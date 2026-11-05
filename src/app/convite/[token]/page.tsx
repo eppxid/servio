@@ -6,6 +6,7 @@ import { SENHA_MINIMA } from "@/lib/auth-core";
 import { usuarioAtual } from "@/lib/auth";
 import { abrirSessao } from "@/lib/lgpd/sessao";
 import { consentiu } from "@/lib/lgpd/termos";
+import { Publica } from "@/components/Publica";
 import { CampoConsentimento, RodapeLegal } from "@/lib/lgpd/ui";
 import { aceitarConvite, cadastrarPorConvite, conviteValido } from "@/lib/ministerios/nucleo";
 import { validar } from "@/lib/validar";
@@ -62,23 +63,23 @@ export default async function Convite({
 
   if (!convite) {
     return (
-      <main className="mx-auto max-w-sm space-y-4 px-4 py-12">
-        <h1 className="text-2xl font-bold">Convite inválido</h1>
-        <p className="text-sm text-slate-600">O link expirou ou não existe. Peça um novo ao líder.</p>
+      <Publica>
+        <h1 className="title">Convite inválido</h1>
+        <p className="text-sm text-muted">O link expirou ou não existe. Peça um novo ao líder.</p>
         <RodapeLegal />
-      </main>
+      </Publica>
     );
   }
 
   if (ok) {
     return (
-      <main className="mx-auto max-w-sm space-y-4 px-4 py-12">
-        <h1 className="text-2xl font-bold">Pedido enviado</h1>
-        <p className="text-sm text-slate-600">O líder de {convite.ministerio} vai aprovar sua entrada.</p>
-        <Link href="/agenda" className="botao">
+      <Publica>
+        <h1 className="title">Pedido enviado</h1>
+        <p className="text-sm text-muted">O líder de {convite.ministerio} vai aprovar sua entrada.</p>
+        <Link href="/agenda" className="btn btn--primary btn--block">
           Abrir o app
         </Link>
-      </main>
+      </Publica>
     );
   }
 
@@ -93,45 +94,45 @@ export default async function Convite({
         : null;
 
   return (
-    <main className="mx-auto max-w-sm space-y-6 px-4 py-12">
-      <h1 className="text-2xl font-bold">Convite: {convite.ministerio}</h1>
+    <Publica>
+      <h1 className="title">Convite: {convite.ministerio}</h1>
       {msg && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           {msg}
         </p>
       )}
       {usuario && usuario.igrejaId === convite.igrejaId ? (
         <form action={pedirEntrada} className="space-y-4">
           <input type="hidden" name="token" value={token} />
-          <p className="text-sm text-slate-600">Entrar como {usuario.nome}.</p>
-          <button type="submit" className="botao">Pedir para entrar</button>
+          <p className="text-sm text-muted">Entrar como {usuario.nome}.</p>
+          <button type="submit" className="btn btn--primary btn--block">Pedir para entrar</button>
         </form>
       ) : (
         <>
           <form action={cadastrar} className="space-y-4">
             <input type="hidden" name="token" value={token} />
-            <label className="block space-y-1 text-sm">
+            <label className="rotulo">
               Nome
               <input name="nome" required minLength={2} maxLength={120} autoComplete="name" className="campo" />
             </label>
-            <label className="block space-y-1 text-sm">
+            <label className="rotulo">
               E-mail
               <input name="email" type="email" required autoComplete="email" className="campo" />
             </label>
-            <label className="block space-y-1 text-sm">
+            <label className="rotulo">
               Telefone (opcional)
               <input name="telefone" type="tel" maxLength={30} autoComplete="tel" className="campo" />
             </label>
-            <label className="block space-y-1 text-sm">
+            <label className="rotulo">
               Senha
               <input name="senha" type="password" required minLength={SENHA_MINIMA} autoComplete="new-password" className="campo" />
             </label>
             <CampoConsentimento />
-            <button type="submit" className="botao">Criar conta e pedir para entrar</button>
+            <button type="submit" className="btn btn--primary btn--block">Criar conta e pedir para entrar</button>
           </form>
           <p className="text-sm">
             Já tem conta?{" "}
-            <Link href="/entrar" className="text-blue-700 underline">
+            <Link href="/entrar" className="link">
               Entre
             </Link>{" "}
             e abra este link de novo.
@@ -139,6 +140,6 @@ export default async function Convite({
         </>
       )}
       <RodapeLegal />
-    </main>
+    </Publica>
   );
 }

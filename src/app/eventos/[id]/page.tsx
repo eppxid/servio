@@ -8,6 +8,7 @@ import { exigirPapel } from "@/lib/auth";
 import { FUSO } from "@/lib/recorrencia";
 import { EscalasDoEvento } from "@/components/EscalasDoEvento";
 import { editarEvento, excluirRegra, gerarProximos } from "../acoes";
+import { Publica } from "@/components/Publica";
 
 export const dynamic = "force-dynamic";
 
@@ -30,20 +31,20 @@ export default async function DetalheEvento({
 
   const f = (d: Date, p: string) => formatInTimeZone(d, FUSO, p);
   return (
-    <main className="mx-auto max-w-xl space-y-6 px-4 py-6">
-      <Link href={`/eventos?mes=${f(evento.inicio, "yyyy-MM")}`} className="text-sm">
+    <Publica>
+      <Link href={`/eventos?mes=${f(evento.inicio, "yyyy-MM")}`} className="link text-sm">
         ← Eventos
       </Link>
-      <h1 className="text-2xl font-bold">{evento.titulo}</h1>
+      <h1 className="title">{evento.titulo}</h1>
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           {erro}
         </p>
       )}
 
       <form action={editarEvento} className="space-y-4">
         <input type="hidden" name="id" value={evento.id} />
-        <label className="block space-y-1 text-sm">
+        <label className="rotulo">
           Título
           <input
             name="titulo"
@@ -53,7 +54,7 @@ export default async function DetalheEvento({
             className="campo"
           />
         </label>
-        <label className="block space-y-1 text-sm">
+        <label className="rotulo">
           Data
           <input
             name="data"
@@ -64,7 +65,7 @@ export default async function DetalheEvento({
           />
         </label>
         <div className="grid grid-cols-2 gap-3">
-          <label className="block space-y-1 text-sm">
+          <label className="rotulo">
             Início
             <input
               name="horaInicio"
@@ -74,7 +75,7 @@ export default async function DetalheEvento({
               className="campo"
             />
           </label>
-          <label className="block space-y-1 text-sm">
+          <label className="rotulo">
             Fim
             <input
               name="horaFim"
@@ -84,32 +85,32 @@ export default async function DetalheEvento({
             />
           </label>
         </div>
-        <button type="submit" className="botao">
+        <button type="submit" className="btn btn--primary btn--block">
           Salvar esta ocorrência
         </button>
         {evento.recorrenciaId && (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted">
             A alteração vale só para este dia; a regra semanal não muda.
           </p>
         )}
       </form>
 
       {evento.recorrenciaId && (
-        <section aria-label="Recorrência" className="space-y-3 border-t border-slate-200 pt-4">
+        <section aria-label="Recorrência" className="space-y-3 border-t border-line pt-4">
           <h2 className="font-semibold">Repete toda semana</h2>
           <form action={gerarProximos}>
             <input type="hidden" name="recorrenciaId" value={evento.recorrenciaId} />
-            <button type="submit" className="botao">
+            <button type="submit" className="btn btn--block">
               Gerar próximos 90 dias
             </button>
           </form>
           <form action={excluirRegra}>
             <input type="hidden" name="recorrenciaId" value={evento.recorrenciaId} />
-            <button type="submit" className="botao">
+            <button type="submit" className="btn btn--danger btn--block">
               Excluir regra e ocorrências futuras
             </button>
           </form>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted">
             Ocorrências futuras com escala publicada são mantidas como eventos avulsos.
           </p>
         </section>
@@ -118,6 +119,6 @@ export default async function DetalheEvento({
       <section id="escalas-do-evento" aria-label="Escalas do evento">
         <EscalasDoEvento eventoId={evento.id} igrejaId={admin.igrejaId} />
       </section>
-    </main>
+    </Publica>
   );
 }

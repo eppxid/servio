@@ -11,6 +11,7 @@ import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
 import { FUSO } from "@/lib/recorrencia";
 import { presencaDaEscala } from "@/lib/trocas/nucleo";
 import { gravarEscala } from "../../acoes";
+import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
 
@@ -44,47 +45,44 @@ export default async function MontarEscala({
       : null;
 
   return (
-    <div className="space-y-6">
-      <Link href="/escalas" className="text-sm">
-        ← Escalas
-      </Link>
-      <header>
-        <h1 className="text-2xl font-bold">
-          {d.ministerio.nome} · {d.evento.titulo}
-        </h1>
-        <p className="text-sm text-slate-600">
-          {formatInTimeZone(d.evento.inicio, FUSO, "dd/MM/yyyy HH:mm")}
-          {d.evento.fim ? `–${formatInTimeZone(d.evento.fim, FUSO, "HH:mm")}` : ""} ·{" "}
-          {d.status === "publicada" ? "Publicada" : d.status === "rascunho" ? "Rascunho" : "Sem escala"}
-        </p>
-      </header>
+    <div className="space-y-5">
+      <Cabecalho
+        eyebrow={`${formatInTimeZone(d.evento.inicio, FUSO, "dd/MM/yyyy HH:mm")}${
+          d.evento.fim ? `–${formatInTimeZone(d.evento.fim, FUSO, "HH:mm")}` : ""
+        } · ${d.status === "publicada" ? "Publicada" : d.status === "rascunho" ? "Rascunho" : "Sem escala"}`}
+        titulo={`${d.ministerio.nome} · ${d.evento.titulo}`}
+      >
+        <Link href="/escalas" className="btn">
+          ← Escalas
+        </Link>
+      </Cabecalho>
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           {erro}
         </p>
       )}
-      {ok && <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">{ok}</p>}
+      {ok && <p className="alerta alerta--good">{ok}</p>}
 
       {d.funcoes.length === 0 ? (
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           Cadastre as funções do ministério em{" "}
-          <Link href={`/ministerios/${d.ministerio.id}`} className="underline">
+          <Link href={`/ministerios/${d.ministerio.id}`} className="link">
             Ministérios
           </Link>
           .
         </p>
       ) : (
-        <form action={gravarEscala} className="space-y-4">
+        <form action={gravarEscala} className="card space-y-4">
           <input type="hidden" name="evento" value={d.evento.id} />
           <input type="hidden" name="ministerio" value={d.ministerio.id} />
           {d.funcoes.map((f) => {
             const bloqueados = f.candidatos.filter((c) => c.bloqueio);
             return (
               <fieldset key={f.id} className="space-y-1">
-                <label className="block space-y-1 text-sm">
-                  <span className="font-medium">{f.nome}</span>
+                <label className="rotulo">
+                  <span className="text-ink font-semibold">{f.nome}</span>
                   {f.statusItem && d.status === "publicada" && (
-                    <span className="ml-2 text-xs text-slate-500">({f.statusItem})</span>
+                    <span className="ml-2 text-xs font-normal">({f.statusItem})</span>
                   )}
                   <select name={`f_${f.id}`} defaultValue={f.escolhido ?? ""} className="campo">
                     <option value="">— vago —</option>
@@ -93,7 +91,7 @@ export default async function MontarEscala({
                         key={c.usuarioId}
                         value={c.usuarioId}
                         disabled={Boolean(c.bloqueio) && c.usuarioId !== f.escolhido}
-                        className={c.bloqueio ? "text-red-600" : undefined}
+                        className={c.bloqueio ? "text-bad" : undefined}
                       >
                         {c.nome}
                         {c.bloqueio ? ` (${MOTIVO[c.bloqueio]})` : ""}
@@ -102,10 +100,10 @@ export default async function MontarEscala({
                   </select>
                 </label>
                 {f.candidatos.length === 0 && (
-                  <p className="text-xs text-slate-500">Ninguém aprovado tem esta função.</p>
+                  <p className="text-xs text-muted">Ninguém aprovado tem esta função.</p>
                 )}
                 {bloqueados.length > 0 && (
-                  <ul className="text-xs text-red-600">
+                  <ul className="text-xs text-bad">
                     {bloqueados.map((c) => (
                       <li key={c.usuarioId}>
                         {c.nome}: {MOTIVO[c.bloqueio!]}
@@ -116,11 +114,11 @@ export default async function MontarEscala({
               </fieldset>
             );
           })}
-          <div className="grid grid-cols-2 gap-3">
-            <button type="submit" name="acao" value="rascunho" className="botao">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button type="submit" name="acao" value="rascunho" className="btn btn--block">
               Salvar rascunho
             </button>
-            <button type="submit" name="acao" value="publicar" className="botao">
+            <button type="submit" name="acao" value="publicar" className="btn btn--primary btn--block">
               {d.status === "publicada" ? "Atualizar publicada" : "Publicar"}
             </button>
           </div>
@@ -130,7 +128,7 @@ export default async function MontarEscala({
       <PresencaEscala linhas={presenca} />
 
       {whatsapp && (
-        <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="botao block text-center">
+        <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="btn btn--block">
           Compartilhar no WhatsApp
         </a>
       )}

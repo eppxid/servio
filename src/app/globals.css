@@ -1,43 +1,94 @@
 @import "tailwindcss";
+@import "../ui/kit/tokens.css";
+/* Em layer para que as utilitárias do Tailwind continuem vencendo as classes do kit. */
+@import "../ui/kit/kit.css" layer(components);
 
-:root {
-  --fundo: #f8fafc;
-  --texto: #0f172a;
-  --suave: #64748b;
-  --borda: #e2e8f0;
-  --acento: #1d4ed8;
+@theme inline {
+  --font-sans: var(--font);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-raised: var(--raised);
+  --color-well: var(--well);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --color-info: var(--info);
 }
 
-html {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: var(--fundo);
-  color: var(--texto);
-}
+@layer components {
+  /* ---------- Casca ---------- */
+  .stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .main { max-width: 1100px; margin-inline: auto; padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
+  .logo { display: grid; place-items: center; background: var(--primary); color: var(--on-primary); font-weight: 700; }
+  .rail__ind { left: 0; right: auto; width: 44px; }
+  .rail__btn { text-decoration: none; }
+  .rail__rot { display: none; }
+  .rail:not([data-pronto]) .rail__btn.is-active { background: var(--primary); }
 
-body {
-  min-height: 100dvh;
-}
+  @media (max-width: 899px) {
+    .app { padding-left: 0; }
+    .top { height: 56px; grid-template-columns: 1fr auto; }
+    .rail {
+      left: 50%; top: auto; bottom: calc(env(safe-area-inset-bottom) + 10px);
+      transform: translateX(-50%);
+      width: auto; max-width: calc(100% - 16px);
+      flex-direction: row; gap: 2px; padding: 5px; border-radius: var(--r-pill);
+    }
+    .rail__btn { width: 58px; height: 52px; flex-direction: column; gap: 2px; display: flex; justify-content: center; }
+    .rail__btn svg { width: 22px; height: 22px; }
+    .rail__rot { display: block; font-size: 10px; font-weight: 600; line-height: 1; }
+    .rail__btn[data-tip]::after { display: none; }
+    .title { font-size: var(--fs-3xl); }
+  }
+  @media (min-width: 900px) {
+    .top { grid-template-columns: 1fr auto; }
+  }
 
-.campo {
-  display: block;
-  width: 100%;
-  min-height: 44px;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--borda);
-  border-radius: 0.5rem;
-  background: #fff;
-  font-size: 1rem;
-}
+  /* ---------- Páginas fora da casca ---------- */
+  .pub { min-height: 100dvh; display: grid; place-items: start center; padding: 40px var(--gutter) 40px; }
+  .pub__col { width: 100%; max-width: 440px; }
+  .pub__col--larga { max-width: 760px; }
+  .pub .brand { justify-content: center; margin-bottom: 20px; }
+  .pub .title { font-size: var(--fs-3xl); }
 
-.botao {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 44px;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  background: var(--acento);
-  color: #fff;
-  font-weight: 600;
+  /* ---------- Formulário, botões e alertas ---------- */
+  .campo {
+    display: block; width: 100%; min-height: 44px; padding: 8px 14px;
+    border-radius: var(--r-tile); border: 1px solid transparent;
+    background: var(--well); color: var(--text); font-size: 16px;
+    transition: border-color var(--t-2), background var(--t-2);
+  }
+  .campo:focus { outline: 0; border-color: var(--primary); background: var(--raised); }
+  .campo::placeholder { color: var(--faint); }
+  textarea.campo { min-height: 88px; }
+  .rotulo { display: block; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
+  .rotulo > .campo { margin-top: 4px; font-weight: 400; }
+
+  .btn { text-decoration: none; justify-content: center; }
+  .btn--block { width: 100%; }
+  .btn--danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+  .btn--danger:hover { background: color-mix(in srgb, var(--bad) 10%, var(--raised)); }
+  @media (pointer: coarse) { .btn { min-height: 44px; } .btn--sm { min-height: 36px; } }
+
+  .alerta {
+    --c: var(--info);
+    padding: 12px 14px; border-radius: var(--r-tile); font-size: var(--fs-md);
+    background: color-mix(in srgb, var(--c) 12%, var(--raised));
+    border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+    border-left: 4px solid var(--c);
+  }
+  .alerta--bad { --c: var(--bad); }
+  .alerta--good { --c: var(--good); }
+  .alerta--warn { --c: var(--warn); }
+
+  .link { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+  .check input[type="checkbox"], .caixa { accent-color: var(--primary); }
 }

@@ -14,6 +14,7 @@ import {
   mesValido,
   rotuloMes,
 } from "./mes";
+import { Publica } from "@/components/Publica";
 
 export const dynamic = "force-dynamic";
 
@@ -41,25 +42,32 @@ export default async function Eventos({
   }
 
   return (
-    <main className="mx-auto max-w-xl space-y-6 px-4 py-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Eventos</h1>
-        <Link href="/eventos/novo" className="botao">
+    <Publica larga>
+      <header className="head !my-0">
+        <div>
+          <p className="eyebrow">Administração</p>
+          <h1 className="title">Eventos</h1>
+        </div>
+        <Link href="/eventos/novo" className="btn btn--primary">
           Novo
         </Link>
       </header>
 
       <nav aria-label="Mês" className="flex items-center justify-between text-sm">
-        <Link href={`/eventos?mes=${deslocarMes(mes, -1)}`}>← Anterior</Link>
+        <Link href={`/eventos?mes=${deslocarMes(mes, -1)}`} className="btn btn--sm">
+          ← Anterior
+        </Link>
         <strong>{rotuloMes(mes)}</strong>
-        <Link href={`/eventos?mes=${deslocarMes(mes, 1)}`}>Próximo →</Link>
+        <Link href={`/eventos?mes=${deslocarMes(mes, 1)}`} className="btn btn--sm">
+          Próximo →
+        </Link>
       </nav>
 
-      {lista.length === 0 && <p className="text-sm text-slate-600">Nenhum evento neste mês.</p>}
+      {lista.length === 0 && <p className="text-sm text-muted">Nenhum evento neste mês.</p>}
 
       {[...semanas.entries()].map(([domingo, itens]) => (
         <section key={domingo} aria-label={`Semana de ${domingo}`} className="space-y-2">
-          <h2 className="text-sm font-semibold text-slate-500">
+          <h2 className="text-sm font-semibold text-muted">
             Semana de {domingo.split("-").reverse().slice(0, 2).join("/")}
           </h2>
           <ul className="space-y-2">
@@ -67,10 +75,10 @@ export default async function Eventos({
               <li key={e.id}>
                 <Link
                   href={`/eventos/${e.id}`}
-                  className="block rounded-lg border border-slate-200 p-3"
+                  className="block rounded-[var(--r-tile)] border border-line bg-surface p-3 hover:bg-well"
                 >
                   <span className="block font-medium">{e.titulo}</span>
-                  <span className="text-sm text-slate-600">
+                  <span className="text-sm text-muted">
                     {formatarDia(e.inicio)} · {formatarHora(e.inicio)}
                     {e.fim ? `–${formatarHora(e.fim)}` : ""}
                     {e.recorrenciaId ? " · semanal" : ""}
@@ -81,6 +89,6 @@ export default async function Eventos({
           </ul>
         </section>
       ))}
-    </main>
+    </Publica>
   );
 }

@@ -9,29 +9,31 @@ export default async function ResumoPontos({ usuario }: { usuario: Ator }) {
   const { pontos, medalhas } = await resumoDoUsuario(db(), usuario);
   const aparecer = await lerAparecerNoRanking(db(), usuario);
   return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-semibold">Meus pontos</h2>
-      <p className="text-2xl font-bold text-blue-700">{pontos}</p>
+    <section className="card space-y-3">
+      <h2 className="card__title">Meus pontos</h2>
+      <p className="stat__val text-primary" data-count={pontos}>
+        {pontos}
+      </p>
       {medalhas.length > 0 && (
-        <ul className="flex flex-wrap gap-2 text-sm">
+        <ul className="flex flex-wrap gap-2">
           {medalhas.slice(0, 3).map((m) => (
-            <li key={m.chave} className="rounded-full bg-amber-100 px-3 py-1 text-amber-900">
+            <li key={m.chave} className="chip chip--warn">
               {m.nome}
             </li>
           ))}
         </ul>
       )}
-      <Link href="/reconhecimento" className="inline-block text-sm text-blue-700 underline">
+      <Link href="/reconhecimento" className="link inline-block text-sm">
         Ver reconhecimento e ranking
       </Link>
       <form action={mudarRanking} className="space-y-1">
         <input type="hidden" name="voltar" value="/perfil" />
         <label className="flex min-h-11 items-center gap-2 text-sm">
           <input type="hidden" name="aparecer" value="0" />
-          <input type="checkbox" name="aparecer" value="1" defaultChecked={aparecer} className="size-5" />
+          <input type="checkbox" name="aparecer" value="1" defaultChecked={aparecer} className="caixa size-5" />
           Aparecer no ranking
         </label>
-        <button type="submit" className="min-h-11 px-3 text-blue-700">
+        <button type="submit" className="btn btn--sm">
           Salvar
         </button>
       </form>

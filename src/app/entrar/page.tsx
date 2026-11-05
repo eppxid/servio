@@ -7,6 +7,7 @@ import { usuarioAtual } from "@/lib/auth";
 import { abrirSessao, guardarAceitePendente } from "@/lib/lgpd/sessao";
 import { aceiteEmDia } from "@/lib/lgpd/termos";
 import { RodapeLegal } from "@/lib/lgpd/ui";
+import { Publica } from "@/components/Publica";
 import { validar } from "@/lib/validar";
 
 export const dynamic = "force-dynamic";
@@ -42,26 +43,26 @@ export default async function Entrar({
   const { erro, conta } = await searchParams;
 
   return (
-    <main className="mx-auto max-w-sm space-y-6 px-4 py-12">
-      <h1 className="text-2xl font-bold">Entrar</h1>
+    <Publica>
+      <h1 className="title">Entrar</h1>
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           {erro === "bloqueado"
             ? "Muitas tentativas. Aguarde 15 minutos e tente de novo."
             : "E-mail ou senha inválidos."}
         </p>
       )}
       {conta === "removida" && (
-        <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+        <p role="status" className="alerta alerta--good">
           Conta excluída. Seus dados pessoais foram apagados.
         </p>
       )}
       <form action={entrar} className="space-y-4">
-        <label className="block space-y-1 text-sm">
+        <label className="rotulo">
           E-mail
           <input name="email" type="email" required autoComplete="email" className="campo" />
         </label>
-        <label className="block space-y-1 text-sm">
+        <label className="rotulo">
           Senha
           <input
             name="senha"
@@ -71,11 +72,11 @@ export default async function Entrar({
             className="campo"
           />
         </label>
-        <button type="submit" className="botao">
+        <button type="submit" className="btn btn--primary btn--block">
           Entrar
         </button>
       </form>
       <RodapeLegal />
-    </main>
+    </Publica>
   );
 }

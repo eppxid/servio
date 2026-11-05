@@ -18,6 +18,7 @@ import {
 } from "@/lib/ministerios/nucleo";
 import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
 import { validar } from "@/lib/validar";
+import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
 
@@ -121,37 +122,38 @@ export default async function Ministerio({
   const marcas = (marcadas: number[]) =>
     d.funcoes.map((f) => (
       <label key={f.id} className="flex min-h-11 items-center gap-2 text-sm">
-        <input type="checkbox" name="funcoes" value={f.id} defaultChecked={marcadas.includes(f.id)} className="size-5" />
+        <input type="checkbox" name="funcoes" value={f.id} defaultChecked={marcadas.includes(f.id)} className="caixa size-5" />
         {f.nome}
       </label>
     ));
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{d.ministerio.nome}</h1>
+    <div className="space-y-5">
+      <Cabecalho eyebrow="Ministério" titulo={d.ministerio.nome} />
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           {erro === "senha" ? `A senha precisa de ${SENHA_MINIMA} caracteres ou mais.` : "Confira os campos."}
         </p>
       )}
       {erro === "agradecimento" && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           Não foi possível enviar o agradecimento. Confira o texto (até 280 caracteres).
         </p>
       )}
       {ok === "agradecimento" && (
-        <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+        <p role="status" className="alerta alerta--good">
           Agradecimento enviado.
         </p>
       )}
       {ok === "senha" && (
-        <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+        <p role="status" className="alerta alerta--good">
           Senha temporária definida. O membro troca no próximo acesso.
         </p>
       )}
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">Funções</h2>
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+      <section className="card space-y-3">
+        <h2 className="card__title">Funções</h2>
         <ul className="space-y-2">
           {d.funcoes.map((f) => (
             <li key={f.id} className="text-sm">
@@ -161,12 +163,12 @@ export default async function Ministerio({
                     <input type="hidden" name="ministerio" value={id} />
                     <input type="hidden" name="funcao" value={f.id} />
                     <input name="nome" defaultValue={f.nome} required minLength={2} maxLength={80} className="campo" aria-label="Nome da função" />
-                    <button type="submit" className="min-h-11 px-3 text-blue-700">Salvar</button>
+                    <button type="submit" className="btn">Salvar</button>
                   </form>
                   <form action={funcaoExcluir}>
                     <input type="hidden" name="ministerio" value={id} />
                     <input type="hidden" name="funcao" value={f.id} />
-                    <button type="submit" className="min-h-11 px-3 text-red-700">Excluir</button>
+                    <button type="submit" className="btn btn--danger">Excluir</button>
                   </form>
                 </div>
               ) : (
@@ -174,31 +176,31 @@ export default async function Ministerio({
               )}
             </li>
           ))}
-          {d.funcoes.length === 0 && <li className="text-sm text-slate-600">Sem funções.</li>}
+          {d.funcoes.length === 0 && <li className="text-sm text-muted">Sem funções.</li>}
         </ul>
         {d.lider && (
           <form action={funcaoNova} className="flex gap-2">
             <input type="hidden" name="ministerio" value={id} />
             <input name="nome" required minLength={2} maxLength={80} className="campo" aria-label="Nova função" placeholder="Nova função" />
-            <button type="submit" className="min-h-11 px-3 text-blue-700">Adicionar</button>
+            <button type="submit" className="btn btn--primary">Adicionar</button>
           </form>
         )}
       </section>
 
       {d.lider && (
         <>
-          <section className="space-y-3">
-            <h2 className="font-semibold">Convite</h2>
+          <section className="card space-y-3">
+            <h2 className="card__title">Convite</h2>
             <form action={convidar}>
               <input type="hidden" name="ministerio" value={id} />
-              <button type="submit" className="botao">Gerar convite</button>
+              <button type="submit" className="btn btn--primary btn--block">Gerar convite</button>
             </form>
             {link && (
               <div className="space-y-2">
-                <p className="text-sm text-slate-600">Vale por 14 dias.</p>
+                <p className="text-sm text-muted">Vale por 14 dias.</p>
                 <CopiarLink link={link} />
                 <a
-                  className="botao"
+                  className="btn btn--block"
                   href={`https://wa.me/?text=${encodeURIComponent(`Convite para o ministério ${d.ministerio.nome}: ${link}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -209,21 +211,21 @@ export default async function Ministerio({
             )}
           </section>
 
-          <section className="space-y-3">
-            <h2 className="font-semibold">Pendentes ({pendentes.length})</h2>
+          <section className="space-y-3 lg:col-span-2">
+            <h2 className="card__title">Pendentes ({pendentes.length})</h2>
             {pendentes.map((m) => (
-              <form key={m.id} action={decidir} className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
+              <form key={m.id} action={decidir} className="card space-y-2">
                 <input type="hidden" name="ministerio" value={id} />
                 <input type="hidden" name="membro" value={m.id} />
                 <p className="font-medium">{m.nome}</p>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-muted">
                   {m.email}
                   {m.telefone ? ` · ${m.telefone}` : ""}
                 </p>
                 {marcas([])}
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="submit" name="aprovar" value="1" className="botao">Aprovar</button>
-                  <button type="submit" name="aprovar" value="0" className="botao" style={{ background: "#b91c1c" }}>
+                  <button type="submit" name="aprovar" value="1" className="btn btn--primary btn--block">Aprovar</button>
+                  <button type="submit" name="aprovar" value="0" className="btn btn--danger btn--block">
                     Recusar
                   </button>
                 </div>
@@ -231,15 +233,15 @@ export default async function Ministerio({
             ))}
           </section>
 
-          <section className="space-y-3">
-            <h2 className="font-semibold">Membros ({aprovados.length})</h2>
+          <section className="space-y-3 lg:col-span-2">
+            <h2 className="card__title">Membros ({aprovados.length})</h2>
             {aprovados.map((m) => (
-              <div key={m.id} className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
+              <div key={m.id} className="card space-y-2">
                 <p className="font-medium">
                   {m.nome}
                   {m.papel === "lider" ? " (líder)" : ""}
                 </p>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-muted">
                   {m.email}
                   {m.telefone ? ` · ${m.telefone}` : ""}
                 </p>
@@ -247,7 +249,7 @@ export default async function Ministerio({
                   <input type="hidden" name="ministerio" value={id} />
                   <input type="hidden" name="membro" value={m.id} />
                   {marcas(m.funcaoIds)}
-                  <button type="submit" className="min-h-11 px-3 text-blue-700">Salvar funções</button>
+                  <button type="submit" className="btn btn--sm">Salvar funções</button>
                 </form>
                 {m.status === "aprovado" && (
                   <BotaoAgradecer ministerioId={id} membroId={m.id} nome={m.nome} />
@@ -256,13 +258,14 @@ export default async function Ministerio({
                   <input type="hidden" name="ministerio" value={id} />
                   <input type="hidden" name="membro" value={m.id} />
                   <input name="senha" type="text" required minLength={SENHA_MINIMA} autoComplete="off" className="campo" aria-label="Senha temporária" placeholder="Senha temporária" />
-                  <button type="submit" className="min-h-11 px-3 text-blue-700">Definir</button>
+                  <button type="submit" className="btn">Definir</button>
                 </form>
               </div>
             ))}
           </section>
         </>
       )}
+      </div>
     </div>
   );
 }

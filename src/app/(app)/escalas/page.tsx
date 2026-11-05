@@ -6,13 +6,14 @@ import { listarEscalasFuturas, ministeriosDoLider, type StatusEscala } from "@/l
 import { exigirUsuarioSemTroca } from "@/lib/ministerios/sessao";
 import { FUSO } from "@/lib/recorrencia";
 import { sugerirMesAcao } from "./acoes";
+import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
 
 const ROTULO: Record<StatusEscala, { texto: string; cor: string }> = {
-  sem_escala: { texto: "Sem escala", cor: "bg-slate-100 text-slate-600" },
-  rascunho: { texto: "Rascunho", cor: "bg-amber-100 text-amber-800" },
-  publicada: { texto: "Publicada", cor: "bg-green-100 text-green-800" },
+  sem_escala: { texto: "Sem escala", cor: "chip--plain" },
+  rascunho: { texto: "Rascunho", cor: "chip--warn" },
+  publicada: { texto: "Publicada", cor: "chip--good" },
 };
 
 export default async function Escalas({
@@ -30,29 +31,22 @@ export default async function Escalas({
   const mesAtual = formatInTimeZone(new Date(), FUSO, "yyyy-MM");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Escalas</h1>
-        {ministerios.length > 0 && (
-          <Link href="/painel" className="text-sm underline">
-            Painel
-          </Link>
-        )}
-      </div>
+    <div className="space-y-5">
+      <Cabecalho eyebrow="Próximos 60 dias" titulo="Escalas" />
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           {erro}
         </p>
       )}
-      {ok && <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">{ok}</p>}
+      {ok && <p className="alerta alerta--good">{ok}</p>}
 
       {ministerios.length === 0 ? (
-        <p className="text-sm text-slate-600">Você não lidera nenhum ministério.</p>
+        <p className="card text-sm text-muted">Você não lidera nenhum ministério.</p>
       ) : (
         <>
-          <form action={sugerirMesAcao} className="space-y-2 rounded-lg border border-slate-200 p-3">
-            <h2 className="font-semibold">Sugerir mês</h2>
-            <p className="text-xs text-slate-500">
+          <form action={sugerirMesAcao} className="card space-y-3">
+            <h2 className="card__title">Sugerir mês</h2>
+            <p className="text-xs text-muted">
               Preenche as vagas vazias com quem tem menos escalas, sem conflito. Fica como rascunho.
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -65,28 +59,28 @@ export default async function Escalas({
               </select>
               <input name="mes" type="month" required defaultValue={mesAtual} className="campo" aria-label="Mês" />
             </div>
-            <button type="submit" className="botao">
+            <button type="submit" className="btn btn--primary btn--block">
               Sugerir
             </button>
           </form>
 
-          {lista.length === 0 && <p className="text-sm text-slate-600">Nenhum evento nos próximos 60 dias.</p>}
-          <ul className="space-y-3">
+          {lista.length === 0 && <p className="card text-sm text-muted">Nenhum evento nos próximos 60 dias.</p>}
+          <ul className="grid items-start gap-4 md:grid-cols-2" data-enter>
             {lista.map(({ evento, ministerios: ms }) => (
-              <li key={evento.id} className="rounded-lg border border-slate-200 p-3">
-                <span className="block font-medium">{evento.titulo}</span>
-                <span className="text-sm text-slate-600">
+              <li key={evento.id} className="card">
+                <span className="card__title block">{evento.titulo}</span>
+                <span className="text-sm text-muted">
                   {formatInTimeZone(evento.inicio, FUSO, "dd/MM HH:mm")}
                 </span>
-                <ul className="mt-2 space-y-1">
+                <ul className="mt-3 space-y-1">
                   {ms.map((m) => (
                     <li key={m.id}>
                       <Link
                         href={`/escalas/${evento.id}/${m.id}`}
-                        className="flex items-center justify-between text-sm"
+                        className="flex min-h-11 items-center justify-between gap-2 rounded-[var(--r-tile)] px-2 text-sm hover:bg-well"
                       >
                         {m.nome}
-                        <span className={`rounded px-2 py-0.5 text-xs ${ROTULO[m.status].cor}`}>
+                        <span className={`chip ${ROTULO[m.status].cor}`}>
                           {ROTULO[m.status].texto}
                         </span>
                       </Link>

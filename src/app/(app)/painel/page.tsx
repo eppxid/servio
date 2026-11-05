@@ -5,6 +5,7 @@ import { carregarPainel } from "@/lib/indicadores/consulta";
 import { ErroAcesso } from "@/lib/ministerios/nucleo";
 import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
 import { FUSO } from "@/lib/recorrencia";
+import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function Painel({
   } catch (e) {
     if (e instanceof ErroAcesso) {
       return (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           Acesso negado (403). O painel é só para administradores e líderes.
         </p>
       );
@@ -40,31 +41,31 @@ export default async function Painel({
   if (filtro.ministerioId) consulta.set("ministerio", String(filtro.ministerioId));
   const csv = (tipo: string) => `/api/painel/csv?tipo=${tipo}&${consulta.toString()}`;
 
-  const cartoes: [string, string][] = [
-    ["Escalas publicadas", String(i.escalasPublicadas)],
-    ["Taxa de confirmação", pct(i.taxaConfirmacao)],
-    ["Taxa de presença", pct(i.taxaPresenca)],
-    ["Trocas pedidas", String(i.trocasPedidas)],
-    ["Trocas aprovadas", String(i.trocasAprovadas)],
-    ["Voluntários aprovados", String(i.voluntariosAprovados)],
-    ["Sem escala há mais de 60 dias", String(i.voluntariosSemEscala)],
+  const cartoes: { rotulo: string; valor: number; sufixo?: string }[] = [
+    { rotulo: "Escalas publicadas", valor: i.escalasPublicadas },
+    { rotulo: "Taxa de confirmação", valor: Math.round(i.taxaConfirmacao * 100), sufixo: "%" },
+    { rotulo: "Taxa de presença", valor: Math.round(i.taxaPresenca * 100), sufixo: "%" },
+    { rotulo: "Trocas pedidas", valor: i.trocasPedidas },
+    { rotulo: "Trocas aprovadas", valor: i.trocasAprovadas },
+    { rotulo: "Voluntários aprovados", valor: i.voluntariosAprovados },
+    { rotulo: "Sem escala há mais de 60 dias", valor: i.voluntariosSemEscala },
   ];
   const maiorMes = Math.max(1, ...painel.presencaMensal.map((p) => p.confirmados));
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Painel</h1>
+    <div className="space-y-5">
+      <Cabecalho eyebrow="Indicadores" titulo="Painel" />
 
-      <form method="get" className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 p-3">
-        <label className="text-xs text-slate-600">
+      <form method="get" className="card grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="rotulo">
           De
           <input type="date" name="de" defaultValue={filtro.de} className="campo" />
         </label>
-        <label className="text-xs text-slate-600">
+        <label className="rotulo">
           Até
           <input type="date" name="ate" defaultValue={filtro.ate} className="campo" />
         </label>
-        <label className="col-span-2 text-xs text-slate-600">
+        <label className="rotulo">
           Ministério
           <select name="ministerio" defaultValue={filtro.ministerioId ?? ""} className="campo">
             <option value="">Todos</option>
@@ -75,24 +76,27 @@ export default async function Painel({
             ))}
           </select>
         </label>
-        <button type="submit" className="botao col-span-2">
+        <button type="submit" className="btn btn--primary btn--block">
           Filtrar
         </button>
       </form>
 
-      <ul className="grid grid-cols-2 gap-2">
-        {cartoes.map(([rotulo, valor]) => (
-          <li key={rotulo} className="rounded-lg border border-slate-200 p-3">
-            <span className="block text-2xl font-bold">{valor}</span>
-            <span className="text-xs text-slate-600">{rotulo}</span>
+      <ul className="stats" data-enter>
+        {cartoes.map((c) => (
+          <li key={c.rotulo} className="stat">
+            <span className="stat__label">{c.rotulo}</span>
+            <span className="stat__val block" data-count={c.valor} data-suffix={c.sufixo}>
+              {c.valor}
+              {c.sufixo}
+            </span>
           </li>
         ))}
       </ul>
 
-      <section className="space-y-2">
-        <h2 className="font-semibold">Presença por mês</h2>
+      <section className="card space-y-3">
+        <h2 className="card__title">Presença por mês</h2>
         {painel.presencaMensal.length === 0 ? (
-          <p className="text-sm text-slate-600">Sem eventos passados com confirmação no período.</p>
+          <p className="text-sm text-muted">Sem eventos passados com confirmação no período.</p>
         ) : (
           <ul className="space-y-2">
             {painel.presencaMensal.map((p) => (
@@ -104,12 +108,12 @@ export default async function Painel({
                   </span>
                 </div>
                 <div
-                  className="h-3 rounded bg-slate-100"
+                  className="bar !h-3"
                   style={{ width: `${(p.confirmados / maiorMes) * 100}%` }}
                   role="img"
                   aria-label={`${p.presentes} presentes de ${p.confirmados} confirmados`}
                 >
-                  <div className="h-3 rounded bg-green-600" style={{ width: `${(p.presentes / p.confirmados) * 100}%` }} />
+                  <i style={{ "--v": `${(p.presentes / p.confirmados) * 100}%`, "--c": "var(--good)" } as React.CSSProperties} />
                 </div>
               </li>
             ))}
@@ -117,20 +121,21 @@ export default async function Painel({
         )}
       </section>
 
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Escalas por voluntário</h2>
-          <a href={csv("voluntarios")} className="text-sm underline">
+      <section className="card space-y-3">
+        <div className="card__head !mb-0">
+          <h2 className="card__title">Escalas por voluntário</h2>
+          <a href={csv("voluntarios")} className="btn btn--sm">
             Baixar CSV
           </a>
         </div>
         {painel.porVoluntario.length === 0 ? (
-          <p className="text-sm text-slate-600">Nenhuma escala publicada no período.</p>
+          <p className="text-sm text-muted">Nenhuma escala publicada no período.</p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="table">
             <thead>
-              <tr className="text-xs text-slate-600">
-                <th className="py-1">Voluntário</th>
+              <tr>
+                <th>Voluntário</th>
                 <th>Total</th>
                 <th>Conf.</th>
                 <th>Pres.</th>
@@ -139,8 +144,8 @@ export default async function Painel({
             </thead>
             <tbody>
               {painel.porVoluntario.map((l) => (
-                <tr key={l.usuarioId} className="border-t border-slate-100">
-                  <td className="py-1">{l.nome}</td>
+                <tr key={l.usuarioId}>
+                  <td>{l.nome}</td>
                   <td>{l.total}</td>
                   <td>{l.confirmadas}</td>
                   <td>{l.presencas}</td>
@@ -149,26 +154,27 @@ export default async function Painel({
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
 
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Vagas abertas (próximos 30 dias)</h2>
-          <a href={csv("vagas")} className="text-sm underline">
+      <section className="card space-y-3">
+        <div className="card__head !mb-0">
+          <h2 className="card__title">Vagas abertas (próximos 30 dias)</h2>
+          <a href={csv("vagas")} className="btn btn--sm">
             Baixar CSV
           </a>
         </div>
         {painel.vagas.length === 0 ? (
-          <p className="text-sm text-slate-600">Nenhuma vaga aberta.</p>
+          <p className="text-sm text-muted">Nenhuma vaga aberta.</p>
         ) : (
-          <ul className="space-y-1 text-sm">
+          <ul className="text-sm">
             {painel.vagas.map((v, n) => (
-              <li key={n} className="flex justify-between border-t border-slate-100 py-1">
+              <li key={n} className="flex justify-between gap-3 border-t border-line py-2">
                 <span>
                   {v.ministerio} · {v.funcao}
                 </span>
-                <span className="text-slate-600">{formatInTimeZone(v.quando, FUSO, "dd/MM HH:mm")}</span>
+                <span className="text-muted whitespace-nowrap">{formatInTimeZone(v.quando, FUSO, "dd/MM HH:mm")}</span>
               </li>
             ))}
           </ul>

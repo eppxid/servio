@@ -15,14 +15,14 @@ export function PresencaEscala({ linhas }: { linhas: readonly LinhaPresenca[] })
   if (linhas.length === 0) return null;
   return (
     <section className="space-y-2">
-      <h2 className="font-semibold">Presença</h2>
-      <ul className="divide-y divide-slate-200 text-sm">
+      <h2 className="card__title">Presença</h2>
+      <ul className="divide-y divide-line text-sm">
         {linhas.map((l) => (
-          <li key={`${l.funcao}-${l.nome}`} className="flex justify-between gap-3 py-1">
+          <li key={`${l.funcao}-${l.nome}`} className="flex items-center justify-between gap-3 py-2">
             <span>
               {l.funcao}: {l.nome}
             </span>
-            <span className={l.checkinEm ? "text-green-700" : "text-slate-500"}>
+            <span className={`chip ${l.checkinEm || l.status === "confirmado" ? "chip--good" : l.status === "recusado" ? "chip--bad" : "chip--warn"}`}>
               {l.checkinEm ? `Presente ${formatInTimeZone(l.checkinEm, FUSO, "HH:mm")}` : STATUS[l.status]}
             </span>
           </li>

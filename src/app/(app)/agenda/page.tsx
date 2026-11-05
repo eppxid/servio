@@ -16,10 +16,12 @@ import {
   responderTrocaAcao,
   revogarLinkCalendario,
 } from "./acoes";
+import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
 
 const STATUS = { pendente: "Aguardando confirmação", confirmado: "Confirmado", recusado: "Recusado" } as const;
+const STATUS_CHIP = { pendente: "chip--warn", confirmado: "chip--good", recusado: "chip--bad" } as const;
 
 export default async function Agenda({
   searchParams,
@@ -43,30 +45,30 @@ export default async function Agenda({
   const quando = (d: Date) => formatInTimeZone(d, FUSO, "dd/MM HH:mm");
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Agenda</h1>
+    <div className="space-y-5">
+      <Cabecalho eyebrow="Suas escalas" titulo="Agenda" />
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           {erro}
         </p>
       )}
-      {ok && <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">{ok}</p>}
+      {ok && <p className="alerta alerta--good">{ok}</p>}
 
       {paraMim.length > 0 && (
         <section className="space-y-3">
-          <h2 className="font-semibold">Pedidos de troca para você</h2>
+          <h2 className="card__title">Pedidos de troca para você</h2>
           {paraMim.map((p) => (
-            <form key={p.id} action={responderTrocaAcao} className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+            <form key={p.id} action={responderTrocaAcao} className="alerta alerta--warn space-y-2">
               <input type="hidden" name="troca" value={p.id} />
               <p>
                 {p.solicitante} pede para você assumir <strong>{p.funcao}</strong> ({p.ministerio}) em {p.titulo},{" "}
                 {quando(p.inicio)}.
               </p>
               <div className="grid grid-cols-2 gap-3">
-                <button name="acao" value="aceitar" className="botao">
+                <button name="acao" value="aceitar" className="btn btn--primary btn--block">
                   Aceitar
                 </button>
-                <button name="acao" value="recusar" className="botao">
+                <button name="acao" value="recusar" className="btn btn--block">
                   Recusar
                 </button>
               </div>
@@ -76,37 +78,39 @@ export default async function Agenda({
       )}
 
       {itens.length === 0 ? (
-        <p className="text-sm text-slate-600">Você não tem escalas publicadas à frente.</p>
+        <p className="card text-sm text-muted">Você não tem escalas publicadas à frente.</p>
       ) : (
-        <ul className="space-y-4">
+        <ul className="grid items-start gap-4 md:grid-cols-2" data-enter>
           {itens.map((i) => (
-            <li key={i.itemId} className="space-y-3 rounded-lg border border-slate-200 p-3">
+            <li key={i.itemId} className="card space-y-3">
               <div>
-                <p className="font-semibold">{i.evento.titulo}</p>
-                <p className="text-sm text-slate-600">
+                <p className="card__title">{i.evento.titulo}</p>
+                <p className="text-sm text-muted">
                   {quando(i.evento.inicio)}
                   {i.evento.fim ? `–${formatInTimeZone(i.evento.fim, FUSO, "HH:mm")}` : ""} · {i.ministerio} · {i.funcao}
                 </p>
-                <p className="text-xs text-slate-500">
-                  {STATUS[i.status]}
-                  {i.checkinEm ? ` · check-in às ${formatInTimeZone(i.checkinEm, FUSO, "HH:mm")}` : ""}
+                <p className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className={`chip ${STATUS_CHIP[i.status]}`}>{STATUS[i.status]}</span>
+                  {i.checkinEm && (
+                    <span className="text-xs text-muted">check-in às {formatInTimeZone(i.checkinEm, FUSO, "HH:mm")}</span>
+                  )}
                 </p>
               </div>
               {repertorios.has(i.escalaId) && (
                 <Link
                   href={`/escalas/${repertorios.get(i.escalaId)!.eventoId}/${repertorios.get(i.escalaId)!.ministerioId}/repertorio`}
-                  className="block text-sm underline"
+                  className="link block text-sm"
                 >
                   Repertório
                 </Link>
               )}
               {i.colegas.length > 0 && (
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-muted">
                   Com: {i.colegas.map((c) => `${c.nome} (${c.funcao})`).join(", ")}
                 </p>
               )}
               {i.troca ? (
-                <p className="text-xs text-amber-800">
+                <p className="alerta alerta--warn text-xs">
                   Troca {i.troca.status === "aberta" ? "aguardando o substituto" : "aguardando o líder"}.
                 </p>
               ) : null}
@@ -115,28 +119,28 @@ export default async function Agenda({
                   {i.status === "pendente" && (
                     <form action={confirmarEscala}>
                       <input type="hidden" name="item" value={i.itemId} />
-                      <button className="botao w-full">Confirmar</button>
+                      <button className="btn btn--primary btn--block">Confirmar</button>
                     </form>
                   )}
                   <form action={recusarEscala}>
                     <input type="hidden" name="item" value={i.itemId} />
-                    <button className="botao w-full">Não posso</button>
+                    <button className="btn btn--block">Não posso</button>
                   </form>
                 </div>
               )}
               {i.checkinAberto && i.status !== "recusado" && !i.checkinEm && (
                 <form action={checkinAcao}>
                   <input type="hidden" name="item" value={i.itemId} />
-                  <button className="botao w-full">Fazer check-in</button>
+                  <button className="btn btn--primary btn--block">Fazer check-in</button>
                 </form>
               )}
               {!i.troca && i.status !== "recusado" && (
                 <details>
-                  <summary className="cursor-pointer text-sm underline">Pedir troca</summary>
+                  <summary className="btn btn--sm cursor-pointer">Pedir troca</summary>
                   {(substitutos.get(i.itemId) ?? []).length === 0 ? (
-                    <p className="mt-2 text-xs text-slate-500">Ninguém disponível com esta função.</p>
+                    <p className="mt-2 text-xs text-muted">Ninguém disponível com esta função.</p>
                   ) : (
-                    <form action={pedirTrocaAcao} className="mt-2 space-y-2">
+                    <form action={pedirTrocaAcao} className="mt-3 space-y-2">
                       <input type="hidden" name="item" value={i.itemId} />
                       <select name="substituto" className="campo" required>
                         {(substitutos.get(i.itemId) ?? []).map((s) => (
@@ -145,7 +149,7 @@ export default async function Agenda({
                           </option>
                         ))}
                       </select>
-                      <button className="botao w-full">Enviar pedido</button>
+                      <button className="btn btn--primary btn--block">Enviar pedido</button>
                     </form>
                   )}
                 </details>
@@ -155,24 +159,24 @@ export default async function Agenda({
         </ul>
       )}
 
-      <section className="space-y-2 text-sm">
-        <h2 className="font-semibold">Calendário do celular</h2>
+      <section className="card space-y-3 text-sm">
+        <h2 className="card__title">Calendário do celular</h2>
         {token ? (
           <>
-            <p className="break-all rounded bg-slate-100 p-2 text-xs">/agenda/ics/{token}</p>
-            <p className="text-xs text-slate-500">
+            <p className="campo break-all text-xs">/agenda/ics/{token}</p>
+            <p className="text-xs text-muted">
               Assine este endereço (com o domínio do portal) no app de calendário. Quem tiver o link vê sua agenda.
             </p>
             <form action={revogarLinkCalendario}>
-              <button className="botao w-full">Revogar link</button>
+              <button className="btn btn--danger btn--block">Revogar link</button>
             </form>
           </>
         ) : (
           <form action={gerarLinkCalendario}>
-            <button className="botao w-full">Gerar link do calendário</button>
+            <button className="btn btn--primary btn--block">Gerar link do calendário</button>
           </form>
         )}
-        <Link href="/agenda/trocas" className="block underline">
+        <Link href="/agenda/trocas" className="btn btn--block">
           Aprovar trocas (líderes)
         </Link>
       </section>

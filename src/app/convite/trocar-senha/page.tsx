@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { SENHA_MINIMA } from "@/lib/auth-core";
 import { exigirUsuario, sessao } from "@/lib/auth";
 import { trocarSenhaObrigatoria } from "@/lib/ministerios/nucleo";
+import { Publica } from "@/components/Publica";
 import { validar } from "@/lib/validar";
 
 export const dynamic = "force-dynamic";
@@ -31,21 +32,21 @@ export default async function TrocarSenha({
   if (!usuario.trocarSenha) redirect("/agenda");
   const { erro } = await searchParams;
   return (
-    <main className="mx-auto max-w-sm space-y-6 px-4 py-12">
-      <h1 className="text-2xl font-bold">Defina uma nova senha</h1>
-      <p className="text-sm text-slate-600">Sua senha era temporária. Escolha uma só sua.</p>
+    <Publica>
+      <h1 className="title">Defina uma nova senha</h1>
+      <p className="text-sm text-muted">Sua senha era temporária. Escolha uma só sua.</p>
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           A senha precisa de {SENHA_MINIMA} caracteres ou mais.
         </p>
       )}
       <form action={trocar} className="space-y-4">
-        <label className="block space-y-1 text-sm">
+        <label className="rotulo">
           Nova senha
           <input name="senha" type="password" required minLength={SENHA_MINIMA} autoComplete="new-password" className="campo" />
         </label>
-        <button type="submit" className="botao">Salvar</button>
+        <button type="submit" className="btn btn--primary btn--block">Salvar</button>
       </form>
-    </main>
+    </Publica>
   );
 }

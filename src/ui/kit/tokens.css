@@ -1,0 +1,84 @@
+/* layout-fluido — tokens. Claro é o padrão; escuro via html[data-theme="dark"]; acento via html[data-accent].
+   Fontes locais (offline/CSP 'self'): fontes em public/ui/fonts. */
+
+@font-face { font-family: 'Urbanist'; font-weight: 400; font-display: swap; src: url('/ui/fonts/urbanist-latin-400.woff2') format('woff2'); }
+@font-face { font-family: 'Urbanist'; font-weight: 500; font-display: swap; src: url('/ui/fonts/urbanist-latin-500.woff2') format('woff2'); }
+@font-face { font-family: 'Urbanist'; font-weight: 600; font-display: swap; src: url('/ui/fonts/urbanist-latin-600.woff2') format('woff2'); }
+@font-face { font-family: 'Urbanist'; font-weight: 700; font-display: swap; src: url('/ui/fonts/urbanist-latin-700.woff2') format('woff2'); }
+
+:root {
+  --font: 'Urbanist', 'Segoe UI Variable Text', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --fs-2xs: 11px; --fs-xs: 12px; --fs-sm: 12.5px; --fs-md: 13.5px; --fs-base: 14px;
+  --fs-lg: 15px; --fs-xl: 17px; --fs-2xl: 20px; --fs-3xl: 24px; --fs-display: 32px;
+
+  /* Superfícies, do fundo para a frente: bg → surface → surface-2 → raised. well = buraco (input, trilho). */
+  --bg: #eef1f5;
+  --surface: #fbfcfd;
+  --surface-2: #f3f5f8;
+  --raised: #ffffff;
+  --well: #1018280d;
+  --line: #10182814;
+  --line-2: #10182829;
+  --hair: #10182833;
+  --shadow: 0 1px 2px #1018280a, 0 14px 34px -22px #10182847;
+  --shadow-pop: 0 26px 60px -20px #10182857, 0 2px 6px #10182814;
+  --text: #141a24;
+  --muted: #556070;
+  --faint: #6b7585;
+
+  /* Acento: --primary é para texto/botão (contraste AA no claro); --deco é o tom da marca para brilho e gráfico. */
+  --primary: #2563eb;
+  --on-primary: #f5f8ff;
+  --deco: #4c8dff;
+  --glow-a: color-mix(in srgb, var(--deco) 14%, transparent);
+  --glow-b: color-mix(in srgb, var(--deco) 7%, transparent);
+
+  --good: #1f8a4c; --warn: #94620a; --bad: #c0392b; --info: #2563eb;
+  --soft: 14%; /* fundo dos chips: color-mix(var(--c) var(--soft), transparent) */
+
+  --r-card: 22px; --r-tile: 14px; --r-pill: 999px;
+  --gap: 16px; --gutter: clamp(12px, 1.6vw, 24px);
+  --rail-w: 60px; --top-h: 72px;
+
+  /* Movimento. Uma curva de entrada para tudo; "in" só para saída; "pop" para o que nasce (badge, toast). */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --ease-in: cubic-bezier(.4, 0, 1, 1);
+  --ease-pop: cubic-bezier(.34, 1.56, .64, 1);
+  --t-1: .16s; --t-2: .28s; --t-3: .45s; --t-4: .6s;
+
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  --bg: #0e1118;
+  --surface: #151a23;
+  --surface-2: #1a202b;
+  --raised: #212836;
+  --well: #ffffff0e;
+  --line: #ffffff14;
+  --line-2: #ffffff29;
+  --hair: #ffffff38;
+  --shadow: 0 1px 0 #ffffff09 inset, 0 18px 40px -26px #000000d9;
+  --shadow-pop: 0 26px 60px -18px #000000c7, 0 0 0 1px #ffffff14;
+  --text: #e9edf4;
+  --muted: #a3adbd;
+  --faint: #8590a2;
+  --primary: #7aa8ff;
+  --on-primary: #0a1633;
+  --glow-a: color-mix(in srgb, var(--deco) 12%, transparent);
+  --glow-b: color-mix(in srgb, var(--deco) 5%, transparent);
+  --good: #6fd38e; --warn: #f2c056; --bad: #f58c7f; --info: #8bb3f6;
+  --soft: 18%;
+  color-scheme: dark;
+}
+
+/* Acentos alternativos (o padrão é o azul). Cada um tem par claro/escuro para manter contraste AA. */
+html[data-accent='ciano']    { --primary: #0b7f9c; --deco: #3dd6f5; --on-primary: #f0fbfe; }
+html[data-accent='violeta']  { --primary: #6d4fd8; --deco: #a77bff; --on-primary: #f7f4ff; }
+html[data-accent='verde']    { --primary: #17804b; --deco: #3fbf7f; --on-primary: #f2fbf6; }
+html[data-accent='grafite']  { --primary: #2c2f38; --deco: #6b7280; --on-primary: #f7f7f9; }
+html[data-theme='dark'][data-accent='ciano']   { --primary: #5fdcf7; --on-primary: #03202a; }
+html[data-theme='dark'][data-accent='violeta'] { --primary: #b9a2ff; --on-primary: #1a0f3d; }
+html[data-theme='dark'][data-accent='verde']   { --primary: #6fd6a1; --on-primary: #03210f; }
+html[data-theme='dark'][data-accent='grafite'] { --primary: #e4e4ea; --on-primary: #141418; }

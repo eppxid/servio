@@ -8,14 +8,14 @@ export function Player({ spotify, deezer }: { spotify: string | null; deezer: st
   const url = aberto === "spotify" ? spotify : aberto === "deezer" ? deezer : null;
   return (
     <div className="space-y-2">
-      <div className="flex gap-3 text-sm">
+      <div className="flex flex-wrap gap-2">
         {spotify && (
-          <button type="button" className="underline" onClick={() => setAberto(aberto === "spotify" ? null : "spotify")}>
+          <button type="button" className="btn btn--sm" onClick={() => setAberto(aberto === "spotify" ? null : "spotify")}>
             Ouvir no Spotify
           </button>
         )}
         {deezer && (
-          <button type="button" className="underline" onClick={() => setAberto(aberto === "deezer" ? null : "deezer")}>
+          <button type="button" className="btn btn--sm" onClick={() => setAberto(aberto === "deezer" ? null : "deezer")}>
             Ouvir no Deezer
           </button>
         )}
@@ -28,7 +28,7 @@ export function Player({ spotify, deezer }: { spotify: string | null; deezer: st
           height={aberto === "spotify" ? 152 : 150}
           allow="encrypted-media"
           loading="lazy"
-          className="rounded-lg border-0"
+          className="rounded-[var(--r-tile)] border-0"
         />
       )}
     </div>

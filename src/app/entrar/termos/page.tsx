@@ -5,6 +5,7 @@ import { usuarioDaSessao, type AnyDb } from "@/lib/auth-core";
 import { abrirSessao, sessaoLgpd } from "@/lib/lgpd/sessao";
 import { consentiu } from "@/lib/lgpd/termos";
 import { registrarAceite } from "@/lib/lgpd/titular";
+import { Publica } from "@/components/Publica";
 import { CampoConsentimento } from "@/lib/lgpd/ui";
 
 export const dynamic = "force-dynamic";
@@ -40,38 +41,38 @@ export default async function AceiteTermos({ searchParams }: { searchParams: Pro
   const { erro } = await searchParams;
 
   return (
-    <main className="mx-auto max-w-sm space-y-6 px-4 py-12">
-      <h1 className="text-2xl font-bold">Termos atualizados</h1>
-      <p className="text-sm text-slate-600">
+    <Publica>
+      <h1 className="title">Termos atualizados</h1>
+      <p className="text-sm text-muted">
         Para continuar, leia a{" "}
-        <Link href="/privacidade" className="underline">
+        <Link href="/privacidade" className="link">
           política de privacidade
         </Link>{" "}
         e os{" "}
-        <Link href="/termos" className="underline">
+        <Link href="/termos" className="link">
           termos de uso
         </Link>{" "}
         e marque a autorização.
       </p>
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           Marque a autorização para continuar.
         </p>
       )}
       <form action={aceitar} className="space-y-4">
         <CampoConsentimento />
-        <button type="submit" className="botao">
+        <button type="submit" className="btn btn--primary btn--block">
           Aceitar e continuar
         </button>
       </form>
       <form action={recusar}>
-        <button type="submit" className="text-sm text-slate-600 underline">
+        <button type="submit" className="btn btn--block">
           Não aceito (sair)
         </button>
       </form>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-muted">
         Sem o aceite você não usa o portal. Para excluir os seus dados, escreva para o contato da política.
       </p>
-    </main>
+    </Publica>
   );
 }

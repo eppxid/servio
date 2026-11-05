@@ -15,6 +15,7 @@ import {
 } from "@/lib/ministerios/nucleo";
 import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
 import { validar } from "@/lib/validar";
+import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
 
@@ -81,30 +82,30 @@ export default async function Ministerios({
     : [];
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Ministérios</h1>
+    <div className="space-y-5">
+      <Cabecalho eyebrow="Equipes" titulo="Ministérios" />
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           Confira os campos.
         </p>
       )}
-      <ul className="space-y-3">
+      <ul className="grid items-start gap-4 md:grid-cols-2" data-enter>
         {lista.map((m) => (
-          <li key={m.id} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-            <Link href={`/ministerios/${m.id}`} className="block min-h-11 font-semibold text-blue-700">
+          <li key={m.id} className="card space-y-3">
+            <Link href={`/ministerios/${m.id}`} className="card__title block min-h-6 text-primary">
               {m.nome}
               {m.arquivadoEm ? " (arquivado)" : ""}
             </Link>
-            {m.descricao && <p className="text-sm text-slate-600">{m.descricao}</p>}
+            {m.descricao && <p className="text-sm text-muted">{m.descricao}</p>}
             {admin && (
               <details className="text-sm">
-                <summary className="min-h-11 cursor-pointer py-2">Gerenciar</summary>
-                <div className="space-y-3">
+                <summary className="btn btn--sm cursor-pointer">Gerenciar</summary>
+                <div className="mt-3 space-y-3">
                   <form action={editar} className="space-y-2">
                     <input type="hidden" name="id" value={m.id} />
                     <input name="nome" defaultValue={m.nome} required minLength={2} maxLength={120} className="campo" aria-label="Nome" />
                     <input name="descricao" defaultValue={m.descricao ?? ""} maxLength={500} className="campo" aria-label="Descrição" />
-                    <button type="submit" className="botao">Salvar</button>
+                    <button type="submit" className="btn btn--primary btn--block">Salvar</button>
                   </form>
                   <form action={lider} className="space-y-2">
                     <input type="hidden" name="id" value={m.id} />
@@ -119,26 +120,26 @@ export default async function Ministerios({
                       <option value="1">Líder</option>
                       <option value="0">Voluntário</option>
                     </select>
-                    <button type="submit" className="botao">Definir papel</button>
+                    <button type="submit" className="btn btn--primary btn--block">Definir papel</button>
                   </form>
                   <form action={arquivar}>
                     <input type="hidden" name="id" value={m.id} />
                     <input type="hidden" name="arquivar" value={m.arquivadoEm ? "0" : "1"} />
-                    <button type="submit" className="botao">{m.arquivadoEm ? "Reativar" : "Arquivar"}</button>
+                    <button type="submit" className="btn btn--block">{m.arquivadoEm ? "Reativar" : "Arquivar"}</button>
                   </form>
                 </div>
               </details>
             )}
           </li>
         ))}
-        {lista.length === 0 && <li className="text-sm text-slate-600">Nenhum ministério ainda.</li>}
+        {lista.length === 0 && <li className="card text-sm text-muted">Nenhum ministério ainda.</li>}
       </ul>
       {admin && (
-        <form action={criar} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="font-semibold">Novo ministério</h2>
+        <form action={criar} className="card space-y-3">
+          <h2 className="card__title">Novo ministério</h2>
           <input name="nome" required minLength={2} maxLength={120} className="campo" aria-label="Nome" placeholder="Nome" />
           <input name="descricao" maxLength={500} className="campo" aria-label="Descrição" placeholder="Descrição (opcional)" />
-          <button type="submit" className="botao">Criar</button>
+          <button type="submit" className="btn btn--primary btn--block">Criar</button>
         </form>
       )}
     </div>

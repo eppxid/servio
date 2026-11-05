@@ -12,15 +12,15 @@ export default function BotaoAgradecer({
 }) {
   return (
     <details>
-      <summary className="min-h-11 cursor-pointer px-3 py-2 text-blue-700">Agradecer</summary>
-      <form action={agradecer} className="space-y-2">
+      <summary className="btn btn--sm btn--ghost cursor-pointer text-primary">Agradecer</summary>
+      <form action={agradecer} className="mt-2 space-y-2">
         <input type="hidden" name="ministerio" value={ministerioId} />
         <input type="hidden" name="membro" value={membroId} />
-        <label className="block space-y-1 text-sm">
+        <label className="rotulo">
           Agradecimento para {nome}
           <textarea name="texto" required maxLength={280} rows={3} className="campo" />
         </label>
-        <button type="submit" className="botao">
+        <button type="submit" className="btn btn--primary btn--block">
           Enviar agradecimento
         </button>
       </form>

@@ -5,6 +5,7 @@ import { igrejas, usuarios } from "@/db/schema";
 import { SENHA_MINIMA, hashSenha, normalizarEmail } from "@/lib/auth-core";
 import { abrirSessao } from "@/lib/lgpd/sessao";
 import { TERMOS_VERSAO, consentiu } from "@/lib/lgpd/termos";
+import { Publica } from "@/components/Publica";
 import { CampoConsentimento, RodapeLegal } from "@/lib/lgpd/ui";
 import { validar } from "@/lib/validar";
 
@@ -61,30 +62,30 @@ export default async function PrimeiroAcesso({
   const { erro } = await searchParams;
 
   return (
-    <main className="mx-auto max-w-sm space-y-6 px-4 py-12">
-      <h1 className="text-2xl font-bold">Primeiro acesso</h1>
-      <p className="text-sm text-slate-600">Cria a igreja e o administrador.</p>
+    <Publica>
+      <h1 className="title">Primeiro acesso</h1>
+      <p className="text-sm text-muted">Cria a igreja e o administrador.</p>
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           {erro === "consentimento"
             ? "Marque a autorização de tratamento de dados para continuar."
             : `Confira os campos. A senha precisa de ${SENHA_MINIMA} caracteres ou mais.`}
         </p>
       )}
       <form action={criar} className="space-y-4">
-        <label className="block space-y-1 text-sm">
+        <label className="rotulo">
           Nome da igreja
           <input name="igreja" required minLength={2} maxLength={120} className="campo" />
         </label>
-        <label className="block space-y-1 text-sm">
+        <label className="rotulo">
           Seu nome
           <input name="nome" required minLength={2} maxLength={120} autoComplete="name" className="campo" />
         </label>
-        <label className="block space-y-1 text-sm">
+        <label className="rotulo">
           E-mail
           <input name="email" type="email" required autoComplete="email" className="campo" />
         </label>
-        <label className="block space-y-1 text-sm">
+        <label className="rotulo">
           Senha
           <input
             name="senha"
@@ -96,11 +97,11 @@ export default async function PrimeiroAcesso({
           />
         </label>
         <CampoConsentimento />
-        <button type="submit" className="botao">
+        <button type="submit" className="btn btn--primary btn--block">
           Criar
         </button>
       </form>
       <RodapeLegal />
-    </main>
+    </Publica>
   );
 }

@@ -6,6 +6,7 @@ import { exigirAcessoChat } from "@/lib/chat/nucleo";
 import { ErroAcesso } from "@/lib/ministerios/nucleo";
 import { idSeguro } from "@/lib/ministerios/sessao";
 import { Chat } from "./Chat";
+import { Publica } from "@/components/Publica";
 
 export const dynamic = "force-dynamic";
 
@@ -21,9 +22,9 @@ export default async function PaginaChat({ params }: { params: Promise<{ eventoI
     throw e;
   }
   return (
-    <main className="mx-auto max-w-xl space-y-4 px-4 py-6">
-      <h1 className="text-2xl font-bold">Chat da escala</h1>
+    <Publica>
+      <h1 className="title">Chat da escala</h1>
       <Chat eventoId={eventoId} usuarioId={usuario.id} lider={lider} />
-    </main>
+    </Publica>
   );
 }

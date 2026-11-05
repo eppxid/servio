@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Publica } from "@/components/Publica";
 import { AVISO_RASCUNHO, TERMOS_VERSAO, dadosIgreja } from "@/lib/lgpd/termos";
 
 export const dynamic = "force-dynamic";
@@ -7,12 +8,12 @@ export const metadata = { title: "Termos de uso — Servio" };
 export default function Termos() {
   const igreja = dadosIgreja();
   return (
-    <main className="mx-auto max-w-2xl space-y-6 px-4 py-10 text-sm leading-relaxed">
-      <p role="note" className="rounded-lg border-2 border-red-500 bg-red-50 p-3 font-bold text-red-800">
+    <Publica larga className="text-sm leading-relaxed">
+      <p role="note" className="alerta alerta--bad font-bold">
         {AVISO_RASCUNHO}
       </p>
-      <h1 className="text-2xl font-bold">Termos de uso</h1>
-      <p className="text-slate-500">Versão {TERMOS_VERSAO}</p>
+      <h1 className="title">Termos de uso</h1>
+      <p className="text-muted">Versão {TERMOS_VERSAO}</p>
 
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">1. O serviço</h2>
@@ -44,7 +45,7 @@ export default function Termos() {
         <h2 className="text-lg font-semibold">4. Privacidade</h2>
         <p>
           O tratamento dos seus dados segue a{" "}
-          <Link href="/privacidade" className="underline">
+          <Link href="/privacidade" className="link">
             política de privacidade
           </Link>
           . Quando esta versão mudar, o portal pede um novo aceite no próximo login.
@@ -67,14 +68,14 @@ export default function Termos() {
       </section>
 
       <p>
-        <Link href="/privacidade" className="underline">
+        <Link href="/privacidade" className="link">
           Política de privacidade
         </Link>
         {" · "}
-        <Link href="/entrar" className="underline">
+        <Link href="/entrar" className="link">
           Entrar
         </Link>
       </p>
-    </main>
+    </Publica>
   );
 }

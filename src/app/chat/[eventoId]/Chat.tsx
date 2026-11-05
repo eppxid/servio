@@ -57,19 +57,19 @@ export function Chat({ eventoId, usuarioId, lider }: { eventoId: number; usuario
   return (
     <div className="space-y-4">
       <ul className="space-y-2" aria-live="polite">
-        {mensagens.length === 0 && <li className="text-sm text-slate-600">Nenhuma mensagem ainda.</li>}
+        {mensagens.length === 0 && <li className="text-sm text-muted">Nenhuma mensagem ainda.</li>}
         {mensagens.map((m) => (
           <li
             key={m.id}
-            className={`rounded-lg p-3 text-sm ${
+            className={`rounded-[var(--r-tile)] p-3 text-sm ${
               m.aviso
-                ? "border border-amber-400 bg-amber-50"
+                ? "alerta alerta--warn"
                 : m.usuarioId === usuarioId
-                  ? "bg-blue-50"
-                  : "bg-slate-100"
+                  ? "bg-primary/10"
+                  : "bg-well"
             }`}
           >
-            <p className="text-xs font-medium text-slate-600">
+            <p className="text-xs font-medium text-muted">
               {m.aviso && "Aviso · "}
               {m.autor} · {new Date(m.criadoEm).toLocaleString("pt-BR")}
             </p>
@@ -79,7 +79,7 @@ export function Chat({ eventoId, usuarioId, lider }: { eventoId: number; usuario
       </ul>
       <form onSubmit={enviar} className="space-y-2">
         {erro && (
-          <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+          <p role="alert" className="alerta alerta--bad">
             {erro}
           </p>
         )}
@@ -94,11 +94,11 @@ export function Chat({ eventoId, usuarioId, lider }: { eventoId: number; usuario
         />
         {lider && (
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={aviso} onChange={(e) => setAviso(e.target.checked)} />
+            <input type="checkbox" className="caixa size-5" checked={aviso} onChange={(e) => setAviso(e.target.checked)} />
             Marcar como aviso
           </label>
         )}
-        <button type="submit" className="botao">
+        <button type="submit" className="btn btn--primary btn--block">
           Enviar
         </button>
       </form>

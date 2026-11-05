@@ -5,6 +5,7 @@ import { exigirUsuario } from "@/lib/auth";
 import { dadosIgreja } from "@/lib/lgpd/termos";
 import { membrosParaAnonimizar } from "@/lib/lgpd/titular";
 import { anonimizarAPedido, excluirConta } from "./acoes";
+import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
 
@@ -24,76 +25,75 @@ export default async function Privacidade({
   const contato = dadosIgreja().contato;
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-1">
-        <Link href="/perfil" className="text-sm text-blue-700 underline">
+    <div className="space-y-5">
+      <Cabecalho eyebrow="Perfil" titulo="Privacidade e meus dados">
+        <Link href="/perfil" className="btn">
           Voltar ao perfil
         </Link>
-        <h1 className="text-2xl font-bold">Privacidade e meus dados</h1>
-        <p className="text-sm text-slate-600">
+      </Cabecalho>
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <p className="text-sm text-muted lg:col-span-2">
           Autorização dada em {formatar(usuario.consentimentoEm)} (versão {usuario.termosVersao ?? "—"}).{" "}
-          <Link href="/privacidade" className="underline">
+          <Link href="/privacidade" className="link">
             Política de privacidade
           </Link>
         </p>
-      </div>
-
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           {erro}
         </p>
       )}
       {ok && (
-        <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+        <p role="status" className="alerta alerta--good">
           {ok}
         </p>
       )}
 
-      <section className="space-y-2">
-        <h2 className="text-lg font-semibold">Baixar meus dados</h2>
-        <p className="text-sm text-slate-600">
+      <section className="card space-y-2">
+        <h2 className="card__title">Baixar meus dados</h2>
+        <p className="text-sm text-muted">
           Arquivo JSON com perfil, ministérios, escalas, indisponibilidades, trocas, mensagens e reconhecimentos.
         </p>
-        <a href="/perfil/privacidade/exportar" className="botao block text-center" download>
+        <a href="/perfil/privacidade/exportar" className="btn btn--primary btn--block" download>
           Baixar meus dados
         </a>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Excluir minha conta ou revogar a autorização</h2>
-        <p className="text-sm text-slate-600">
+      <section className="card space-y-3">
+        <h2 className="card__title">Excluir minha conta ou revogar a autorização</h2>
+        <p className="text-sm text-muted">
           As duas opções têm o mesmo efeito: sem a autorização não há base para tratar os seus dados. Apagamos nome,
           e-mail, telefone, foto, datas de indisponibilidade, avisos, mensagens e agradecimentos que você escreveu. As
           escalas passadas ficam sem o seu nome, só para os números do ministério. Não dá para desfazer.
         </p>
-        <form action={excluirConta} className="space-y-3 rounded-lg border-2 border-red-300 p-4">
-          <label className="block space-y-1 text-sm">
+        <form action={excluirConta} className="alerta alerta--bad space-y-3">
+          <label className="rotulo">
             Confirme com a sua senha
             <input name="senha" type="password" required autoComplete="current-password" className="campo" />
           </label>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <button type="submit" name="acao" value="exclusao" className="botao" style={{ background: "#b91c1c" }}>
+            <button type="submit" name="acao" value="exclusao" className="btn btn--danger btn--block">
               Excluir minha conta
             </button>
-            <button type="submit" name="acao" value="revogacao" className="botao" style={{ background: "#b91c1c" }}>
+            <button type="submit" name="acao" value="revogacao" className="btn btn--danger btn--block">
               Revogar consentimento
             </button>
           </div>
         </form>
-        <p className="text-xs text-slate-500">Outros pedidos (correção, informação): {contato}.</p>
+        <p className="text-xs text-muted">Outros pedidos (correção, informação): {contato}.</p>
       </section>
 
       {admin && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Anonimizar membro a pedido</h2>
-          <p className="text-sm text-slate-600">
+        <section className="card space-y-3">
+          <h2 className="card__title">Anonimizar membro a pedido</h2>
+          <p className="text-sm text-muted">
             Use só quando o titular pedir pelo contato da igreja. Fica registrado quem fez e quando.
           </p>
           {membros.length === 0 ? (
-            <p className="text-sm text-slate-500">Nenhum membro.</p>
+            <p className="text-sm text-muted">Nenhum membro.</p>
           ) : (
-            <form action={anonimizarAPedido} className="space-y-3 rounded-lg border border-slate-200 p-4">
-              <label className="block space-y-1 text-sm">
+            <form action={anonimizarAPedido} className="space-y-3">
+              <label className="rotulo">
                 Membro
                 <select name="usuario" required className="campo" defaultValue="">
                   <option value="" disabled>
@@ -106,17 +106,18 @@ export default async function Privacidade({
                   ))}
                 </select>
               </label>
-              <label className="block space-y-1 text-sm">
+              <label className="rotulo">
                 A sua senha
                 <input name="senha" type="password" required autoComplete="current-password" className="campo" />
               </label>
-              <button type="submit" className="botao" style={{ background: "#b91c1c" }}>
+              <button type="submit" className="btn btn--danger btn--block">
                 Anonimizar
               </button>
             </form>
           )}
         </section>
       )}
+      </div>
     </div>
   );
 }

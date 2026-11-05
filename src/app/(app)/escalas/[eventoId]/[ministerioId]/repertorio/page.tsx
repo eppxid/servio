@@ -17,6 +17,7 @@ import {
 } from "@/lib/repertorio/nucleo";
 import { copiarAcao, editarAcao, excluirAcao, incluirAcao, moverAcao } from "./acoes";
 import { Player } from "./Player";
+import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
 
@@ -74,27 +75,26 @@ export default async function Repertorio({
   );
 
   return (
-    <div className="space-y-6">
-      <Link href={r.lider ? `/escalas/${eventoId}/${ministerioId}` : "/agenda"} className="text-sm">
-        ← Voltar
-      </Link>
-      <header>
-        <h1 className="text-2xl font-bold">Repertório · {nomeMinisterio}</h1>
-        <p className="text-sm text-slate-600">
-          {evento.titulo} · {formatInTimeZone(evento.inicio, FUSO, "dd/MM/yyyy HH:mm")}
-        </p>
-      </header>
+    <div className="space-y-5">
+      <Cabecalho
+        eyebrow={`${evento.titulo} · ${formatInTimeZone(evento.inicio, FUSO, "dd/MM/yyyy HH:mm")}`}
+        titulo={`Repertório · ${nomeMinisterio}`}
+      >
+        <Link href={r.lider ? `/escalas/${eventoId}/${ministerioId}` : "/agenda"} className="btn">
+          ← Voltar
+        </Link>
+      </Cabecalho>
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           {erro}
         </p>
       )}
-      {ok && <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">{ok}</p>}
+      {ok && <p className="alerta alerta--good">{ok}</p>}
 
       {r.itens.length === 0 ? (
-        <p className="text-sm text-slate-600">Nenhuma música no repertório.</p>
+        <p className="text-sm text-muted">Nenhuma música no repertório.</p>
       ) : (
-        <ol className="space-y-4">
+        <ol className="grid items-start gap-4 md:grid-cols-2">
           {r.itens.map((i, n) => {
             const spotify = urlEmbed("spotify", i.linkSpotify);
             const deezer = urlEmbed("deezer", i.linkDeezer);
@@ -104,51 +104,51 @@ export default async function Repertorio({
               ["Cifra Club", i.linkCifra, urlBusca("cifra", i.titulo, i.artista)],
             ] as const;
             return (
-              <li key={i.id} className="space-y-2 rounded-lg border border-slate-200 p-3">
+              <li key={i.id} className="card space-y-2">
                 <div>
                   <p className="font-semibold">
                     {n + 1}. {i.titulo}
-                    {i.tom && <span className="ml-2 rounded bg-slate-100 px-1.5 text-sm font-normal">Tom {i.tom}</span>}
+                    {i.tom && <span className="chip chip--plain ml-2">Tom {i.tom}</span>}
                   </p>
-                  {i.artista && <p className="text-sm text-slate-600">{i.artista}</p>}
-                  {i.observacao && <p className="text-xs text-slate-500">{i.observacao}</p>}
+                  {i.artista && <p className="text-sm text-muted">{i.artista}</p>}
+                  {i.observacao && <p className="text-xs text-muted">{i.observacao}</p>}
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
                   {links.map(([nome, link, busca]) => (
-                    <a key={nome} href={link ?? busca} target="_blank" rel="noopener noreferrer" className="underline">
+                    <a key={nome} href={link ?? busca} target="_blank" rel="noopener noreferrer" className="link">
                       {link ? nome : `Buscar no ${nome}`}
                     </a>
                   ))}
                 </div>
                 {(spotify || deezer) && <Player spotify={spotify} deezer={deezer} />}
                 {r.lider && (
-                  <div className="space-y-2 border-t border-slate-100 pt-2">
+                  <div className="space-y-2 border-t border-line pt-2">
                     <div className="grid grid-cols-3 gap-2">
                       <form action={moverAcao}>
                         {oculto(i.id)}
                         <input type="hidden" name="direcao" value="subir" />
-                        <button className="botao w-full" disabled={n === 0} aria-label="Subir">
+                        <button className="btn btn--block" disabled={n === 0} aria-label="Subir">
                           ↑
                         </button>
                       </form>
                       <form action={moverAcao}>
                         {oculto(i.id)}
                         <input type="hidden" name="direcao" value="descer" />
-                        <button className="botao w-full" disabled={n === r.itens.length - 1} aria-label="Descer">
+                        <button className="btn btn--block" disabled={n === r.itens.length - 1} aria-label="Descer">
                           ↓
                         </button>
                       </form>
                       <form action={excluirAcao}>
                         {oculto(i.id)}
-                        <button className="botao w-full">Excluir</button>
+                        <button className="btn btn--danger btn--block">Excluir</button>
                       </form>
                     </div>
                     <details>
-                      <summary className="cursor-pointer text-sm underline">Editar</summary>
+                      <summary className="btn btn--sm cursor-pointer">Editar</summary>
                       <form action={editarAcao} className="mt-2 space-y-2">
                         {oculto(i.id)}
                         <Campos v={i} />
-                        <button className="botao w-full">Salvar</button>
+                        <button className="btn btn--primary btn--block">Salvar</button>
                       </form>
                     </details>
                   </div>
@@ -160,20 +160,20 @@ export default async function Repertorio({
       )}
 
       {r.lider && (
-        <section className="space-y-3">
-          <h2 className="font-semibold">Incluir música</h2>
+        <section className="card space-y-3">
+          <h2 className="card__title">Incluir música</h2>
           <form action={incluirAcao} className="space-y-2">
             <input type="hidden" name="evento" value={eventoId} />
             <input type="hidden" name="ministerio" value={ministerioId} />
             <Campos />
-            <button className="botao w-full">Incluir</button>
+            <button className="btn btn--primary btn--block">Incluir</button>
           </form>
           {copiaveis.length > 0 && (
             <form action={copiarAcao} className="space-y-2">
               <input type="hidden" name="evento" value={eventoId} />
               <input type="hidden" name="ministerio" value={ministerioId} />
-              <label className="block space-y-1 text-sm">
-                <span className="font-medium">Copiar repertório de outro evento</span>
+              <label className="rotulo">
+                <span className="text-ink font-semibold">Copiar repertório de outro evento</span>
                 <select name="origem" className="campo">
                   {copiaveis.map((c) => (
                     <option key={c.eventoId} value={c.eventoId}>
@@ -182,14 +182,14 @@ export default async function Repertorio({
                   ))}
                 </select>
               </label>
-              <button className="botao w-full">Copiar</button>
+              <button className="btn btn--block">Copiar</button>
             </form>
           )}
         </section>
       )}
 
       {whatsapp && (
-        <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="botao block text-center">
+        <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="btn btn--block">
           Compartilhar no WhatsApp
         </a>
       )}

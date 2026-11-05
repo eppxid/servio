@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Publica } from "@/components/Publica";
 import { AVISO_RASCUNHO, RETENCAO, TERMOS_VERSAO, dadosIgreja } from "@/lib/lgpd/termos";
 
 export const dynamic = "force-dynamic";
@@ -7,12 +8,12 @@ export const metadata = { title: "Política de privacidade — Servio" };
 export default function Privacidade() {
   const igreja = dadosIgreja();
   return (
-    <main className="mx-auto max-w-2xl space-y-6 px-4 py-10 text-sm leading-relaxed">
-      <p role="note" className="rounded-lg border-2 border-red-500 bg-red-50 p-3 font-bold text-red-800">
+    <Publica larga className="text-sm leading-relaxed">
+      <p role="note" className="alerta alerta--bad font-bold">
         {AVISO_RASCUNHO}
       </p>
-      <h1 className="text-2xl font-bold">Política de privacidade</h1>
-      <p className="text-slate-500">Versão {TERMOS_VERSAO}</p>
+      <h1 className="title">Política de privacidade</h1>
+      <p className="text-muted">Versão {TERMOS_VERSAO}</p>
 
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">1. Quem trata os seus dados</h2>
@@ -108,14 +109,14 @@ export default function Privacidade() {
       </section>
 
       <p>
-        <Link href="/termos" className="underline">
+        <Link href="/termos" className="link">
           Termos de uso
         </Link>
         {" · "}
-        <Link href="/entrar" className="underline">
+        <Link href="/entrar" className="link">
           Entrar
         </Link>
       </p>
-    </main>
+    </Publica>
   );
 }

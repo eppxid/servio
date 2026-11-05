@@ -12,6 +12,7 @@ import {
   mudarSenha,
   salvarPerfil,
 } from "./acoes";
+import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
 
@@ -41,27 +42,28 @@ export default async function Perfil({
     .orderBy(asc(indisponibilidades.dataInicio));
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Perfil</h1>
+    <div className="space-y-5">
+      <Cabecalho eyebrow="Conta" titulo="Perfil" />
 
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           {erro}
         </p>
       )}
       {ok && (
-        <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+        <p role="status" className="alerta alerta--good">
           {ok}
         </p>
       )}
 
-      <form action={salvarPerfil} className="space-y-4">
-        <h2 className="text-lg font-semibold">Meus dados</h2>
-        <label className="block space-y-1 text-sm">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+      <form action={salvarPerfil} className="card space-y-4">
+        <h2 className="card__title">Meus dados</h2>
+        <label className="rotulo">
           Nome
           <input name="nome" required maxLength={120} defaultValue={usuario.nome} className="campo" />
         </label>
-        <label className="block space-y-1 text-sm">
+        <label className="rotulo">
           Telefone (opcional)
           <input
             name="telefone"
@@ -72,7 +74,7 @@ export default async function Perfil({
             className="campo"
           />
         </label>
-        <label className="block space-y-1 text-sm">
+        <label className="rotulo">
           Link da foto (opcional, https)
           <input
             name="fotoUrl"
@@ -82,7 +84,7 @@ export default async function Perfil({
             className="campo"
           />
         </label>
-        <button type="submit" className="botao">
+        <button type="submit" className="btn btn--primary btn--block">
           Salvar
         </button>
       </form>
@@ -91,26 +93,26 @@ export default async function Perfil({
 
       <AtivarAvisos />
 
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Quando não posso servir</h2>
+      <section className="card space-y-4">
+        <h2 className="card__title">Quando não posso servir</h2>
         {periodos.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhum período marcado.</p>
+          <p className="text-sm text-muted">Nenhum período marcado.</p>
         ) : (
           <ul className="space-y-2">
             {periodos.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm"
+                className="flex items-center justify-between gap-3 card text-sm"
               >
                 <span>
                   {p.dataInicio === p.dataFim
                     ? formatar(p.dataInicio)
                     : `${formatar(p.dataInicio)} a ${formatar(p.dataFim)}`}
-                  {p.motivo && <span className="block text-slate-500">{p.motivo}</span>}
+                  {p.motivo && <span className="block text-muted">{p.motivo}</span>}
                 </span>
                 <form action={excluirIndisponibilidade}>
                   <input type="hidden" name="id" value={p.id} />
-                  <button type="submit" className="text-red-700 underline">
+                  <button type="submit" className="btn btn--sm btn--danger">
                     Excluir
                   </button>
                 </form>
@@ -122,20 +124,20 @@ export default async function Perfil({
         <form action={incluirIndisponibilidade} className="space-y-3">
           <h3 className="font-medium">Incluir período</h3>
           <div className="grid grid-cols-2 gap-3">
-            <label className="block space-y-1 text-sm">
+            <label className="rotulo">
               De
               <input name="dataInicio" type="date" required className="campo" />
             </label>
-            <label className="block space-y-1 text-sm">
+            <label className="rotulo">
               Até
               <input name="dataFim" type="date" required className="campo" />
             </label>
           </div>
-          <label className="block space-y-1 text-sm">
+          <label className="rotulo">
             Motivo (opcional; só você vê)
             <input name="motivo" maxLength={200} className="campo" />
           </label>
-          <button type="submit" className="botao">
+          <button type="submit" className="btn btn--primary btn--block">
             Incluir
           </button>
         </form>
@@ -143,7 +145,7 @@ export default async function Perfil({
         <form action={incluirDiasDaSemana} className="space-y-3">
           <h3 className="font-medium">Todo dia da semana num mês</h3>
           <div className="grid grid-cols-2 gap-3">
-            <label className="block space-y-1 text-sm">
+            <label className="rotulo">
               Dia da semana
               <select name="diaSemana" className="campo" defaultValue="0">
                 {DIAS.map((nome, i) => (
@@ -153,24 +155,24 @@ export default async function Perfil({
                 ))}
               </select>
             </label>
-            <label className="block space-y-1 text-sm">
+            <label className="rotulo">
               Mês
               <input name="mes" type="month" required className="campo" />
             </label>
           </div>
-          <label className="block space-y-1 text-sm">
+          <label className="rotulo">
             Motivo (opcional; só você vê)
             <input name="motivo" maxLength={200} className="campo" />
           </label>
-          <button type="submit" className="botao">
+          <button type="submit" className="btn btn--primary btn--block">
             Incluir dias
           </button>
         </form>
       </section>
 
-      <form action={mudarSenha} className="space-y-4">
-        <h2 className="text-lg font-semibold">Trocar senha</h2>
-        <label className="block space-y-1 text-sm">
+      <form action={mudarSenha} className="card space-y-4">
+        <h2 className="card__title">Trocar senha</h2>
+        <label className="rotulo">
           Senha atual
           <input
             name="atual"
@@ -180,7 +182,7 @@ export default async function Perfil({
             className="campo"
           />
         </label>
-        <label className="block space-y-1 text-sm">
+        <label className="rotulo">
           Nova senha (mínimo 8 caracteres)
           <input
             name="nova"
@@ -191,23 +193,25 @@ export default async function Perfil({
             className="campo"
           />
         </label>
-        <button type="submit" className="botao">
+        <button type="submit" className="btn btn--primary btn--block">
           Trocar senha
         </button>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted">
           Trocar a senha encerra o login nos outros aparelhos.
         </p>
       </form>
 
-      <Link href="/perfil/privacidade" className="block text-blue-700 underline">
-        Privacidade e meus dados
-      </Link>
-
-      <form action="/sair" method="post">
-        <button type="submit" className="botao">
-          Sair
-        </button>
-      </form>
+      <div className="card space-y-3">
+        <Link href="/perfil/privacidade" className="btn btn--block">
+          Privacidade e meus dados
+        </Link>
+        <form action="/sair" method="post">
+          <button type="submit" className="btn btn--danger btn--block">
+            Sair
+          </button>
+        </form>
+      </div>
+      </div>
     </div>
   );
 }

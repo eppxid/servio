@@ -15,7 +15,7 @@ export function CopiarLink({ link }: { link: string }) {
       />
       <button
         type="button"
-        className="botao"
+        className="btn btn--block"
         onClick={async () => {
           await navigator.clipboard.writeText(link);
           setCopiado(true);

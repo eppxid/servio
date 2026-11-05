@@ -81,38 +81,40 @@ export default function AtivarAvisos() {
   }
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-semibold">Avisos no celular</h2>
-      {estado === "carregando" && <p className="text-sm text-slate-500">Verificando…</p>}
+    <section className="card space-y-3">
+      <h2 className="card__title">Avisos no celular</h2>
+      {estado === "carregando" && <p className="text-sm text-muted">Verificando…</p>}
       {estado === "ios-instalar" && (
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-muted">
           No iPhone, instale o app para receber avisos: toque em Compartilhar &gt; Adicionar à Tela de
           Início e abra o app pelo ícone.
         </p>
       )}
       {estado === "sem-suporte" && (
-        <p className="text-sm text-slate-500">Este navegador não suporta avisos.</p>
+        <p className="text-sm text-muted">Este navegador não suporta avisos.</p>
       )}
       {estado === "bloqueado" && (
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-muted">
           Os avisos estão bloqueados. Libere nas configurações do navegador para este site.
         </p>
       )}
       {estado === "inativo" && (
-        <button type="button" onClick={ativar} className="botao">
+        <button type="button" onClick={ativar} className="btn btn--primary btn--block">
           Ativar avisos
         </button>
       )}
       {estado === "ativo" && (
         <div className="space-y-2">
-          <p className="text-sm text-green-800">Avisos ativos neste aparelho.</p>
-          <button type="button" onClick={desativar} className="botao">
+          <p>
+            <span className="chip chip--good">Avisos ativos neste aparelho</span>
+          </p>
+          <button type="button" onClick={desativar} className="btn btn--block">
             Desativar avisos
           </button>
         </div>
       )}
       {erro && (
-        <p role="alert" className="text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           {erro}
         </p>
       )}

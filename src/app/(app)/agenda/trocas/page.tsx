@@ -9,6 +9,7 @@ import { trocasParaAprovar } from "@/lib/trocas/nucleo";
 import { decidirTrocaAcao, trocaAutomaticaAcao } from "../acoes";
 import { eq } from "drizzle-orm";
 import * as t from "@/db/schema";
+import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
 
@@ -33,37 +34,38 @@ export default async function Trocas({
   const { erro, ok } = await searchParams;
 
   return (
-    <div className="space-y-6">
-      <Link href="/agenda" className="text-sm">
-        ← Agenda
-      </Link>
-      <h1 className="text-2xl font-bold">Trocas</h1>
+    <div className="space-y-5">
+      <Cabecalho eyebrow="Líderes" titulo="Trocas">
+        <Link href="/agenda" className="btn">
+          ← Agenda
+        </Link>
+      </Cabecalho>
       {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="alerta alerta--bad">
           {erro}
         </p>
       )}
-      {ok && <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">{ok}</p>}
+      {ok && <p className="alerta alerta--good">{ok}</p>}
 
       {ministerios.length === 0 ? (
-        <p className="text-sm text-slate-600">Só líderes aprovam trocas.</p>
+        <p className="card text-sm text-muted">Só líderes aprovam trocas.</p>
       ) : (
         <>
           <section className="space-y-3">
-            <h2 className="font-semibold">Aguardando aprovação</h2>
-            {pedidos.length === 0 && <p className="text-sm text-slate-600">Nenhum pedido.</p>}
+            <h2 className="card__title">Aguardando aprovação</h2>
+            {pedidos.length === 0 && <p className="text-sm text-muted">Nenhum pedido.</p>}
             {pedidos.map((p) => (
-              <form key={p.id} action={decidirTrocaAcao} className="space-y-2 rounded-lg border border-slate-200 p-3 text-sm">
+              <form key={p.id} action={decidirTrocaAcao} className="card space-y-2 text-sm">
                 <input type="hidden" name="troca" value={p.id} />
                 <p>
                   {p.ministerio} · {p.titulo}, {formatInTimeZone(p.inicio, FUSO, "dd/MM HH:mm")}: {p.solicitante} →{" "}
                   {p.substituto} ({p.funcao})
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  <button name="acao" value="aprovar" className="botao">
+                  <button name="acao" value="aprovar" className="btn btn--primary btn--block">
                     Aprovar
                   </button>
-                  <button name="acao" value="recusar" className="botao">
+                  <button name="acao" value="recusar" className="btn btn--danger btn--block">
                     Recusar
                   </button>
                 </div>
@@ -71,15 +73,15 @@ export default async function Trocas({
             ))}
           </section>
           <section className="space-y-3">
-            <h2 className="font-semibold">Aprovação automática</h2>
+            <h2 className="card__title">Aprovação automática</h2>
             {ministerios.map((m) => (
-              <form key={m.id} action={trocaAutomaticaAcao} className="flex items-center justify-between gap-3 text-sm">
+              <form key={m.id} action={trocaAutomaticaAcao} className="card flex items-center justify-between gap-3 text-sm">
                 <input type="hidden" name="ministerio" value={m.id} />
                 <input type="hidden" name="ligada" value={auto.get(m.id) ? "0" : "1"} />
                 <span>
                   {m.nome}: {auto.get(m.id) ? "ligada" : "desligada"}
                 </span>
-                <button className="botao">{auto.get(m.id) ? "Desligar" : "Ligar"}</button>
+                <button className="btn">{auto.get(m.id) ? "Desligar" : "Ligar"}</button>
               </form>
             ))}
           </section>
