@@ -6,7 +6,8 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "connect-src 'self'",
-  "frame-src 'none'",
+  // Só os players embutidos do repertório (tarefa 010).
+  "frame-src https://open.spotify.com https://widget.deezer.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
