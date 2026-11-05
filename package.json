@@ -9,7 +9,10 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "vapid": "node src/lib/push/gerar-vapid.mjs"
+    "vapid": "node src/lib/push/gerar-vapid.mjs",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "db:local": "node scripts/postgres-local.mjs",
+    "e2e": "next build && playwright test"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -26,6 +29,8 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.15",
+    "@electric-sql/pglite-socket": "^0.2.18",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.3.4",
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^26.6.6",
@@ -35,6 +40,7 @@
     "drizzle-kit": "^0.31.11",
     "postcss": "^8.5.32",
     "tailwindcss": "^4.3.4",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^5.1.0"
   },
