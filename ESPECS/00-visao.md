@@ -27,6 +27,7 @@ Itens da página comercial do app atual (paridade): escala automática (005), tr
 - **Papéis:** `admin` (igreja toda), `lider` (por ministério), `voluntario`.
 - **Aviso no celular:** Web Push (VAPID, pacote `web-push`). iPhone exige PWA instalado na tela inicial (iOS 16.4+).
 - **Chat:** mensagens no Postgres; tela atualiza por polling a cada 5 s (sem WebSocket — Vercel Free não mantém conexão).
+- **Igreja da 1ª instalação:** Lagoinha Mogi das Cruzes. Contato LGPD: contato@pi-system.com (PI System atende os pedidos do titular em nome da igreja). CNPJ e endereço: pendentes.
 - **Uma igreja por instalação** no início, mas toda tabela tem `igreja_id` para virar multi-igreja depois.
 - **Pasta de código:** `src/app/(rotas)`, `src/lib`, `src/db/schema.ts`, `src/components`.
 - **Testes:** Vitest para regras (conflito, sugestão, troca). `pnpm build` tem de passar.
