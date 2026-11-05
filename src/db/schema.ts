@@ -1,4 +1,5 @@
 import {
+  boolean,
   date,
   index,
   integer,
@@ -41,6 +42,7 @@ export const usuarios = pgTable(
     consentimentoEm: ts("consentimento_em"),
     termosVersao: text("termos_versao"),
     anonimizadoEm: ts("anonimizado_em"),
+    trocarSenha: boolean("trocar_senha").notNull().default(false),
     criadoEm: ts("criado_em").notNull().defaultNow(),
   },
   (t) => [uniqueIndex("usuarios_email_unico").on(t.igrejaId, t.email)],
@@ -51,6 +53,7 @@ export const ministerios = pgTable("ministerios", {
   igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
   nome: text("nome").notNull(),
   descricao: text("descricao"),
+  arquivadoEm: ts("arquivado_em"),
   criadoEm: ts("criado_em").notNull().defaultNow(),
 });
 
