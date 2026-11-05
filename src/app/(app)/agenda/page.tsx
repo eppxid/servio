@@ -5,6 +5,7 @@ import type { AnyDb } from "@/lib/auth-core";
 import { exigirUsuarioSemTroca } from "@/lib/ministerios/sessao";
 import { FUSO } from "@/lib/recorrencia";
 import { tokenAgendaAtual } from "@/lib/trocas/ics";
+import { linksDeRepertorio } from "@/lib/repertorio/nucleo";
 import { agendaDoUsuario, listarSubstitutos, trocasParaMim } from "@/lib/trocas/nucleo";
 import {
   checkinAcao,
@@ -32,6 +33,7 @@ export default async function Agenda({
     trocasParaMim(banco, ator),
     tokenAgendaAtual(banco, ator),
   ]);
+  const repertorios = await linksDeRepertorio(banco, ator, itens.map((i) => i.escalaId));
   const substitutos = new Map(
     await Promise.all(
       itens.filter((i) => !i.troca && i.status !== "recusado").map(async (i) => [i.itemId, await listarSubstitutos(banco, ator, i.itemId)] as const),
@@ -90,6 +92,14 @@ export default async function Agenda({
                   {i.checkinEm ? ` · check-in às ${formatInTimeZone(i.checkinEm, FUSO, "HH:mm")}` : ""}
                 </p>
               </div>
+              {repertorios.has(i.escalaId) && (
+                <Link
+                  href={`/escalas/${repertorios.get(i.escalaId)!.eventoId}/${repertorios.get(i.escalaId)!.ministerioId}/repertorio`}
+                  className="block text-sm underline"
+                >
+                  Repertório
+                </Link>
+              )}
               {i.colegas.length > 0 && (
                 <p className="text-xs text-slate-600">
                   Com: {i.colegas.map((c) => `${c.nome} (${c.funcao})`).join(", ")}
