@@ -1,4 +1,4 @@
-export type TipoNotificacao = "escala_publicada";
+export type TipoNotificacao = "escala_publicada" | "aviso_chat";
 
 export interface Notificacao {
   tipo: TipoNotificacao;

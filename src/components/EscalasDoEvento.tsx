@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { db } from "@/db";
 import type { AnyDb } from "@/lib/auth-core";
 import { escalasPublicadasDoEvento } from "@/lib/escala/nucleo";
@@ -8,6 +9,9 @@ export async function EscalasDoEvento({ eventoId, igrejaId }: { eventoId: number
   return (
     <div className="space-y-3 border-t border-slate-200 pt-4">
       <h2 className="font-semibold">Escalas</h2>
+      <Link href={`/chat/${eventoId}`} className="text-sm underline">
+        Chat
+      </Link>
       {grupos.length === 0 && <p className="text-sm text-slate-600">Nenhuma escala publicada.</p>}
       {grupos.map((g) => (
         <div key={g.ministerio} className="space-y-1">

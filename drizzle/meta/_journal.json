@@ -15,6 +15,13 @@
       "when": 1793844522818,
       "tag": "0001_rapid_kat_farrell",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793845449611,
+      "tag": "0002_chat_aviso",
+      "breakpoints": true
     }
   ]
 }
