@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
+import BotaoAgradecer from "@/components/BotaoAgradecer";
 import { CopiarLink } from "../copiar-link";
 import { SENHA_MINIMA } from "@/lib/auth-core";
 import {
@@ -133,6 +134,16 @@ export default async function Ministerio({
           {erro === "senha" ? `A senha precisa de ${SENHA_MINIMA} caracteres ou mais.` : "Confira os campos."}
         </p>
       )}
+      {erro === "agradecimento" && (
+        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+          Não foi possível enviar o agradecimento. Confira o texto (até 280 caracteres).
+        </p>
+      )}
+      {ok === "agradecimento" && (
+        <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+          Agradecimento enviado.
+        </p>
+      )}
       {ok === "senha" && (
         <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
           Senha temporária definida. O membro troca no próximo acesso.
@@ -238,6 +249,9 @@ export default async function Ministerio({
                   {marcas(m.funcaoIds)}
                   <button type="submit" className="min-h-11 px-3 text-blue-700">Salvar funções</button>
                 </form>
+                {m.status === "aprovado" && (
+                  <BotaoAgradecer ministerioId={id} membroId={m.id} nome={m.nome} />
+                )}
                 <form action={senhaTemporaria} className="flex gap-2">
                   <input type="hidden" name="ministerio" value={id} />
                   <input type="hidden" name="membro" value={m.id} />

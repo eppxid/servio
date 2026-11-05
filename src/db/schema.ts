@@ -43,6 +43,7 @@ export const usuarios = pgTable(
     termosVersao: text("termos_versao"),
     anonimizadoEm: ts("anonimizado_em"),
     trocarSenha: boolean("trocar_senha").notNull().default(false),
+    aparecerNoRanking: boolean("aparecer_no_ranking").notNull().default(true),
     agendaToken: text("agenda_token").unique(),
     agendaTokenExpiraEm: ts("agenda_token_expira_em"),
     criadoEm: ts("criado_em").notNull().defaultNow(),
