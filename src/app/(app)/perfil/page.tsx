@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import AtivarAvisos from "@/components/AtivarAvisos";
+import ResumoPontos from "@/components/ResumoPontos";
 import { db } from "@/db";
 import { indisponibilidades } from "@/db/schema";
 import { exigirUsuario } from "@/lib/auth";
@@ -84,6 +85,8 @@ export default async function Perfil({
           Salvar
         </button>
       </form>
+
+      <ResumoPontos usuario={usuario} />
 
       <AtivarAvisos />
 

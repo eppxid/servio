@@ -36,6 +36,13 @@
       "when": 1793846025599,
       "tag": "0004_repertorio",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793846400587,
+      "tag": "0005_gamificacao",
+      "breakpoints": true
     }
   ]
 }
