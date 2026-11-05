@@ -31,7 +31,14 @@ export default async function Escalas({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Escalas</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Escalas</h1>
+        {ministerios.length > 0 && (
+          <Link href="/painel" className="text-sm underline">
+            Painel
+          </Link>
+        )}
+      </div>
       {erro && (
         <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
           {erro}
