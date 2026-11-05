@@ -3,11 +3,13 @@ import { notFound } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
 import { db } from "@/db";
 import type { AnyDb } from "@/lib/auth-core";
+import { PresencaEscala } from "@/components/PresencaEscala";
 import { dadosMontagem } from "@/lib/escala/nucleo";
 import { linkWhatsApp, textoEscala } from "@/lib/escala/texto";
 import { ErroAcesso } from "@/lib/ministerios/nucleo";
 import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
 import { FUSO } from "@/lib/recorrencia";
+import { presencaDaEscala } from "@/lib/trocas/nucleo";
 import { gravarEscala } from "../../acoes";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +34,7 @@ export default async function MontarEscala({
     if (erro instanceof ErroAcesso) notFound();
     throw erro;
   }
+  const presenca = d.status === "publicada" ? await presencaDaEscala(db() as unknown as AnyDb, ator, eventoId, ministerioId) : [];
   const { erro, ok } = await searchParams;
   const nomeDe = (f: (typeof d.funcoes)[number]) =>
     f.candidatos.find((c) => c.usuarioId === f.escolhido)?.nome ?? null;
@@ -123,6 +126,8 @@ export default async function MontarEscala({
           </div>
         </form>
       )}
+
+      <PresencaEscala linhas={presenca} />
 
       {whatsapp && (
         <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="botao block text-center">
