@@ -16,7 +16,8 @@ export async function limparDadosAntigos(db: AnyDb, agora = new Date()) {
   const eventosVelhos = db
     .select({ id: t.eventos.id })
     .from(t.eventos)
-    .where(lt(sql`coalesce(${t.eventos.fim}, ${t.eventos.inicio})`, limiteMensagens));
+    // Comparado a uma expressão sql, o Date não passa pelo mapeamento da coluna: o driver postgres recusa o objeto.
+    .where(lt(sql`coalesce(${t.eventos.fim}, ${t.eventos.inicio})`, sql`${limiteMensagens.toISOString()}::timestamptz`));
   const mensagens = await db
     .delete(t.mensagens)
     .where(inArray(t.mensagens.eventoId, eventosVelhos))

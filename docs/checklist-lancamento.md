@@ -1,4 +1,4 @@
-# Checklist de lançamento — Escala Igreja — 2026-11-05
+# Checklist de lançamento — Servio — 2026-11-05
 
 Classificação: público (só /entrar, /primeiro-acesso, /convite, /privacidade, /termos) + logado · sem venda (uso gratuito, não B2C) · a igreja é **controladora**; a PI System opera o sistema e atende o canal do titular · dado sensível (convicção religiosa, LGPD art. 11).
 

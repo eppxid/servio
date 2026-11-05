@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AVISO_RASCUNHO, TERMOS_VERSAO, dadosIgreja } from "@/lib/lgpd/termos";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Termos de uso — Escala Igreja" };
+export const metadata = { title: "Termos de uso — Servio" };
 
 export default function Termos() {
   const igreja = dadosIgreja();

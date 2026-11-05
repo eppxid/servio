@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Escala Igreja",
-    short_name: "Escala",
+    name: "Servio",
+    short_name: "Servio",
     description: "Escala de voluntários da igreja",
     start_url: "/agenda",
     scope: "/",

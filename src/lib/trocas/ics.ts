@@ -68,12 +68,12 @@ export interface EventoIcs {
 }
 
 export function montarIcs(eventos: readonly EventoIcs[], agora = new Date()): string {
-  const linhas = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//EscalaIgreja//Agenda//PT-BR", "CALSCALE:GREGORIAN"];
+  const linhas = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Servio//Agenda//PT-BR", "CALSCALE:GREGORIAN"];
   for (const e of eventos) {
     const fim = e.fim ?? new Date(e.inicio.getTime() + DURACAO_PADRAO_MS);
     linhas.push(
       "BEGIN:VEVENT",
-      `UID:escala-item-${e.itemId}@escala-igreja`,
+      `UID:escala-item-${e.itemId}@servio`,
       `DTSTAMP:${utc(agora)}`,
       `DTSTART:${utc(e.inicio)}`,
       `DTEND:${utc(fim)}`,

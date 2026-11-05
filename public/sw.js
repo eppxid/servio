@@ -29,7 +29,7 @@ self.addEventListener("push", (e) => {
     d = e.data ? e.data.json() : {};
   } catch {}
   e.waitUntil(
-    self.registration.showNotification(d.titulo || "Escala Igreja", {
+    self.registration.showNotification(d.titulo || "Servio", {
       body: d.corpo || "",
       icon: "/icons/icone-192.png",
       data: { url: d.url || "/agenda" },

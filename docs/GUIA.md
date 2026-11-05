@@ -1,4 +1,4 @@
-# Guia de uso — Escala Igreja
+# Guia de uso — Servio
 
 Este guia tem três partes: administrador, líder e voluntário. Leia só a sua.
 

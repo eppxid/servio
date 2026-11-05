@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AVISO_RASCUNHO, RETENCAO, TERMOS_VERSAO, dadosIgreja } from "@/lib/lgpd/termos";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Política de privacidade — Escala Igreja" };
+export const metadata = { title: "Política de privacidade — Servio" };
 
 export default function Privacidade() {
   const igreja = dadosIgreja();
