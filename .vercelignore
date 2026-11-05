@@ -1,0 +1,7 @@
+.env*
+!.env.example
+ESPECS/
+.vitest/
+HANDOFF.md
+e2e-results/
+test-results/

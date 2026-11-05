@@ -5,3 +5,5 @@ node_modules/
 ESPECS/fila/
 *.tsbuildinfo
 next-env.d.ts
+.vercel
+.vitest/
