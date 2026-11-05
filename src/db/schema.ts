@@ -162,6 +162,7 @@ export const mensagens = pgTable(
     eventoId: integer("evento_id").notNull().references(() => eventos.id),
     usuarioId: integer("usuario_id").notNull().references(() => usuarios.id),
     texto: text("texto").notNull(),
+    aviso: boolean("aviso").notNull().default(false),
     criadoEm: ts("criado_em").notNull().defaultNow(),
   },
   (t) => [index("mensagens_evento").on(t.eventoId, t.criadoEm)],

@@ -1,5 +1,6 @@
 export type TipoNotificacao =
   | "escala_publicada"
+  | "aviso_chat"
   | "troca_pedida"
   | "troca_aceita"
   | "troca_recusada"

@@ -19,8 +19,15 @@
     {
       "idx": 2,
       "version": "7",
-      "when": 1793845543901,
-      "tag": "0002_agenda_trocas",
+      "when": 1793845449611,
+      "tag": "0002_chat_aviso",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793845687411,
+      "tag": "0003_agenda_trocas",
       "breakpoints": true
     }
   ]

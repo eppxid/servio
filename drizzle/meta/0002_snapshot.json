@@ -1,5 +1,5 @@
 {
-  "id": "57e294a5-a54a-41e0-a8c0-fac77c2d73bf",
+  "id": "ebbb77e6-5326-4d23-be87-2517f6bdfeca",
   "prevId": "5066f0d0-5e31-46b4-a5f6-b034bbb2ceab",
   "version": "7",
   "dialect": "postgresql",
@@ -804,6 +804,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "aviso": {
+          "name": "aviso",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "criado_em": {
           "name": "criado_em",
           "type": "timestamp with time zone",
@@ -915,13 +922,6 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
-        },
-        "troca_automatica": {
-          "name": "troca_automatica",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "criado_em": {
           "name": "criado_em",
@@ -1358,18 +1358,6 @@
           "notNull": true,
           "default": false
         },
-        "agenda_token": {
-          "name": "agenda_token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agenda_token_expira_em": {
-          "name": "agenda_token_expira_em",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
         "criado_em": {
           "name": "criado_em",
           "type": "timestamp with time zone",
@@ -1417,15 +1405,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "usuarios_agenda_token_unique": {
-          "name": "usuarios_agenda_token_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "agenda_token"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
