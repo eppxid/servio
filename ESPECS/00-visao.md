@@ -17,7 +17,7 @@ Funciona no navegador do celular (PWA) — Android e iPhone. O app atual só rod
 
 Extras baratos: indisponibilidade por data, sugestão automática de escala, aviso no celular (Web Push), link de WhatsApp.
 
-Itens da página comercial do app atual (paridade): escala automática (005), troca entre voluntários (006), gestão de vários ministérios (002), repertório com links de Spotify, Deezer e Cifra Club (010), painel de indicadores e relatórios (011), pontos, medalhas e reconhecimento (012). Aviso oficial por WhatsApp: em decisão (API oficial da Meta cobra por mensagem).
+Itens da página comercial do app atual (paridade): escala automática (005), troca entre voluntários (006), gestão de vários ministérios (002), repertório com links de Spotify, Deezer e Cifra Club (010), painel de indicadores e relatórios (011), pontos, medalhas e reconhecimento (012). Aviso: só Web Push + link wa.me (decidido 04/11/2026). Fora do escopo: API oficial do WhatsApp (custo por mensagem) e SMS por celular Android (TextBee).
 
 ## Decisões
 - **Stack:** Next.js 15 (App Router, Server Actions) + TypeScript + Tailwind + Drizzle ORM + Postgres.
