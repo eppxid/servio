@@ -1,4 +1,7 @@
 {
   "regions": ["gru1"],
-  "crons": [{ "path": "/api/cron/lembretes", "schedule": "0 21 * * *" }]
+  "crons": [
+    { "path": "/api/cron/lembretes", "schedule": "0 21 * * *" },
+    { "path": "/api/cron/limpeza", "schedule": "0 6 * * *" }
+  ]
 }
