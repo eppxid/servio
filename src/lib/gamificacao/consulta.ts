@@ -50,6 +50,7 @@ async function itensDe(db: AnyDb, igrejaId: number, f: Filtro) {
       eventoInicio: t.eventos.inicio,
       status: t.escalaItens.status,
       checkinEm: t.escalaItens.checkinEm,
+      recusadoEm: t.escalaItens.recusadoEm,
     })
     .from(t.escalaItens)
     .innerJoin(t.escalas, eq(t.escalas.id, t.escalaItens.escalaId))

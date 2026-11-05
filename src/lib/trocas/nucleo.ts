@@ -119,7 +119,12 @@ export async function responderEscala(db: AnyDb, ator: Ator, itemId: number, ace
   if (fimDoEvento(evento).getTime() < Date.now()) throw new ErroTroca("O evento já terminou");
   await db
     .update(t.escalaItens)
-    .set({ status: aceitar ? "confirmado" : "recusado", checkinEm: aceitar ? item.checkinEm : null })
+    .set({
+      status: aceitar ? "confirmado" : "recusado",
+      checkinEm: aceitar ? item.checkinEm : null,
+      // Recusa repetida mantém a data da primeira: é ela que conta para a penalidade de 48 h.
+      recusadoEm: aceitar ? null : (item.recusadoEm ?? new Date()),
+    })
     .where(eq(t.escalaItens.id, item.id));
 }
 

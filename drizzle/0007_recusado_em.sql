@@ -1,0 +1,1 @@
+ALTER TABLE "escala_itens" ADD COLUMN "recusado_em" timestamp with time zone;

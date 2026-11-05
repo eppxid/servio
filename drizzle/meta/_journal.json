@@ -50,6 +50,13 @@
       "when": 1793884652949,
       "tag": "0006_lgpd_registros",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793886184178,
+      "tag": "0007_recusado_em",
+      "breakpoints": true
     }
   ]
 }

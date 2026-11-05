@@ -143,6 +143,7 @@ export const escalaItens = pgTable("escala_itens", {
   usuarioId: integer("usuario_id").references(() => usuarios.id),
   status: statusItem("status").notNull().default("pendente"),
   checkinEm: ts("checkin_em"),
+  recusadoEm: ts("recusado_em"),
 });
 
 export const trocas = pgTable("trocas", {

@@ -110,6 +110,19 @@ describe("check-in", () => {
     await responderEscala(db, ana, itemId, false);
     await expect(fazerCheckin(db, ana, itemId, new Date("2030-06-15T13:30:00Z"))).rejects.toThrow(ErroTroca);
   });
+
+  it("guarda quando recusou (mantém a primeira data) e limpa ao aceitar", async () => {
+    const { itemId } = await escalar(ana, new Date("2030-06-22T13:00:00Z"));
+    const ler = async () =>
+      (await db.select().from(schema.escalaItens).where(eq(schema.escalaItens.id, itemId)))[0].recusadoEm;
+    await responderEscala(db, ana, itemId, false);
+    const primeira = await ler();
+    expect(primeira).toBeInstanceOf(Date);
+    await responderEscala(db, ana, itemId, false);
+    expect((await ler())?.getTime()).toBe(primeira?.getTime());
+    await responderEscala(db, ana, itemId, true);
+    expect(await ler()).toBeNull();
+  });
 });
 
 describe("agenda", () => {
