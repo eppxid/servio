@@ -1,4 +1,9 @@
-export type TipoNotificacao = "escala_publicada";
+export type TipoNotificacao =
+  | "escala_publicada"
+  | "troca_pedida"
+  | "troca_aceita"
+  | "troca_recusada"
+  | "troca_aprovada";
 
 export interface Notificacao {
   tipo: TipoNotificacao;
