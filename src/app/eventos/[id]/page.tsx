@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { eventos } from "@/db/schema";
 import { exigirPapel } from "@/lib/auth";
 import { FUSO } from "@/lib/recorrencia";
+import { EscalasDoEvento } from "@/components/EscalasDoEvento";
 import { editarEvento, excluirRegra, gerarProximos } from "../acoes";
 
 export const dynamic = "force-dynamic";
@@ -114,7 +115,9 @@ export default async function DetalheEvento({
         </section>
       )}
 
-      <section id="escalas-do-evento" aria-label="Escalas do evento"></section>
+      <section id="escalas-do-evento" aria-label="Escalas do evento">
+        <EscalasDoEvento eventoId={evento.id} igrejaId={admin.igrejaId} />
+      </section>
     </main>
   );
 }
