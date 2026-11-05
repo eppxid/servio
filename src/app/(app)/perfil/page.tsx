@@ -1,4 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
+import AtivarAvisos from "@/components/AtivarAvisos";
 import { db } from "@/db";
 import { indisponibilidades } from "@/db/schema";
 import { exigirUsuario } from "@/lib/auth";
@@ -83,6 +84,8 @@ export default async function Perfil({
           Salvar
         </button>
       </form>
+
+      <AtivarAvisos />
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Quando não posso servir</h2>
