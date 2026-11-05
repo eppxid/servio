@@ -3,7 +3,9 @@ import { z } from "zod";
 import { db } from "@/db";
 import { igrejas, usuarios } from "@/db/schema";
 import { SENHA_MINIMA, hashSenha, normalizarEmail } from "@/lib/auth-core";
-import { sessao } from "@/lib/auth";
+import { abrirSessao } from "@/lib/lgpd/sessao";
+import { TERMOS_VERSAO, consentiu } from "@/lib/lgpd/termos";
+import { CampoConsentimento, RodapeLegal } from "@/lib/lgpd/ui";
 import { validar } from "@/lib/validar";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +21,8 @@ async function criar(formData: FormData) {
   "use server";
   const v = validar(esquema, formData);
   if (!v.ok) redirect("/primeiro-acesso?erro=1");
+  if (!consentiu(formData.get("consentimento"))) redirect("/primeiro-acesso?erro=consentimento");
+  const agora = new Date();
   const banco = db();
   const senhaHash = await hashSenha(v.dados.senha);
 
@@ -35,16 +39,15 @@ async function criar(formData: FormData) {
         email: normalizarEmail(v.dados.email),
         senhaHash,
         papelGlobal: "admin",
+        consentimentoEm: agora,
+        termosVersao: TERMOS_VERSAO,
       })
       .returning();
     return novo;
   });
   if (!usuario) redirect("/entrar");
 
-  const s = await sessao();
-  s.usuarioId = usuario.id;
-  s.sessaoVersao = usuario.sessaoVersao;
-  await s.save();
+  await abrirSessao(usuario);
   redirect("/agenda");
 }
 
@@ -63,7 +66,9 @@ export default async function PrimeiroAcesso({
       <p className="text-sm text-slate-600">Cria a igreja e o administrador.</p>
       {erro && (
         <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
-          Confira os campos. A senha precisa de {SENHA_MINIMA} caracteres ou mais.
+          {erro === "consentimento"
+            ? "Marque a autorização de tratamento de dados para continuar."
+            : `Confira os campos. A senha precisa de ${SENHA_MINIMA} caracteres ou mais.`}
         </p>
       )}
       <form action={criar} className="space-y-4">
@@ -90,10 +95,12 @@ export default async function PrimeiroAcesso({
             className="campo"
           />
         </label>
+        <CampoConsentimento />
         <button type="submit" className="botao">
           Criar
         </button>
       </form>
+      <RodapeLegal />
     </main>
   );
 }

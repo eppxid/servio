@@ -3,7 +3,10 @@ import { z } from "zod";
 import { db } from "@/db";
 import { igrejas } from "@/db/schema";
 import { autenticar } from "@/lib/auth-core";
-import { sessao, usuarioAtual } from "@/lib/auth";
+import { usuarioAtual } from "@/lib/auth";
+import { abrirSessao, guardarAceitePendente } from "@/lib/lgpd/sessao";
+import { aceiteEmDia } from "@/lib/lgpd/termos";
+import { RodapeLegal } from "@/lib/lgpd/ui";
 import { validar } from "@/lib/validar";
 
 export const dynamic = "force-dynamic";
@@ -19,22 +22,24 @@ async function entrar(formData: FormData) {
   if (!v.ok) redirect("/entrar?erro=1");
   const r = await autenticar(db(), v.dados.email, v.dados.senha);
   if (!r.ok) redirect(r.motivo === "bloqueado" ? "/entrar?erro=bloqueado" : "/entrar?erro=1");
-  const s = await sessao();
-  s.usuarioId = r.usuario.id;
-  s.sessaoVersao = r.usuario.sessaoVersao;
-  await s.save();
+  // Termos novos (ou nunca aceitos): a sessão só abre depois do aceite.
+  if (!aceiteEmDia(r.usuario)) {
+    await guardarAceitePendente(r.usuario);
+    redirect("/entrar/termos");
+  }
+  await abrirSessao(r.usuario);
   redirect("/agenda");
 }
 
 export default async function Entrar({
   searchParams,
 }: {
-  searchParams: Promise<{ erro?: string }>;
+  searchParams: Promise<{ erro?: string; conta?: string }>;
 }) {
   if (await usuarioAtual()) redirect("/agenda");
   const [igreja] = await db().select({ id: igrejas.id }).from(igrejas).limit(1);
   if (!igreja) redirect("/primeiro-acesso");
-  const { erro } = await searchParams;
+  const { erro, conta } = await searchParams;
 
   return (
     <main className="mx-auto max-w-sm space-y-6 px-4 py-12">
@@ -44,6 +49,11 @@ export default async function Entrar({
           {erro === "bloqueado"
             ? "Muitas tentativas. Aguarde 15 minutos e tente de novo."
             : "E-mail ou senha inválidos."}
+        </p>
+      )}
+      {conta === "removida" && (
+        <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+          Conta excluída. Seus dados pessoais foram apagados.
         </p>
       )}
       <form action={entrar} className="space-y-4">
@@ -65,6 +75,7 @@ export default async function Entrar({
           Entrar
         </button>
       </form>
+      <RodapeLegal />
     </main>
   );
 }

@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import * as t from "@/db/schema";
 import { SENHA_MINIMA, hashSenha, normalizarEmail, temPapel, type AnyDb } from "@/lib/auth-core";
+import { TERMOS_VERSAO } from "@/lib/lgpd/termos";
 
 export const VALIDADE_CONVITE_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -172,7 +173,7 @@ export async function conviteValido(db: AnyDb, token: string, agora: Date = new 
   return c ?? null;
 }
 
-export type ResultadoConvite = { ok: true } | { ok: false; motivo: "invalido" | "email_em_uso" };
+export type ResultadoConvite = { ok: true } | { ok: false; motivo: "invalido" | "email_em_uso" | "sem_consentimento" };
 
 async function entrarNoMinisterio(db: AnyDb, igrejaId: number, ministerioId: number, usuarioId: number) {
   await db
@@ -194,14 +195,18 @@ export async function aceitarConvite(
   return { ok: true };
 }
 
-/** Quem não tem conta cria uma e já entra como pendente. Devolve o usuário criado. */
+/**
+ * Quem não tem conta cria uma e já entra como pendente. Devolve o usuário criado.
+ * Sem o consentimento destacado (LGPD art. 11 I) o cadastro é recusado.
+ */
 export async function cadastrarPorConvite(
   db: AnyDb,
   token: string,
-  dados: { nome: string; email: string; telefone?: string; senha: string },
+  dados: { nome: string; email: string; telefone?: string; senha: string; consentimento: boolean },
   agora: Date = new Date(),
 ) {
   if (dados.senha.length < SENHA_MINIMA) throw new Error("Senha curta demais");
+  if (!dados.consentimento) return { ok: false as const, motivo: "sem_consentimento" as const };
   const c = await conviteValido(db, token, agora);
   if (!c) return { ok: false as const, motivo: "invalido" as const };
   const email = normalizarEmail(dados.email);
@@ -222,6 +227,7 @@ export async function cadastrarPorConvite(
         telefone: dados.telefone || null,
         senhaHash,
         consentimentoEm: agora,
+        termosVersao: TERMOS_VERSAO,
       })
       .returning();
     await entrarNoMinisterio(tx as unknown as AnyDb, c.igrejaId, c.ministerioId, novo.id);

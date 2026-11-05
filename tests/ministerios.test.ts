@@ -60,13 +60,13 @@ describe("convite", () => {
     const depois = new Date(t0.getTime() + VALIDADE_CONVITE_MS + 1000);
     expect(await conviteValido(db, token, depois)).toBeNull();
     expect(await aceitarConvite(db, voluntario, token, depois)).toEqual({ ok: false, motivo: "invalido" });
-    const r = await cadastrarPorConvite(db, token, { nome: "N", email: "n@x.com", senha: "senha-12345" }, depois);
+    const r = await cadastrarPorConvite(db, token, { nome: "N", email: "n@x.com", senha: "senha-12345", consentimento: true }, depois);
     expect(r).toEqual({ ok: false, motivo: "invalido" });
   });
 
   it("cadastro por convite cria membro pendente; aprovação valida as funções", async () => {
     const token = await gerarConvite(db, lider, minId);
-    const r = await cadastrarPorConvite(db, token, { nome: "Bia", email: "Bia@x.com", senha: "senha-12345" });
+    const r = await cadastrarPorConvite(db, token, { nome: "Bia", email: "Bia@x.com", senha: "senha-12345", consentimento: true });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const [membro] = await db
@@ -88,7 +88,7 @@ describe("convite", () => {
 
   it("e-mail já cadastrado não duplica a conta", async () => {
     const token = await gerarConvite(db, lider, minId);
-    const r = await cadastrarPorConvite(db, token, { nome: "X", email: "vol@x.com", senha: "senha-12345" });
+    const r = await cadastrarPorConvite(db, token, { nome: "X", email: "vol@x.com", senha: "senha-12345", consentimento: true });
     expect(r).toEqual({ ok: false, motivo: "email_em_uso" });
   });
 });
@@ -112,7 +112,7 @@ describe("acesso negado", () => {
 describe("senha temporária", () => {
   it("marca troca obrigatória e derruba as sessões", async () => {
     const token = await gerarConvite(db, lider, minId);
-    const r = await cadastrarPorConvite(db, token, { nome: "Caio", email: "caio@x.com", senha: "senha-12345" });
+    const r = await cadastrarPorConvite(db, token, { nome: "Caio", email: "caio@x.com", senha: "senha-12345", consentimento: true });
     if (!r.ok) throw new Error("cadastro falhou");
     const [m] = await db.select().from(schema.membrosMinisterio).where(eq(schema.membrosMinisterio.usuarioId, r.usuario.id));
     await definirSenhaTemporaria(db, lider, m.id, "temporaria-1");

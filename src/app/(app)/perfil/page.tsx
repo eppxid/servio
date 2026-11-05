@@ -1,4 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
+import Link from "next/link";
 import AtivarAvisos from "@/components/AtivarAvisos";
 import ResumoPontos from "@/components/ResumoPontos";
 import { db } from "@/db";
@@ -197,6 +198,10 @@ export default async function Perfil({
           Trocar a senha encerra o login nos outros aparelhos.
         </p>
       </form>
+
+      <Link href="/perfil/privacidade" className="block text-blue-700 underline">
+        Privacidade e meus dados
+      </Link>
 
       <form action="/sair" method="post">
         <button type="submit" className="botao">

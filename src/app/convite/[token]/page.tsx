@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
 import { SENHA_MINIMA } from "@/lib/auth-core";
-import { sessao, usuarioAtual } from "@/lib/auth";
+import { usuarioAtual } from "@/lib/auth";
+import { abrirSessao } from "@/lib/lgpd/sessao";
+import { consentiu } from "@/lib/lgpd/termos";
+import { CampoConsentimento, RodapeLegal } from "@/lib/lgpd/ui";
 import { aceitarConvite, cadastrarPorConvite, conviteValido } from "@/lib/ministerios/nucleo";
 import { validar } from "@/lib/validar";
 
@@ -28,12 +31,12 @@ async function cadastrar(formData: FormData) {
   const token = String(formData.get("token") ?? "");
   const v = validar(esquema, formData);
   if (!v.ok) redirect(caminho(token, "erro=1"));
-  const r = await cadastrarPorConvite(db(), v.dados.token, v.dados);
+  const r = await cadastrarPorConvite(db(), v.dados.token, {
+    ...v.dados,
+    consentimento: consentiu(formData.get("consentimento")),
+  });
   if (!r.ok) redirect(caminho(token, `erro=${r.motivo}`));
-  const s = await sessao();
-  s.usuarioId = r.usuario.id;
-  s.sessaoVersao = r.usuario.sessaoVersao;
-  await s.save();
+  await abrirSessao(r.usuario);
   redirect(caminho(token, "ok=1"));
 }
 
@@ -62,6 +65,7 @@ export default async function Convite({
       <main className="mx-auto max-w-sm space-y-4 px-4 py-12">
         <h1 className="text-2xl font-bold">Convite inválido</h1>
         <p className="text-sm text-slate-600">O link expirou ou não existe. Peça um novo ao líder.</p>
+        <RodapeLegal />
       </main>
     );
   }
@@ -82,7 +86,9 @@ export default async function Convite({
   const msg =
     erro === "email_em_uso"
       ? "Este e-mail já tem conta. Entre com ela."
-      : erro
+      : erro === "sem_consentimento"
+        ? "Marque a autorização de tratamento de dados para criar a conta."
+        : erro
         ? `Confira os campos. A senha precisa de ${SENHA_MINIMA} caracteres ou mais.`
         : null;
 
@@ -120,6 +126,7 @@ export default async function Convite({
               Senha
               <input name="senha" type="password" required minLength={SENHA_MINIMA} autoComplete="new-password" className="campo" />
             </label>
+            <CampoConsentimento />
             <button type="submit" className="botao">Criar conta e pedir para entrar</button>
           </form>
           <p className="text-sm">
@@ -131,6 +138,7 @@ export default async function Convite({
           </p>
         </>
       )}
+      <RodapeLegal />
     </main>
   );
 }
