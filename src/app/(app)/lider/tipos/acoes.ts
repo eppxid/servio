@@ -1,9 +1,11 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import type { AnyDb } from "@/lib/auth-core";
 import { ErroAcesso } from "@/lib/ministerios/nucleo";
 import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
+import { renomearTipo } from "@/lib/tipos/nucleo";
 import { salvarModeloVagas } from "@/lib/vagas/nucleo";
 import { ajustarCultosAoModelo } from "../cultos/vagas-culto";
 
@@ -31,5 +33,21 @@ export async function salvarModeloAcao(
     if (erro instanceof RangeError) return { erro: erro.message };
     throw erro;
   }
+  return {};
+}
+
+/** Troca o nome do tipo de culto (só admin). */
+export async function renomearTipoAcao(recorrenciaId: number, nome: string): Promise<{ erro?: string }> {
+  const ator = await exigirUsuarioSemTroca();
+  const rec = idSeguro(recorrenciaId);
+  try {
+    await renomearTipo(db() as unknown as AnyDb, ator, rec, String(nome));
+  } catch (erro) {
+    if (erro instanceof ErroAcesso) return { erro: "Só o administrador renomeia o tipo de culto" };
+    if (erro instanceof RangeError) return { erro: erro.message };
+    throw erro;
+  }
+  revalidatePath("/lider/tipos");
+  revalidatePath(`/lider/tipos/${rec}`);
   return {};
 }
