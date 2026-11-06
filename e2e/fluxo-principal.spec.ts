@@ -103,13 +103,33 @@ test("admin cria ministério, voluntário entra por convite, líder aprova, esca
   await lider.goto(`/lider/escalar?mes=${mes}`);
   const linkCulto = lider.getByRole("link", { name: /Culto E2E/ });
   const eventoId = (await linkCulto.getAttribute("href"))!.split("/").pop();
+  if (process.env.E2E_PRINTS) {
+    for (const tema of ["light", "dark"] as const) {
+      await lider.emulateMedia({ colorScheme: tema });
+      await lider.waitForTimeout(400);
+      await lider.screenshot({ path: `${process.env.E2E_PRINTS}/escalar-vagas-${tema}.png`, fullPage: true });
+    }
+    await lider.emulateMedia({ colorScheme: "light" });
+  }
   await lider.getByRole("button", { name: "Sugerir escala do mês" }).click();
   await expect(lider.getByText(/1 de 1 vaga preenchida/)).toBeVisible();
+  if (process.env.E2E_PRINTS) {
+    for (const tema of ["light", "dark"] as const) {
+      await lider.emulateMedia({ colorScheme: tema });
+      await lider.waitForTimeout(400);
+      await lider.screenshot({ path: `${process.env.E2E_PRINTS}/escalar-resumo-${tema}.png`, fullPage: true });
+    }
+    await lider.emulateMedia({ colorScheme: "light" });
+  }
   await lider.getByRole("button", { name: "Desfazer" }).click();
   await expect(lider.getByText(/Sugestão desfeita: 1 vaga esvaziada/)).toBeVisible();
   await lider.getByRole("button", { name: "Sugerir escala do mês" }).click();
   await expect(lider.getByText(/1 de 1 vaga preenchida/)).toBeVisible();
   await lider.getByRole("button", { name: "Publicar mês" }).click();
+  if (process.env.E2E_PRINTS) {
+    await lider.waitForTimeout(700);
+    await lider.screenshot({ path: `${process.env.E2E_PRINTS}/escalar-publicar.png` });
+  }
   await lider.getByRole("button", { name: "Publicar e avisar" }).click();
   await expect(lider.getByText(/Mês publicado: 1 escala publicada/)).toBeVisible();
 
