@@ -16,7 +16,10 @@ function juntar(itens: string[]) {
 export function descreverFaltas(faltas: readonly FaltaSemCandidato[]) {
   const porFuncao = new Map<string, string[]>();
   for (const f of [...faltas].sort((a, b) => a.data.localeCompare(b.data))) {
-    porFuncao.set(f.funcao, [...(porFuncao.get(f.funcao) ?? []), ddmm(f.data)]);
+    const datas = porFuncao.get(f.funcao) ?? [];
+    // Duas vagas da mesma função no mesmo culto viram uma data só.
+    if (datas.at(-1) !== ddmm(f.data)) datas.push(ddmm(f.data));
+    porFuncao.set(f.funcao, datas);
   }
   return [...porFuncao].map(([funcao, datas]) => `${funcao}, ${juntar(datas)}`).join("; ");
 }

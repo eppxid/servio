@@ -108,6 +108,24 @@ Sem o cabeçalho, a resposta é `401`.
 1. Envie o código novo para o repositório (`git push`). O Vercel faz o deploy sozinho.
 2. Se a versão trouxe arquivos novos em `drizzle/`, rode `pnpm db:migrate` com a `DATABASE_URL` de produção.
 
+### App v2: migração 0008 em produção
+
+A versão do app v2 (dois modos, calendário com vagas e escala automática) traz `drizzle/0008_app_v2_dados.sql`.
+Rode a migração no Neon de produção **antes** de abrir o app novo:
+
+1. Faça o deploy no Vercel (`git push`).
+2. Rode `pnpm db:migrate` com a `DATABASE_URL` de produção (comandos do passo de migração acima).
+3. Confira a mensagem `migrations applied successfully`.
+
+A 0008 é aditiva e não apaga dados:
+
+- tabela nova `vagas_modelo` (vagas por tipo de culto, ministério e função);
+- `membro_funcoes.status` (`desejada` ou `aprovada`), com `aprovada` para os vínculos que já existem;
+- `ministerios.limite_mensal` (padrão 4 escalas por pessoa no mês);
+- `recorrencias.nome` (padrão "Culto"). Os cultos semanais que já existem aparecem em **Cultos → Tipos de culto** com o dia e a hora.
+
+Sem a 0008, as telas do modo líder dão erro de coluna inexistente.
+
 ## Rodar tudo no seu computador
 
 1. Copie `.env.example` para `.env.local` e preencha.

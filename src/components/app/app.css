@@ -53,6 +53,7 @@
   .row__ic svg { width: 21px; height: 21px; }
   .row__tx { flex: 1; min-width: 0; }
   .row__tx b { display: block; font-size: var(--fs-lg); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row__tx--quebra b { white-space: normal; }
   .row__tx span { display: block; font-size: var(--fs-sm); color: var(--muted); margin-top: 1px; }
   .row__end { flex-shrink: 0; display: flex; align-items: center; gap: 6px; color: var(--faint); }
   .row__end svg { width: 18px; height: 18px; }

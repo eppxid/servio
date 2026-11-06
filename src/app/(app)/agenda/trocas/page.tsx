@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { formatInTimeZone } from "date-fns-tz";
 import { db } from "@/db";
 import type { AnyDb } from "@/lib/auth-core";
@@ -35,11 +34,7 @@ export default async function Trocas({
 
   return (
     <div className="space-y-5">
-      <Cabecalho eyebrow="Líderes" titulo="Trocas">
-        <Link href="/agenda" className="btn">
-          ← Agenda
-        </Link>
-      </Cabecalho>
+      <Cabecalho eyebrow="Modo líder" titulo="Trocas" />
       {erro && (
         <p role="alert" className="alerta alerta--bad">
           {erro}

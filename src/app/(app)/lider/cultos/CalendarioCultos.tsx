@@ -77,7 +77,11 @@ export function CalendarioCultos({ mes, cultos }: { mes: string; cultos: CultoDo
         aoMudarMes={(novo) => router.push(`/lider/cultos?mes=${novo}`)}
         dias={dias}
         selecionado={dia}
-        aoEscolherDia={(d) => setEscolhido({ mes, dia: d })}
+        aoEscolherDia={(d) => {
+          setEscolhido({ mes, dia: d });
+          // No celular a lista do dia fica abaixo do calendário: rola até ela.
+          requestAnimationFrame(() => document.getElementById("cultos-do-dia")?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+        }}
         legenda={
           <>
             <span>
@@ -97,7 +101,7 @@ export function CalendarioCultos({ mes, cultos }: { mes: string; cultos: CultoDo
           <p>Nenhum culto neste mês.</p>
         </section>
       ) : (
-        <section className="list" aria-label={dia ? nomeDoDia(dia) : "Cultos"}>
+        <section id="cultos-do-dia" className="list" aria-label={dia ? nomeDoDia(dia) : "Cultos"} style={{ scrollMarginBottom: 150 }}>
           {doDia.length === 0 ? (
             <p className="vazio" style={{ padding: 16 }}>
               Sem culto neste dia. Toque num dia com marcação.

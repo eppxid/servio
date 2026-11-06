@@ -24,4 +24,8 @@ describe("resumoDaSugestao", () => {
       "Som, 01/11, 08/11 e 15/11",
     );
   });
+  it("duas vagas da mesma função no mesmo dia aparecem uma vez", () => {
+    const faltas = ["08", "08", "15", "15"].map((d) => ({ funcao: "Projeção", data: `2026-11-${d}` }));
+    expect(resumoDaSugestao(4, 0, faltas)).toBe("0 de 4 vagas preenchidas; 4 sem candidato (Projeção, 08/11 e 15/11).");
+  });
 });

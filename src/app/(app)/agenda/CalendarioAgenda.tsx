@@ -57,6 +57,11 @@ export function CalendarioAgenda({ escalas, folgas }: { escalas: EscalaDoDia[]; 
           </>
         }
       />
+      <p className="text-sm text-muted">
+        {escalas.some((e) => e.status !== "recusado")
+          ? "Toque num dia marcado para confirmar, pedir troca ou ver quem serve com você."
+          : "Nenhuma escala com você ainda. Quando o líder publicar, o dia aparece marcado aqui."}
+      </p>
       <FolhaInferior
         aberta={dia !== null}
         aoFechar={() => setDia(null)}

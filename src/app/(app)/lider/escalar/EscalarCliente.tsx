@@ -100,7 +100,7 @@ export function EscalarCliente({
       {sugestao?.resumo && (
         <section className="list" aria-label="Resumo da sugestão" role="status">
           <div className="row">
-            <span className="row__tx">
+            <span className="row__tx row__tx--quebra">
               <b>{sugestao.resumo}</b>
               <span>Rascunho: revise nos cultos e publique o mês.</span>
             </span>

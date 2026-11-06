@@ -5,7 +5,7 @@ export const COOKIE_MODO = "servio_modo";
 
 export const INICIO_DO_MODO: Record<Modo, string> = { voluntario: "/inicio", lider: "/lider/cultos" };
 
-const ROTAS_LIDER = ["/lider", "/painel"];
+const ROTAS_LIDER = ["/lider", "/painel", "/agenda/trocas"];
 const ROTAS_VOLUNTARIO = ["/inicio", "/agenda", "/folgas", "/perfil"];
 
 const dentro = (caminho: string, raizes: string[]) =>

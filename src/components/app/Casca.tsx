@@ -11,8 +11,9 @@ import { definirModo } from "./modo";
 import { INICIO_DO_MODO, modoDoCaminho, type Modo } from "./modo-comum";
 
 /** Telas antigas que ainda não têm substituto nas abas novas. */
-const MAIS: { href: string; rotulo: string; icone: NomeIcone; soAdmin?: boolean }[] = [
+const MAIS: { href: string; rotulo: string; icone: NomeIcone; soAdmin?: boolean; soLider?: boolean }[] = [
   { href: "/escalas", rotulo: "Escalas", icone: "escalas" },
+  { href: "/agenda/trocas", rotulo: "Trocas", icone: "escalar", soLider: true },
   { href: "/ministerios", rotulo: "Ministérios", icone: "ministerios" },
   { href: "/eventos", rotulo: "Eventos", icone: "agenda", soAdmin: true },
   { href: "/reconhecimento", rotulo: "Reconhecimento", icone: "pontos" },
@@ -66,7 +67,7 @@ export function Casca({
       </header>
       <FolhaInferior aberta={mais} aoFechar={() => setMais(false)} titulo="Mais">
         <nav aria-label="Mais telas" className="lista-mais">
-          {MAIS.filter((m) => !m.soAdmin || ehAdmin).map((m) => (
+          {MAIS.filter((m) => (!m.soAdmin || ehAdmin) && (!m.soLider || ehLider)).map((m) => (
             <Link key={m.href} href={m.href} className="row" onClick={() => setMais(false)}>
               <span className="row__ic">
                 <IconeApp nome={m.icone} />
