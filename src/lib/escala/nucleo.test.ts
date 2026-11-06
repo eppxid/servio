@@ -145,10 +145,16 @@ describe("montagem", () => {
   });
 
   it("sugerir mês preenche só escalas não publicadas, como rascunho", async () => {
+    // culto2 tem escala em rascunho com 1 vaga vazia; o ensaio não tem escala no Louvor.
+    const [esc2] = await db.insert(schema.escalas).values({ igrejaId, eventoId: culto2, ministerioId: louvor }).returning();
+    await db.insert(schema.escalaItens).values({ igrejaId, escalaId: esc2.id, funcaoId: vocal });
     const r = await sugerirMes(db, lider, louvor, "2099-03", new Date("2099-02-01T00:00:00Z"));
     expect(r.preenchidos).toHaveLength(1);
-    // Ensaio sem candidato e sem escala: não vira rascunho nem entra no resumo.
+    // Ensaio sem escala no ministério: fica fora da sugestão e volta em semVagas.
     expect(r.semCandidato).toEqual([]);
+    expect(r.semVagas).toEqual([{ eventoId: ensaio, data: "2099-03-01" }]);
+    const escEnsaio = await db.select().from(schema.escalas).where(eq(schema.escalas.eventoId, ensaio));
+    expect(escEnsaio.filter((e) => e.ministerioId === louvor)).toEqual([]);
     const [esc] = await db.select().from(schema.escalas).where(eq(schema.escalas.eventoId, culto2));
     expect(esc.status).toBe("rascunho");
     const [item] = await db.select().from(schema.escalaItens).where(eq(schema.escalaItens.escalaId, esc.id));
@@ -161,6 +167,20 @@ describe("montagem", () => {
       [ensaio, "sem_escala"],
       [culto2, "rascunho"],
     ]);
+  });
+});
+
+describe("sugestão sem vagas", () => {
+  it("culto sem escala no ministério não ganha escala nem item e volta em semVagas", async () => {
+    const [fora] = await db
+      .insert(schema.eventos)
+      .values({ igrejaId, titulo: "Culto avulso", inicio: new Date("2099-06-07T22:00:00Z"), fim: new Date("2099-06-07T23:59:00Z") })
+      .returning();
+    const r = await sugerirMes(db, lider, louvor, "2099-06", new Date("2099-05-01T00:00:00Z"));
+    expect(r.preenchidos).toEqual([]);
+    expect(r.total).toBe(0);
+    expect(r.semVagas).toEqual([{ eventoId: fora.id, data: "2099-06-07" }]);
+    expect(await db.select().from(schema.escalas).where(eq(schema.escalas.eventoId, fora.id))).toEqual([]);
   });
 });
 

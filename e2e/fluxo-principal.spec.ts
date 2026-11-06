@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import postgres from "postgres";
 
 const SENHA = "senha-e2e-12345";
 
@@ -103,6 +104,25 @@ test("admin cria ministério, voluntário entra por convite, líder aprova, esca
   await lider.goto(`/lider/escalar?mes=${mes}`);
   const linkCulto = lider.getByRole("link", { name: /Culto E2E/ });
   const eventoId = (await linkCulto.getAttribute("href"))!.split("/").pop();
+  // Culto avulso nasce sem vagas e a sugestão não as inventa: define 1 vaga de Vocal direto no banco.
+  const ministerioId = Number(urlMinisterio.split("/").pop());
+  // O PGlite atende uma conexão por vez e o app mantém a dele por instantes: tenta de novo se a nossa cair.
+  await expect(async () => {
+    const sql = postgres(`postgres://postgres:postgres@127.0.0.1:${process.env.PG_LOCAL_PORT}/postgres`, { max: 1 });
+    try {
+      await sql.begin(async (tx) => {
+        const [esc] = await tx`insert into escalas (igreja_id, evento_id, ministerio_id)
+          select igreja_id, ${Number(eventoId)}, ${ministerioId} from eventos where id = ${Number(eventoId)}
+          on conflict do nothing returning id, igreja_id`;
+        if (!esc) return;
+        await tx`insert into escala_itens (igreja_id, escala_id, funcao_id)
+          select ${esc.igreja_id}, ${esc.id}, id from funcoes where ministerio_id = ${ministerioId} and nome = 'Vocal'`;
+      });
+    } finally {
+      await sql.end({ timeout: 1 }).catch(() => {});
+    }
+  }).toPass({ timeout: 20_000 });
+  await lider.reload();
   if (process.env.E2E_PRINTS) {
     for (const tema of ["light", "dark"] as const) {
       await lider.emulateMedia({ colorScheme: tema });

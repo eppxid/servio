@@ -21,6 +21,8 @@ export interface RespostaSugestao {
   /** Itens que a sugestão preencheu e a pessoa de cada um: voltam em `desfazerAcao`. */
   itens?: number[];
   usuarios?: number[];
+  /** Cultos do mês sem vagas definidas para o ministério: ficaram fora da sugestão. */
+  semVagas?: { eventoId: number; data: string }[];
   /** Funções com falta sem candidato em que há pessoas que desejam a função e ainda não foram aprovadas. */
   recomendacoes?: { funcaoId: number; funcao: string; desejam: number }[];
 }
@@ -41,13 +43,18 @@ export async function sugerirAcao(ministerioId: number, mes: string): Promise<Re
     revalidatePath("/lider/escalar");
     revalidatePath("/lider/cultos");
     return {
-      resumo: resumoDaSugestao(
-        r.total,
-        r.preenchidos.length,
-        r.semCandidato.map((f) => ({ funcao: nomes.get(f.funcaoId) ?? "Função", data: f.data })),
-      ),
+      resumo:
+        resumoDaSugestao(
+          r.total,
+          r.preenchidos.length,
+          r.semCandidato.map((f) => ({ funcao: nomes.get(f.funcaoId) ?? "Função", data: f.data })),
+        ) +
+        (r.semVagas.length > 0
+          ? ` ${r.semVagas.length} ${r.semVagas.length === 1 ? "culto" : "cultos"} sem vagas definidas.`
+          : ""),
       itens: r.preenchidos,
       usuarios: r.usuarios,
+      semVagas: r.semVagas,
       recomendacoes: sugestoes.map((s) => ({ funcaoId: s.funcaoId, funcao: s.funcao, desejam: s.desejam })),
     };
   } catch (erro) {

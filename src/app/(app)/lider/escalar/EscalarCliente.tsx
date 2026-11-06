@@ -112,6 +112,17 @@ export function EscalarCliente({
               </span>
             )}
           </div>
+          {(sugestao.semVagas ?? []).map((v) => (
+            <Link key={v.eventoId} href={`/lider/cultos/${v.eventoId}`} className="row">
+              <span className="row__tx">
+                <b>{v.data.slice(8, 10)}/{v.data.slice(5, 7)} · sem vagas definidas</b>
+                <span>Defina as vagas do culto para entrar na sugestão</span>
+              </span>
+              <span className="row__end">
+                <IconeApp nome="dir" />
+              </span>
+            </Link>
+          ))}
           {(sugestao.recomendacoes ?? []).map((r) => (
             <Link key={r.funcaoId} href="/lider/equipe" className="row">
               <span className="row__tx">

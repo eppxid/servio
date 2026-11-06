@@ -281,6 +281,8 @@ export interface ResultadoSugestao {
   /** Pessoa posta em cada item de `preenchidos`, na mesma ordem. */
   usuarios: number[];
   semCandidato: { eventoId: number; funcaoId: number; data: string }[];
+  /** Eventos futuros do mês sem escala neste ministério (sem vagas definidas): a sugestão não os preenche. */
+  semVagas: { eventoId: number; data: string }[];
   /** Total de vagas vazias que a sugestão tentou preencher. */
   total: number;
 }
@@ -290,8 +292,8 @@ const DIAS_RODIZIO_MS = 60 * 24 * 60 * 60 * 1000;
 /**
  * "Sugerir mês": preenche as vagas vazias (itens sem pessoa) das escalas em rascunho do
  * ministério nos eventos futuros do mês. Nunca mexe em item já escolhido nem em escala
- * publicada. Evento sem escala neste ministério (sem modelo de vagas) conta com uma vaga
- * por função e só ganha o rascunho se a sugestão preencher alguma delas.
+ * publicada. Evento sem escala neste ministério fica fora da sugestão e volta em `semVagas`:
+ * o líder define as vagas do culto.
  */
 export async function sugerirMes(
   db: AnyDb,
@@ -303,7 +305,7 @@ export async function sugerirMes(
   const ministerio = await exigirLider(db, ator, ministerioId);
   const lim = limitesDoMes(mes);
   const de = lim.de > agora ? lim.de : agora;
-  const vazio: ResultadoSugestao = { preenchidos: [], usuarios: [], semCandidato: [], total: 0 };
+  const vazio: ResultadoSugestao = { preenchidos: [], usuarios: [], semCandidato: [], semVagas: [], total: 0 };
   const evs = await db
     .select()
     .from(t.eventos)
@@ -311,15 +313,13 @@ export async function sugerirMes(
     .orderBy(asc(t.eventos.inicio));
   if (evs.length === 0) return vazio;
 
-  const funcoes = await db
-    .select({ id: t.funcoes.id })
-    .from(t.funcoes)
-    .where(eq(t.funcoes.ministerioId, ministerioId));
   const escalasExistentes = await db
     .select()
     .from(t.escalas)
     .where(and(eq(t.escalas.ministerioId, ministerioId), inArray(t.escalas.eventoId, evs.map((e) => e.id))));
   const comEscala = new Set(escalasExistentes.map((e) => e.eventoId));
+  const dataDe = new Map(evs.map((e) => [e.id, dataLocal(e.inicio)]));
+  const semVagas = evs.filter((e) => !comEscala.has(e.id)).map((e) => ({ eventoId: e.id, data: dataDe.get(e.id)! }));
 
   const itensVazios = await db
     .select({ itemId: t.escalaItens.id, eventoId: t.escalas.eventoId, funcaoId: t.escalaItens.funcaoId })
@@ -333,13 +333,8 @@ export async function sugerirMes(
         isNull(t.escalaItens.usuarioId),
       ),
     );
-  // Evento sem escala: vagas virtuais (id negativo), gravadas só se a sugestão preencher alguma.
-  let virtual = 0;
-  const virtuais: VagaSugestao[] = evs
-    .filter((e) => !comEscala.has(e.id))
-    .flatMap((e) => funcoes.map((f) => ({ itemId: --virtual, eventoId: e.id, funcaoId: f.id })));
-  const vagas: VagaSugestao[] = [...itensVazios, ...virtuais];
-  if (vagas.length === 0) return vazio;
+  const vagas: VagaSugestao[] = itensVazios;
+  if (vagas.length === 0) return { ...vazio, semVagas };
 
   const elegiveis = await elegiveisPorFuncao(db, ministerioId);
   const indisp = await indisponiveisNoPeriodo(ministerioId, lim.de, new Date(lim.ate.getTime() - 1), db);
@@ -357,8 +352,7 @@ export async function sugerirMes(
 
   const preenchidos: number[] = [];
   const usuarios: number[] = [];
-  const reais = atribuicoes.filter((a) => a.itemId > 0);
-  for (const a of reais) {
+  for (const a of atribuicoes) {
     // `usuario_id is null` no WHERE: se o líder escolheu alguém nesse meio-tempo, a escolha dele fica.
     const feitos = await db
       .update(t.escalaItens)
@@ -370,47 +364,12 @@ export async function sugerirMes(
       usuarios.push(a.usuarioId);
     }
   }
-  const porEventoVirtual = new Map<number, Map<number, number>>();
-  for (const a of atribuicoes) {
-    if (a.itemId > 0) continue;
-    const m = porEventoVirtual.get(a.eventoId) ?? new Map<number, number>();
-    m.set(a.funcaoId, a.usuarioId);
-    porEventoVirtual.set(a.eventoId, m);
-  }
-  for (const [eventoId, escolhas] of porEventoVirtual) {
-    const [nova] = await db
-      .insert(t.escalas)
-      .values({ igrejaId: ator.igrejaId, eventoId, ministerioId })
-      .onConflictDoNothing()
-      .returning();
-    if (!nova) continue;
-    const criados = await db
-      .insert(t.escalaItens)
-      .values(
-        funcoes.map((f) => ({
-          igrejaId: ator.igrejaId,
-          escalaId: nova.id,
-          funcaoId: f.id,
-          usuarioId: escolhas.get(f.id) ?? null,
-        })),
-      )
-      .returning({ id: t.escalaItens.id, usuarioId: t.escalaItens.usuarioId });
-    for (const c of criados) {
-      if (c.usuarioId === null) continue;
-      preenchidos.push(c.id);
-      usuarios.push(c.usuarioId);
-    }
-  }
-  const dataDe = new Map(evs.map((e) => [e.id, dataLocal(e.inicio)]));
-  // Evento virtual sem nenhuma vaga preenchida não vira escala: não entra no resumo.
-  const virtuaisVazios = new Set(evs.filter((e) => !comEscala.has(e.id) && !porEventoVirtual.has(e.id)).map((e) => e.id));
   return {
     preenchidos,
     usuarios,
-    semCandidato: semCandidato
-      .filter((v) => !virtuaisVazios.has(v.eventoId))
-      .map((v) => ({ eventoId: v.eventoId, funcaoId: v.funcaoId, data: dataDe.get(v.eventoId)! })),
-    total: vagas.filter((v) => !virtuaisVazios.has(v.eventoId)).length,
+    semCandidato: semCandidato.map((v) => ({ eventoId: v.eventoId, funcaoId: v.funcaoId, data: dataDe.get(v.eventoId)! })),
+    semVagas,
+    total: vagas.length,
   };
 }
 
