@@ -1,0 +1,170 @@
+/* Casca do app v2 (maquete ESPECS/maquete-v2/app.css), por cima do kit layout-fluido.
+   Celular primeiro: abas no rodapé, ação principal no polegar, folha inferior.
+   Desktop (>= 900 px): abas viram a barra de ícones à esquerda; conteúdo em coluna central. */
+
+/* Mesma ordem de camadas do Tailwind: vale qualquer que seja o arquivo carregado primeiro. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  :root { --tab-h: 64px; --cta-h: 56px; }
+
+  /* ---------- Topo ---------- */
+  .top__avatar { width: 36px; height: 36px; font-size: var(--fs-2xs); text-decoration: none; }
+  .top__end form { display: contents; }
+
+  /* Chave de modo (voluntário / líder) */
+  .modo {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 34px; padding: 0 6px 0 12px; border-radius: var(--r-pill);
+    background: var(--raised); border: 1px solid var(--line-2); box-shadow: var(--shadow);
+    font-size: var(--fs-xs); font-weight: 600; color: var(--muted);
+  }
+  .modo i { position: relative; width: 36px; height: 22px; border-radius: 99px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line-2); }
+  .modo i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--raised); box-shadow: 0 1px 3px #0003; transition: translate var(--t-2) var(--ease); }
+  .modo.is-on { color: var(--primary); }
+  .modo.is-on i { background: var(--primary); box-shadow: none; }
+  .modo.is-on i::after { translate: 14px 0; }
+
+  /* ---------- Abas no rodapé ---------- */
+  .tabbar {
+    position: fixed; z-index: 40; left: 0; right: 0; bottom: 0;
+    height: calc(var(--tab-h) + env(safe-area-inset-bottom));
+    padding: 0 8px env(safe-area-inset-bottom);
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    background: color-mix(in srgb, var(--raised) 88%, transparent);
+    backdrop-filter: blur(18px) saturate(1.4);
+    border-top: 1px solid var(--line);
+    view-transition-name: rail;
+  }
+  .tabbar a { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: var(--faint); font-size: 11px; font-weight: 600; }
+  .tabbar a svg { width: 23px; height: 23px; }
+  .tabbar .pill { width: 56px; height: 30px; border-radius: 99px; display: grid; place-items: center; transition: background var(--t-2), color var(--t-2); }
+  .tabbar a:hover { color: var(--muted); }
+  .tabbar a.is-active { color: var(--primary); }
+  .tabbar a.is-active .pill { background: color-mix(in srgb, var(--primary) 14%, transparent); }
+  .tabbar .badge { top: 5px; right: calc(50% - 26px); }
+
+  /* ---------- Linhas de lista e botões de toque ---------- */
+  .list { background: var(--raised); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 13px 16px; min-height: 64px; text-decoration: none; color: inherit; }
+  .list .row + .row { border-top: 1px solid var(--line); }
+  a.row:hover { background: var(--well); }
+  .row__ic { width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--c, var(--primary)) var(--soft), transparent); color: var(--c, var(--primary)); }
+  .row__ic svg { width: 21px; height: 21px; }
+  .row__tx { flex: 1; min-width: 0; }
+  .row__tx b { display: block; font-size: var(--fs-lg); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row__tx span { display: block; font-size: var(--fs-sm); color: var(--muted); margin-top: 1px; }
+  .row__end { flex-shrink: 0; display: flex; align-items: center; gap: 6px; color: var(--faint); }
+  .row__end svg { width: 18px; height: 18px; }
+
+  .tbtn { height: 40px; padding: 0 16px; border-radius: 99px; border: 0; font-weight: 700; font-size: var(--fs-sm); display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--well); color: var(--text); text-decoration: none; }
+  .tbtn--p { background: var(--primary); color: var(--on-primary); }
+  .tbtn--soft { background: color-mix(in srgb, var(--primary) 13%, transparent); color: var(--primary); }
+  .tbtn svg { width: 18px; height: 18px; }
+
+  /* Estado vazio útil das telas que ainda nascem */
+  .vazio { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 28px 20px; }
+  .vazio .row__ic { width: 56px; height: 56px; border-radius: 18px; }
+  .vazio .row__ic svg { width: 26px; height: 26px; }
+  .vazio h2 { margin: 4px 0 0; font-size: var(--fs-xl); font-weight: 700; }
+  .vazio p { margin: 0; color: var(--muted); max-width: 34ch; }
+  .vazio__acoes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
+  .tela { display: flex; flex-direction: column; gap: 14px; }
+
+  /* ---------- Ação principal no polegar ---------- */
+  .cta {
+    position: fixed; z-index: 35; left: 16px; right: 16px;
+    bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 14px);
+    height: var(--cta-h); border-radius: 18px; border: 0;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: var(--primary); color: var(--on-primary);
+    font: 700 var(--fs-xl)/1 var(--font); text-decoration: none;
+    box-shadow: 0 16px 30px -14px color-mix(in srgb, var(--primary) 85%, transparent);
+    transition: transform var(--t-1) var(--ease), filter var(--t-2);
+  }
+  .cta:hover { filter: brightness(1.06); }
+  .cta:active { transform: scale(.98); }
+  .cta svg { width: 22px; height: 22px; }
+  .cta-espaco { height: calc(var(--cta-h) + 14px); }
+
+  /* ---------- Calendário ---------- */
+  .cal { background: var(--raised); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); padding: 12px 10px 10px; }
+  .cal__nav { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 8px; }
+  .cal__nav b { font-size: var(--fs-xl); font-weight: 700; }
+  .cal__nav button { width: 38px; height: 38px; border: 0; border-radius: 50%; background: var(--well); display: grid; place-items: center; color: var(--text); }
+  .cal__nav svg { width: 18px; height: 18px; }
+  .cal__dow, .cal__grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal__dow span { text-align: center; font-size: var(--fs-2xs); font-weight: 700; color: var(--faint); padding: 4px 0 6px; }
+  .cal__grid { gap: 3px; touch-action: pan-y; user-select: none; }
+  .day {
+    position: relative; min-width: 0; min-height: 54px; border: 0; border-radius: 12px; padding: 5px 2px 4px; background: none; color: inherit;
+    display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: var(--fs-md); font-weight: 600;
+  }
+  button.day:hover { background: var(--well); }
+  .day.is-out { color: var(--faint); opacity: .45; }
+  .day .n { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; }
+  .day.is-today .n { box-shadow: inset 0 0 0 2px var(--primary); color: var(--primary); }
+  .day.is-sel { background: var(--well); }
+  .day.is-mine .n { background: var(--primary); color: var(--on-primary); box-shadow: none; }
+  .day.is-off .n { color: var(--muted); background: repeating-linear-gradient(135deg, var(--well) 0 4px, transparent 4px 8px); box-shadow: inset 0 0 0 1px var(--line-2); text-decoration: line-through; }
+  .day .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--c, var(--faint)); }
+  .vg { --c: var(--faint); height: 18px; padding: 0 6px; border-radius: 99px; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; background: color-mix(in srgb, var(--c) var(--soft), transparent); color: var(--c); white-space: nowrap; }
+  .vg--ok { --c: var(--good); } .vg--falta { --c: var(--warn); } .vg--sem { --c: var(--faint); }
+  .vg .lg { display: none; }
+  .cal__leg { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 6px 2px; font-size: var(--fs-xs); color: var(--muted); }
+  .cal__leg span { display: inline-flex; align-items: center; gap: 6px; }
+  .cal__leg i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+  .cal__leg i.off { border-radius: 3px; background: repeating-linear-gradient(135deg, var(--line-2) 0 2px, transparent 2px 4px); box-shadow: inset 0 0 0 1px var(--line-2); }
+
+  /* ---------- Folha inferior (<dialog>) ---------- */
+  .folha {
+    position: fixed; inset: auto 0 0 0; margin: 0; padding: 0; border: 0;
+    width: 100%; max-width: none; max-height: 85dvh;
+    background: var(--raised); color: var(--text);
+    border-radius: 28px 28px 0 0; box-shadow: var(--shadow-pop);
+    transition: translate var(--t-3) var(--ease);
+  }
+  @starting-style { .folha[open] { translate: 0 100%; } }
+  .folha::backdrop { background: #0b0f1873; backdrop-filter: blur(2px); }
+  html:has(.folha[open]) { overflow: hidden; }
+  .folha__painel { display: flex; flex-direction: column; max-height: 85dvh; padding-bottom: env(safe-area-inset-bottom); }
+  .folha__alca { position: relative; padding: 0 56px 10px 20px; touch-action: none; cursor: grab; }
+  .folha__grab { display: block; width: 40px; height: 5px; border-radius: 99px; background: var(--line-2); margin: 10px auto 8px; translate: 18px 0; }
+  .folha__head h2 { margin: 0; font-size: var(--fs-2xl); font-weight: 700; line-height: 1.2; }
+  .folha__head p { margin: 3px 0 0; font-size: var(--fs-sm); color: var(--muted); }
+  .folha__fechar { position: absolute; top: 16px; right: 12px; width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--well); color: var(--muted); display: grid; place-items: center; }
+  .folha__fechar svg { width: 18px; height: 18px; }
+  .folha__corpo { overflow-y: auto; overscroll-behavior: contain; padding: 0 8px 16px; }
+  .folha__corpo .row { border-radius: 16px; }
+  .folha__rodape { padding: 12px 16px 16px; border-top: 1px solid var(--line); }
+  .tema-opcoes { display: flex; align-items: center; gap: 8px; padding: 12px 16px 4px; color: var(--muted); }
+  .tema-opcoes > svg { width: 20px; height: 20px; margin-right: 4px; }
+
+  @media (prefers-reduced-motion: reduce) { .folha, .cta { transition: none; } }
+
+  /* ---------- Desktop: coluna central + barra de ícones ---------- */
+  @media (min-width: 900px) {
+    :root { --tab-h: 0px; }
+    .app { padding-left: calc(76px + var(--gutter) * 2); }
+    .top { max-width: 1100px; margin-inline: auto; }
+    .tabbar {
+      left: var(--gutter); right: auto; top: 50%; bottom: auto; translate: 0 -50%;
+      width: 76px; height: auto; display: flex; flex-direction: column; gap: 4px; padding: 10px 0;
+      border: 1px solid var(--line); border-radius: 38px; box-shadow: var(--shadow-pop);
+    }
+    .tabbar a { padding: 6px 0; font-size: 10.5px; }
+    .tabbar .pill { width: 50px; height: 34px; border-radius: 14px; }
+    .tabbar a.is-active .pill { background: var(--primary); color: var(--on-primary); }
+    .tabbar .badge { right: 10px; top: 4px; }
+    .cta { position: static; width: 100%; }
+    .cta-espaco { display: none; }
+    .cal { padding: 16px; }
+    .cal__grid { gap: 6px; }
+    .day { min-height: 86px; align-items: flex-start; padding: 8px; border-radius: 14px; background: var(--surface-2); }
+    .day.is-out { background: none; }
+    .day .vg { height: 22px; font-size: var(--fs-2xs); padding: 0 8px; }
+    .day .vg .lg { display: inline; }
+    .folha { inset: auto 0 24px 0; margin: 0 auto; width: min(560px, calc(100% - 48px)); border-radius: 28px; }
+    .folha__painel { max-height: min(85dvh, 720px); }
+  }
+}
