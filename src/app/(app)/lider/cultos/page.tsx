@@ -34,6 +34,9 @@ export default async function Cultos({ searchParams }: { searchParams: Promise<{
   return (
     <div className="tela">
       <Cabecalho eyebrow="Modo líder" titulo="Cultos">
+        <Link href={`/lider/escalar?mes=${mes}`} className="tbtn tbtn--p">
+          Sugerir escala do mês
+        </Link>
         <Link href="/lider/tipos" className="tbtn tbtn--soft">
           Tipos de culto
         </Link>

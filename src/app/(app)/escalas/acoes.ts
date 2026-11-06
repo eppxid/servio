@@ -2,13 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import { db } from "@/db";
 import type { AnyDb } from "@/lib/auth-core";
-import { ErroEscala, salvarEscala, sugerirMes } from "@/lib/escala/nucleo";
+import { ErroEscala, salvarEscala } from "@/lib/escala/nucleo";
 import { ErroAcesso } from "@/lib/ministerios/nucleo";
 import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
-import { validar } from "@/lib/validar";
 
 const banco = () => db() as unknown as AnyDb;
 
@@ -38,35 +36,4 @@ export async function gravarEscala(formData: FormData) {
   }
   revalidatePath("/escalas");
   voltar(caminho, "ok", publicar ? "Escala publicada" : "Rascunho salvo");
-}
-
-const esquemaSugestao = z.object({
-  ministerio: z.coerce.number().int().positive(),
-  mes: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Mês inválido"),
-});
-
-export async function sugerirMesAcao(formData: FormData) {
-  const ator = await exigirUsuarioSemTroca();
-  const v = validar(esquemaSugestao, formData);
-  if (!v.ok) voltar("/escalas", "erro", Object.values(v.erros)[0]);
-  let n = 0;
-  let semCandidato = 0;
-  try {
-    const r = await sugerirMes(banco(), ator, v.dados.ministerio, v.dados.mes);
-    n = r.preenchidos.length;
-    semCandidato = r.semCandidato.length;
-  } catch (erro) {
-    if (erro instanceof ErroAcesso) redirect("/escalas");
-    throw erro;
-  }
-  revalidatePath("/escalas");
-  voltar(
-    "/escalas",
-    "ok",
-    n
-      ? `${n} vaga(s) sugerida(s) como rascunho${semCandidato ? `; ${semCandidato} sem candidato` : ""}. Revise e publique.`
-      : semCandidato
-        ? `Nenhuma vaga preenchida: ${semCandidato} sem candidato.`
-        : "Nenhuma vaga para sugerir.",
-  );
 }

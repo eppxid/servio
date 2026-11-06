@@ -99,15 +99,19 @@ test("admin cria ministério, voluntário entra por convite, líder aprova, esca
   await admin.getByRole("button", { name: "Salvar" }).click();
   await expect(admin).toHaveURL(/\/eventos/);
 
-  // 7. Líder sugere a escala do mês, revisa e publica.
-  await lider.goto("/escalas");
-  await lider.getByLabel("Mês").fill(mes);
-  await lider.getByRole("button", { name: "Sugerir" }).click();
-  await expect(lider.getByText("vaga(s) sugerida(s) como rascunho")).toBeVisible();
-  await lider.getByRole("link", { name: /Louvor E2E/ }).click();
-  await lider.getByLabel("Vocal").selectOption({ label: "Voluntario E2E" });
-  await lider.getByRole("button", { name: "Publicar" }).click();
-  await expect(lider.getByText("Escala publicada")).toBeVisible();
+  // 7. Líder abre Escalar, sugere o mês, vê o resumo, desfaz, sugere de novo e publica o mês.
+  await lider.goto(`/lider/escalar?mes=${mes}`);
+  const linkCulto = lider.getByRole("link", { name: /Culto E2E/ });
+  const eventoId = (await linkCulto.getAttribute("href"))!.split("/").pop();
+  await lider.getByRole("button", { name: "Sugerir escala do mês" }).click();
+  await expect(lider.getByText(/1 de 1 vaga preenchida/)).toBeVisible();
+  await lider.getByRole("button", { name: "Desfazer" }).click();
+  await expect(lider.getByText(/Sugestão desfeita: 1 vaga esvaziada/)).toBeVisible();
+  await lider.getByRole("button", { name: "Sugerir escala do mês" }).click();
+  await expect(lider.getByText(/1 de 1 vaga preenchida/)).toBeVisible();
+  await lider.getByRole("button", { name: "Publicar mês" }).click();
+  await lider.getByRole("button", { name: "Publicar e avisar" }).click();
+  await expect(lider.getByText(/Mês publicado: 1 escala publicada/)).toBeVisible();
 
   // 8. Voluntário confirma e faz check-in.
   await voluntario.goto("/inicio");
@@ -119,7 +123,7 @@ test("admin cria ministério, voluntário entra por convite, líder aprova, esca
   await expect(voluntario.getByText(/check-in às \d\d:\d\d/)).toBeVisible();
 
   // 9. Líder vê o voluntário presente.
-  await lider.reload();
+  await lider.goto(`/escalas/${eventoId}/${urlMinisterio.split("/").pop()}`);
   await expect(lider.getByText(/Vocal: Voluntario E2E/)).toBeVisible();
   await expect(lider.getByText(/Presente \d\d:\d\d/)).toBeVisible();
 });
