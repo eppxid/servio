@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Primeiro acesso — Servio</title>
+<link rel="stylesheet" href="kit/tokens.css"><link rel="stylesheet" href="kit/kit.css"><link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="atop">
+    <div class="atop__title"><small>Passo 1 de 3</small><div class="steps" style="margin-top:8px"><i class="is-on"></i><i></i><i></i></div></div>
+  </header>
+
+  <main class="tela wiz" style="padding-bottom:180px">
+    <div>
+      <h2>Qual ministério você lidera?</h2>
+      <p>Comece por um. Os outros você cria depois.</p>
+      <input class="input" value="Mídia" aria-label="Nome do ministério">
+      <label class="lbl">Funções da Mídia</label>
+      <div class="pick">
+        <button class="is-on" data-ic="check">Projeção</button>
+        <button class="is-on" data-ic="check">Transmissão</button>
+        <button class="is-on" data-ic="check">Iluminação</button>
+        <button>Fotografia</button>
+        <button>Redes sociais</button>
+        <button class="is-add" data-ic="mais">Outra…</button>
+      </div>
+    </div>
+  </main>
+
+  <a class="skip" href="cultos.html">Pular este passo</a>
+  <a class="cta cta--solo" href="cultos.html">Continuar <span data-ic="seta" style="display:contents"></span></a>
+</div>
+</body>
+</html>

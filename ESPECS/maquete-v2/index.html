@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Servio — maquete do app v2</title>
+<link rel="stylesheet" href="kit/tokens.css"><link rel="stylesheet" href="kit/kit.css"><link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+<style>
+  .idx { max-width: 760px; margin: 0 auto; padding: 32px 18px 60px; display: flex; flex-direction: column; gap: 14px; }
+  .idx h1 { margin: 0; font: 700 30px/1.1 var(--font); letter-spacing: -.02em; }
+  .idx .row__tx b { white-space: normal; }
+  .temas { display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+<main class="idx">
+  <div><div class="eyebrow">Maquete estática · sem backend · abra no celular ou em 390 px</div><h1>Servio — app v2</h1></div>
+  <div class="temas"><a class="tbtn" href="index.html">Claro</a><a class="tbtn" href="index.html?tema=dark">Escuro</a><a class="tbtn tbtn--soft" href="prints/">Prints</a></div>
+
+  <div class="sec"><h2>Voluntário</h2></div>
+  <div class="list">
+    <a class="row" href="inicio.html"><span class="row__ic" data-ic="inicio"></span><span class="row__tx"><b>1. Início</b><span>Próxima escala com Confirmar/Recusar, pendências, troca</span></span><span class="row__end" data-ic="dir"></span></a>
+    <a class="row" href="agenda.html"><span class="row__ic" data-ic="agenda"></span><span class="row__tx"><b>2. Agenda</b><span>Calendário com meus dias e folgas</span></span><span class="row__end" data-ic="dir"></span></a>
+    <a class="row" href="servir.html"><span class="row__ic" data-ic="perfil"></span><span class="row__tx"><b>3. Onde quero servir</b><span>Ministérios e funções em chips</span></span><span class="row__end" data-ic="dir"></span></a>
+  </div>
+
+  <div class="sec"><h2>Líder</h2></div>
+  <div class="list">
+    <a class="row" href="cultos.html"><span class="row__ic" data-ic="agenda"></span><span class="row__tx"><b>4. Cultos</b><span>Calendário com vagas por ministério; chave Modo líder</span></span><span class="row__end" data-ic="dir"></span></a>
+    <a class="row" href="culto.html"><span class="row__ic" data-ic="escalar"></span><span class="row__tx"><b>5. Culto</b><span>Funções com vagas; "Escolher" abre a folha inferior</span></span><span class="row__end" data-ic="dir"></span></a>
+    <a class="row" href="culto.html?folha=1"><span class="row__ic" data-ic="equipe"></span><span class="row__tx"><b>5b. Culto — folha "Escolher"</b><span>Pessoas filtradas, com escalas no mês</span></span><span class="row__end" data-ic="dir"></span></a>
+    <a class="row" href="sugerir.html"><span class="row__ic" data-ic="magia"></span><span class="row__tx"><b>6. Sugerir escala do mês</b><span>Resumo 18 de 20 + recomendação</span></span><span class="row__end" data-ic="dir"></span></a>
+    <a class="row" href="equipe.html"><span class="row__ic" data-ic="equipe"></span><span class="row__tx"><b>8. Equipe</b><span>Pedidos pendentes e funções desejadas</span></span><span class="row__end" data-ic="dir"></span></a>
+  </div>
+
+  <div class="sec"><h2>Admin</h2></div>
+  <div class="list">
+    <a class="row" href="primeiro-acesso.html"><span class="row__ic" data-ic="igreja"></span><span class="row__tx"><b>7. Primeiro acesso guiado</b><span>Passo 1 de 3 com barra de progresso</span></span><span class="row__end" data-ic="dir"></span></a>
+  </div>
+</main>
+</body>
+</html>

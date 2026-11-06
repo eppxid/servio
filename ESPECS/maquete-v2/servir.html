@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Onde quero servir — Servio</title>
+<link rel="stylesheet" href="kit/tokens.css"><link rel="stylesheet" href="kit/kit.css"><link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body data-modo="voluntario" data-aba="perfil">
+<div class="app">
+  <header class="atop">
+    <a class="back" href="inicio.html" aria-label="Voltar" data-ic="voltar"></a>
+    <div class="atop__title"><small>Perfil</small><h1>Onde quero servir</h1></div>
+  </header>
+
+  <main class="tela has-cta">
+    <p class="hint">Toque nas funções que você quer. O líder do ministério aprova.</p>
+
+    <section class="min">
+      <div class="min__head">
+        <span class="row__ic" data-ic="projecao"></span>
+        <div style="flex:1"><b>Mídia</b><span>2 funções escolhidas</span></div>
+        <span class="chip chip--warn">Aguardando líder</span>
+      </div>
+      <div class="pick">
+        <button class="is-on" data-ic="check">Projeção</button>
+        <button class="is-on" data-ic="check">Transmissão</button>
+        <button>Iluminação</button>
+        <button class="is-add" data-ic="mais">Outra…</button>
+      </div>
+    </section>
+
+    <div class="list">
+      <a class="row" href="#">
+        <span class="row__ic" style="--c:#b4549a" data-ic="louvor"></span>
+        <span class="row__tx"><b>Louvor</b><span>Vocal, Teclado, Violão, Bateria</span></span>
+        <span class="row__end" data-ic="dir"></span>
+      </a>
+      <a class="row" href="#">
+        <span class="row__ic" style="--c:var(--good)" data-ic="recepcao"></span>
+        <span class="row__tx"><b>Recepção</b><span>Porta, Estacionamento</span></span>
+        <span class="row__end" data-ic="dir"></span>
+      </a>
+      <a class="row" href="#">
+        <span class="row__ic" style="--c:var(--warn)" data-ic="som"></span>
+        <span class="row__tx"><b>Som</b><span>Mesa, Palco</span></span>
+        <span class="row__end" data-ic="dir"></span>
+      </a>
+    </div>
+  </main>
+
+  <a class="cta" href="inicio.html" data-ic="check">Salvar escolhas</a>
+</div>
+</body>
+</html>

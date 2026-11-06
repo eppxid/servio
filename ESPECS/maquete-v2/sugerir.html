@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sugerir escala do mês — Servio</title>
+<link rel="stylesheet" href="kit/tokens.css"><link rel="stylesheet" href="kit/kit.css"><link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body data-modo="lider" data-aba="escalar">
+<div class="app">
+  <header class="atop">
+    <a class="back" href="cultos.html" aria-label="Voltar" data-ic="voltar"></a>
+    <div class="atop__title"><small>Mídia · Novembro</small><h1>Escala do mês</h1></div>
+  </header>
+
+  <main class="tela has-cta">
+    <section class="card resumo">
+      <div class="ring" style="--v:90"><div><b>18</b><span>de 20</span></div></div>
+      <div><h2>18 de 20 vagas preenchidas</h2><p>Ainda é rascunho. Revise e publique.</p></div>
+    </section>
+
+    <div class="reco">
+      <span class="reco__ic" data-ic="magia"></span>
+      <div class="reco__tx"><b>Ana quer servir em Iluminação.</b> Aprovar completa as 2 vagas abertas.
+        <div class="reco__acts"><button class="tbtn tbtn--p" data-ic="check">Aprovar</button><button class="tbtn">Ver perfil</button></div>
+      </div>
+    </div>
+
+    <div class="sec"><h2>Sem candidato</h2></div>
+    <div class="list">
+      <a class="row" href="culto.html?folha=1">
+        <span class="slot__vazio" data-ic="luz"></span>
+        <span class="row__tx"><b>Iluminação</b><span>Domingo, 15 nov</span></span>
+        <span class="tbtn tbtn--soft">Escolher</span>
+      </a>
+      <a class="row" href="culto.html?folha=1">
+        <span class="slot__vazio" data-ic="luz"></span>
+        <span class="row__tx"><b>Iluminação</b><span>Domingo, 22 nov</span></span>
+        <span class="tbtn tbtn--soft">Escolher</span>
+      </a>
+    </div>
+
+    <div class="sec"><h2>Preenchidas pela sugestão</h2></div>
+    <div class="list">
+      <a class="culto" href="culto.html" style="color:inherit;text-decoration:none">
+        <span class="culto__d"><b>8</b><span>dom</span></span>
+        <span class="culto__tx"><b>4 pessoas</b><span class="hero__team" style="margin:4px 0 0;opacity:1"><span class="faces"><span class="avatar" style="box-shadow:0 0 0 2px var(--raised);--c:var(--primary);background:color-mix(in srgb,var(--primary) 20%,var(--raised));color:var(--primary)">PI</span><span class="avatar" style="box-shadow:0 0 0 2px var(--raised);background:color-mix(in srgb,#b4549a 20%,var(--raised));color:#b4549a">MC</span><span class="avatar" style="box-shadow:0 0 0 2px var(--raised);background:color-mix(in srgb,var(--good) 20%,var(--raised));color:var(--good)">LM</span><span class="avatar" style="box-shadow:0 0 0 2px var(--raised);background:color-mix(in srgb,var(--warn) 20%,var(--raised));color:var(--warn)">RL</span></span></span></span>
+        <span class="vg vg--ok">4/4</span>
+      </a>
+      <a class="culto" href="culto.html" style="color:inherit;text-decoration:none">
+        <span class="culto__d"><b>11</b><span>qua</span></span>
+        <span class="culto__tx"><b>2 pessoas</b><span class="muted" style="display:block;font-size:var(--fs-sm)">Júlia, Bruno</span></span>
+        <span class="vg vg--ok">2/2</span>
+      </a>
+      <a class="culto" href="culto.html" style="color:inherit;text-decoration:none">
+        <span class="culto__d"><b>15</b><span>dom</span></span>
+        <span class="culto__tx"><b>3 pessoas</b><span class="muted" style="display:block;font-size:var(--fs-sm)">Paulo, Marina, Lucas</span></span>
+        <span class="vg vg--falta">3/4</span>
+      </a>
+    </div>
+  </main>
+
+  <div class="toast-fix">18 vagas preenchidas <button>Desfazer</button></div>
+  <div class="cta-row">
+    <a class="cta cta--sec" href="cultos.html">Revisar</a>
+    <a class="cta" href="cultos.html" data-ic="convite">Publicar mês</a>
+  </div>
+</div>
+</body>
+</html>

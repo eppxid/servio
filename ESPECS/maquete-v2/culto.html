@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Culto — Servio</title>
+<link rel="stylesheet" href="kit/tokens.css"><link rel="stylesheet" href="kit/kit.css"><link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body data-modo="lider" data-aba="cultos">
+<div class="app">
+  <header class="atop">
+    <a class="back" href="cultos.html" aria-label="Voltar" data-ic="voltar"></a>
+    <div class="atop__title"><small>Culto de domingo 18h · Mídia</small><h1>Dom, 15 nov</h1></div>
+    <span class="vg vg--falta" style="height:26px;font-size:var(--fs-xs);padding:0 10px">3/4</span>
+  </header>
+
+  <main class="tela has-cta">
+    <div class="reco">
+      <span class="reco__ic" data-ic="magia"></span>
+      <div class="reco__tx"><b>Ana quer servir em Iluminação.</b> Aprovar e escalar neste culto?
+        <div class="reco__acts"><button class="tbtn tbtn--p" data-ic="check">Aprovar</button><button class="tbtn">Agora não</button></div>
+      </div>
+    </div>
+
+    <section class="fn">
+      <div class="fn__head"><span class="row__ic" style="width:34px;height:34px;border-radius:11px" data-ic="projecao"></span><b>Projeção</b><span class="vg vg--ok">2/2</span></div>
+      <div class="slot"><span class="avatar">PI</span><span class="slot__tx"><b>Paulo Ishikawa</b><span>Confirmou</span></span><span class="chip chip--good">Ok</span></div>
+      <div class="slot"><span class="avatar" style="--c:#b4549a">MC</span><span class="slot__tx"><b>Marina Costa</b><span>Ainda não respondeu</span></span><span class="chip chip--warn">Aguarda</span></div>
+    </section>
+
+    <section class="fn">
+      <div class="fn__head"><span class="row__ic" style="width:34px;height:34px;border-radius:11px" data-ic="transmissao"></span><b>Transmissão</b><span class="vg vg--ok">1/1</span></div>
+      <div class="slot"><span class="avatar" style="--c:var(--good)">LM</span><span class="slot__tx"><b>Lucas Mendes</b><span>Confirmou</span></span><span class="chip chip--good">Ok</span></div>
+    </section>
+
+    <section class="fn">
+      <div class="fn__head"><span class="row__ic" style="width:34px;height:34px;border-radius:11px" data-ic="luz"></span><b>Iluminação</b><span class="vg vg--falta">0/1</span></div>
+      <div class="slot"><span class="slot__vazio" data-ic="mais"></span><span class="slot__tx"><b>Vaga aberta</b><span>3 pessoas livres</span></span><a class="tbtn tbtn--p" href="culto.html?folha=1">Escolher</a></div>
+    </section>
+  </main>
+
+  <a class="cta" href="cultos.html" data-ic="convite">Publicar escala</a>
+
+  <div id="folha" hidden>
+    <div class="sheet-scrim"></div>
+    <section class="sheet" role="dialog" aria-label="Escolher pessoa">
+      <div class="sheet__grab"></div>
+      <div class="sheet__head"><h3>Quem vai na Iluminação?</h3><p>Dom, 15 nov · só quem tem a função e está livre</p></div>
+      <div class="sheet__body">
+        <div class="row is-best"><span class="avatar" style="--c:var(--good)">RL</span><span class="row__tx"><b>Rafael Lima</b><span>1 escala no mês · melhor opção</span></span><button class="tbtn tbtn--p">Escolher</button></div>
+        <div class="row"><span class="avatar" style="--c:#b4549a">JP</span><span class="row__tx"><b>Júlia Prado</b><span>2 escalas no mês</span></span><button class="tbtn">Escolher</button></div>
+        <div class="row"><span class="avatar" style="--c:var(--warn)">BS</span><span class="row__tx"><b>Bruno Sá</b><span>3 escalas · serviu ontem</span></span><button class="tbtn">Escolher</button></div>
+        <div class="sec" style="margin:14px 12px 4px"><h2 style="font-size:var(--fs-sm);color:var(--muted)">Fora da lista</h2></div>
+        <div class="row dim"><span class="avatar">TA</span><span class="row__tx"><b>Tiago Alves</b><span>De folga neste dia</span></span></div>
+        <div class="row"><span class="avatar" style="--c:var(--warn)">AS</span><span class="row__tx"><b>Ana Souza</b><span>Quer a função · falta aprovar</span></span><button class="tbtn tbtn--soft">Aprovar</button></div>
+      </div>
+    </section>
+  </div>
+</div>
+<script>if (new URLSearchParams(location.search).has('folha')) document.getElementById('folha').hidden = false;</script>
+</body>
+</html>

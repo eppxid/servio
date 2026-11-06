@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cultos — Servio</title>
+<link rel="stylesheet" href="kit/tokens.css"><link rel="stylesheet" href="kit/kit.css"><link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body data-modo="lider" data-aba="cultos">
+<div class="app">
+  <header class="atop atop--wide">
+    <div class="atop__title"><small>Mídia</small><h1>Cultos</h1></div>
+    <a class="modo is-on" href="inicio.html">Líder <i></i></a>
+    <span class="avatar">PI</span>
+  </header>
+
+  <main class="tela tela--wide has-cta">
+    <div class="wide">
+      <div>
+        <section class="cal" id="cal"></section>
+      </div>
+      <div>
+        <div class="sec"><h2>Próximos</h2><a href="sugerir.html">Ver mês</a></div>
+        <div class="list">
+          <a class="culto" href="culto.html" style="color:inherit;text-decoration:none">
+            <span class="culto__d"><b>8</b><span>dom</span></span>
+            <span class="culto__tx"><b>Culto de domingo 18h</b><span class="pills"><span class="vg vg--ok"><span class="lg">Mídia </span>4/4</span><span class="vg vg--falta"><span class="lg">Louvor </span>5/6</span></span></span>
+            <span class="row__end" data-ic="dir"></span>
+          </a>
+          <a class="culto" href="culto.html" style="color:inherit;text-decoration:none">
+            <span class="culto__d"><b>11</b><span>qua</span></span>
+            <span class="culto__tx"><b>Culto de quarta 20h</b><span class="pills"><span class="vg vg--falta"><span class="lg">Mídia </span>1/2</span></span></span>
+            <span class="row__end" data-ic="dir"></span>
+          </a>
+          <a class="culto" href="culto.html" style="color:inherit;text-decoration:none">
+            <span class="culto__d"><b>15</b><span>dom</span></span>
+            <span class="culto__tx"><b>Culto de domingo 18h</b><span class="pills"><span class="vg vg--falta"><span class="lg">Mídia </span>3/4</span><span class="vg vg--sem"><span class="lg">Louvor </span>sem escala</span></span></span>
+            <span class="row__end" data-ic="dir"></span>
+          </a>
+        </div>
+        <a class="cta" href="sugerir.html" data-ic="magia">Sugerir escala do mês</a>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+  function v(t, n) { return { html: '<span class="vg vg--' + t + '"><span class="lg">Mídia </span>' + n + '</span>' }; }
+  var d = { 1: v('ok', '4/4'), 4: v('ok', '2/2'), 8: v('ok', '4/4'), 11: v('falta', '1/2'), 15: v('falta', '3/4'),
+    18: v('sem', '0/2'), 22: v('falta', '1/4'), 25: v('sem', '0/2'), 29: v('sem', '0/4') };
+  d[15].cls = 'is-sel';
+  cal(document.getElementById('cal'), d, { leg: '<span><i style="--c:var(--good)"></i>Completo</span><span><i style="--c:var(--warn)"></i>Faltando gente</span><span><i style="--c:var(--faint)"></i>Sem escala</span>' });
+</script>
+</body>
+</html>

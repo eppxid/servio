@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agenda — Servio</title>
+<link rel="stylesheet" href="kit/tokens.css"><link rel="stylesheet" href="kit/kit.css"><link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body data-modo="voluntario" data-aba="agenda">
+<div class="app">
+  <header class="atop">
+    <div class="atop__title"><small>Minhas escalas e folgas</small><h1>Agenda</h1></div>
+    <span class="avatar">PI</span>
+  </header>
+
+  <main class="tela has-cta">
+    <section class="cal" id="cal"></section>
+
+    <div class="sec"><h2>Em novembro</h2></div>
+    <div class="list">
+      <div class="row">
+        <span class="culto__d"><b>8</b><span>dom</span></span>
+        <span class="row__tx"><b>Projeção</b><span>Culto de domingo 18h</span></span>
+        <span class="chip chip--good">Confirmada</span>
+      </div>
+      <div class="row">
+        <span class="culto__d"><b>11</b><span>qua</span></span>
+        <span class="row__tx"><b>Transmissão</b><span>Culto de quarta 20h</span></span>
+        <span class="chip chip--warn">Responder</span>
+      </div>
+      <div class="row dim">
+        <span class="culto__d"><b>14</b><span>sáb</span></span>
+        <span class="row__tx"><b>Folga até 16 nov</b><span>Viagem</span></span>
+      </div>
+      <div class="row">
+        <span class="culto__d"><b>22</b><span>dom</span></span>
+        <span class="row__tx"><b>Projeção</b><span>Culto de domingo 18h</span></span>
+        <span class="chip chip--good">Confirmada</span>
+      </div>
+    </div>
+  </main>
+
+  <a class="cta" href="agenda.html" data-ic="folga">Marcar folga</a>
+</div>
+<script>
+  var mine = { cls: 'is-mine' }, off = { cls: 'is-off' };
+  cal(document.getElementById('cal'), { 8: mine, 11: mine, 22: mine, 14: off, 15: off, 16: off },
+    { leg: '<span><i style="--c:var(--primary)"></i>Escalado</span><span><i class="off"></i>Folga</span><span><i style="--c:transparent;box-shadow:inset 0 0 0 2px var(--primary)"></i>Hoje</span>' });
+</script>
+</body>
+</html>
