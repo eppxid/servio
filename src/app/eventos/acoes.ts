@@ -8,6 +8,7 @@ import { z } from "zod";
 import { db, type Db } from "@/db";
 import { escalaItens, escalas, eventos, mensagens, recorrencias } from "@/db/schema";
 import { exigirPapel } from "@/lib/auth";
+import type { AnyDb } from "@/lib/auth-core";
 import {
   DIAS_A_GERAR,
   FUSO,
@@ -16,6 +17,7 @@ import {
   type RegraRecorrencia,
 } from "@/lib/recorrencia";
 import { validar } from "@/lib/validar";
+import { criarVagasDosEventos } from "@/lib/vagas/nucleo";
 
 const hora = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Hora inválida");
 const dataIso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida");
@@ -49,9 +51,11 @@ async function inserirOcorrencias(
   const dias = new Set(existentes.map((e) => dataLocal(e.inicio)));
   const novas = gerarOcorrencias(regra, de, ate).filter((o) => !dias.has(dataLocal(o.inicio)));
   if (novas.length === 0) return;
-  await tx
+  const criados = await tx
     .insert(eventos)
-    .values(novas.map((o) => ({ igrejaId, titulo, inicio: o.inicio, fim: o.fim, recorrenciaId })));
+    .values(novas.map((o) => ({ igrejaId, titulo, inicio: o.inicio, fim: o.fim, recorrenciaId })))
+    .returning({ id: eventos.id });
+  await criarVagasDosEventos(tx as unknown as AnyDb, igrejaId, criados.map((e) => e.id));
 }
 
 function erroNovo(msg: string): never {
