@@ -108,9 +108,10 @@ test("admin cria ministério, voluntário entra por convite, líder aprova, esca
   await expect(lider.getByText("Escala publicada")).toBeVisible();
 
   // 8. Voluntário confirma e faz check-in.
-  await voluntario.goto("/agenda");
+  await voluntario.goto("/inicio");
   await expect(voluntario.getByText("Culto E2E")).toBeVisible();
-  await voluntario.getByRole("button", { name: "Confirmar" }).click();
+  await voluntario.getByRole("button", { name: "Confirmar presença" }).click();
+  await expect(voluntario.getByText("Presença confirmada")).toBeVisible();
   await expect(voluntario.getByText(/^Confirmado/)).toBeVisible();
   await voluntario.getByRole("button", { name: "Fazer check-in" }).click();
   await expect(voluntario.getByText(/check-in às \d\d:\d\d/)).toBeVisible();

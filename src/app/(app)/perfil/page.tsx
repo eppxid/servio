@@ -89,6 +89,13 @@ export default async function Perfil({
         </button>
       </form>
 
+      <Link href="/perfil/servir" className="card row" style={{ minHeight: 0 }}>
+        <span className="row__tx">
+          <b>Onde quero servir</b>
+          <span>Escolha ministérios e funções</span>
+        </span>
+      </Link>
+
       <ResumoPontos usuario={usuario} />
 
       <AtivarAvisos />

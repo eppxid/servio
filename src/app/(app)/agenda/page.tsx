@@ -1,27 +1,28 @@
 import Link from "next/link";
+import { and, asc, eq, gte } from "drizzle-orm";
 import { formatInTimeZone } from "date-fns-tz";
 import { db } from "@/db";
+import { indisponibilidades } from "@/db/schema";
 import type { AnyDb } from "@/lib/auth-core";
 import { exigirUsuarioSemTroca } from "@/lib/ministerios/sessao";
 import { FUSO } from "@/lib/recorrencia";
 import { tokenAgendaAtual } from "@/lib/trocas/ics";
 import { linksDeRepertorio } from "@/lib/repertorio/nucleo";
 import { agendaDoUsuario, listarSubstitutos, trocasParaMim } from "@/lib/trocas/nucleo";
-import {
-  checkinAcao,
-  confirmarEscala,
-  gerarLinkCalendario,
-  pedirTrocaAcao,
-  recusarEscala,
-  responderTrocaAcao,
-  revogarLinkCalendario,
-} from "./acoes";
+import { gerarLinkCalendario, responderTrocaAcao, revogarLinkCalendario } from "./acoes";
 import { Cabecalho } from "@/components/Cabecalho";
+import { CalendarioAgenda, type EscalaDoDia } from "./CalendarioAgenda";
+
+/** Dias `AAAA-MM-DD` de um período, limitado a 366 para o calendário não pesar. */
+function diasDoPeriodo(inicio: string, fim: string): string[] {
+  const dias: string[] = [];
+  const d = new Date(`${inicio}T12:00:00Z`);
+  const f = new Date(`${fim}T12:00:00Z`);
+  for (let n = 0; d <= f && n < 366; n++, d.setUTCDate(d.getUTCDate() + 1)) dias.push(d.toISOString().slice(0, 10));
+  return dias;
+}
 
 export const dynamic = "force-dynamic";
-
-const STATUS = { pendente: "Aguardando confirmação", confirmado: "Confirmado", recusado: "Recusado" } as const;
-const STATUS_CHIP = { pendente: "chip--warn", confirmado: "chip--good", recusado: "chip--bad" } as const;
 
 export default async function Agenda({
   searchParams,
@@ -43,10 +44,67 @@ export default async function Agenda({
   );
   const { erro, ok } = await searchParams;
   const quando = (d: Date) => formatInTimeZone(d, FUSO, "dd/MM HH:mm");
+  const hoje = formatInTimeZone(new Date(), FUSO, "yyyy-MM-dd");
+  const periodos = await banco
+    .select({ inicio: indisponibilidades.dataInicio, fim: indisponibilidades.dataFim })
+    .from(indisponibilidades)
+    .where(
+      and(
+        eq(indisponibilidades.usuarioId, ator.id),
+        eq(indisponibilidades.igrejaId, ator.igrejaId),
+        gte(indisponibilidades.dataFim, hoje),
+      ),
+    )
+    .orderBy(asc(indisponibilidades.dataInicio));
+  const folgas = periodos.flatMap((p) => diasDoPeriodo(p.inicio, p.fim));
+  const escalas: EscalaDoDia[] = itens.map((i) => {
+    const r = repertorios.get(i.escalaId);
+    return {
+      itemId: i.itemId,
+      dia: formatInTimeZone(i.evento.inicio, FUSO, "yyyy-MM-dd"),
+      titulo: i.evento.titulo,
+      horario:
+        formatInTimeZone(i.evento.inicio, FUSO, "HH:mm") +
+        (i.evento.fim ? `–${formatInTimeZone(i.evento.fim, FUSO, "HH:mm")}` : ""),
+      ministerio: i.ministerio,
+      funcao: i.funcao,
+      status: i.status,
+      checkinHora: i.checkinEm ? formatInTimeZone(i.checkinEm, FUSO, "HH:mm") : null,
+      checkinAberto: i.checkinAberto,
+      colegas: i.colegas.map((c) => `${c.nome} (${c.funcao})`),
+      repertorio: r ? `/escalas/${r.eventoId}/${r.ministerioId}/repertorio` : null,
+      troca: i.troca ? (i.troca.status as "aberta" | "aceita") : null,
+      substitutos: (substitutos.get(i.itemId) ?? []).map((s) => ({ id: s.usuarioId, nome: s.nome })),
+    };
+  });
 
   return (
-    <div className="space-y-5">
-      <Cabecalho eyebrow="Suas escalas" titulo="Agenda" />
+    <div className="tela">
+      <Cabecalho eyebrow="Suas escalas" titulo="Agenda">
+        <details>
+          <summary className="tbtn tbtn--soft">Calendário do celular</summary>
+          <div className="card space-y-3 text-sm" style={{ marginTop: 8 }}>
+            {token ? (
+              <>
+                <p className="campo break-all text-xs">/agenda/ics/{token}</p>
+                <p className="text-xs text-muted">
+                  Assine este endereço (com o domínio do portal) no app de calendário. Quem tiver o link vê sua agenda.
+                </p>
+                <form action={revogarLinkCalendario}>
+                  <button className="btn btn--danger btn--block">Revogar link</button>
+                </form>
+              </>
+            ) : (
+              <form action={gerarLinkCalendario}>
+                <button className="btn btn--primary btn--block">Gerar link do calendário</button>
+              </form>
+            )}
+            <Link href="/agenda/trocas" className="btn btn--block">
+              Aprovar trocas (líderes)
+            </Link>
+          </div>
+        </details>
+      </Cabecalho>
       {erro && (
         <p role="alert" className="alerta alerta--bad">
           {erro}
@@ -77,109 +135,7 @@ export default async function Agenda({
         </section>
       )}
 
-      {itens.length === 0 ? (
-        <p className="card text-sm text-muted">Você não tem escalas publicadas à frente.</p>
-      ) : (
-        <ul className="grid items-start gap-4 md:grid-cols-2" data-enter>
-          {itens.map((i) => (
-            <li key={i.itemId} className="card space-y-3">
-              <div>
-                <p className="card__title">{i.evento.titulo}</p>
-                <p className="text-sm text-muted">
-                  {quando(i.evento.inicio)}
-                  {i.evento.fim ? `–${formatInTimeZone(i.evento.fim, FUSO, "HH:mm")}` : ""} · {i.ministerio} · {i.funcao}
-                </p>
-                <p className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className={`chip ${STATUS_CHIP[i.status]}`}>{STATUS[i.status]}</span>
-                  {i.checkinEm && (
-                    <span className="text-xs text-muted">check-in às {formatInTimeZone(i.checkinEm, FUSO, "HH:mm")}</span>
-                  )}
-                </p>
-              </div>
-              {repertorios.has(i.escalaId) && (
-                <Link
-                  href={`/escalas/${repertorios.get(i.escalaId)!.eventoId}/${repertorios.get(i.escalaId)!.ministerioId}/repertorio`}
-                  className="link block text-sm"
-                >
-                  Repertório
-                </Link>
-              )}
-              {i.colegas.length > 0 && (
-                <p className="text-xs text-muted">
-                  Com: {i.colegas.map((c) => `${c.nome} (${c.funcao})`).join(", ")}
-                </p>
-              )}
-              {i.troca ? (
-                <p className="alerta alerta--warn text-xs">
-                  Troca {i.troca.status === "aberta" ? "aguardando o substituto" : "aguardando o líder"}.
-                </p>
-              ) : null}
-              {i.status !== "recusado" && (
-                <div className="grid grid-cols-2 gap-3">
-                  {i.status === "pendente" && (
-                    <form action={confirmarEscala}>
-                      <input type="hidden" name="item" value={i.itemId} />
-                      <button className="btn btn--primary btn--block">Confirmar</button>
-                    </form>
-                  )}
-                  <form action={recusarEscala}>
-                    <input type="hidden" name="item" value={i.itemId} />
-                    <button className="btn btn--block">Não posso</button>
-                  </form>
-                </div>
-              )}
-              {i.checkinAberto && i.status !== "recusado" && !i.checkinEm && (
-                <form action={checkinAcao}>
-                  <input type="hidden" name="item" value={i.itemId} />
-                  <button className="btn btn--primary btn--block">Fazer check-in</button>
-                </form>
-              )}
-              {!i.troca && i.status !== "recusado" && (
-                <details>
-                  <summary className="btn btn--sm cursor-pointer">Pedir troca</summary>
-                  {(substitutos.get(i.itemId) ?? []).length === 0 ? (
-                    <p className="mt-2 text-xs text-muted">Ninguém disponível com esta função.</p>
-                  ) : (
-                    <form action={pedirTrocaAcao} className="mt-3 space-y-2">
-                      <input type="hidden" name="item" value={i.itemId} />
-                      <select name="substituto" className="campo" required>
-                        {(substitutos.get(i.itemId) ?? []).map((s) => (
-                          <option key={s.usuarioId} value={s.usuarioId}>
-                            {s.nome}
-                          </option>
-                        ))}
-                      </select>
-                      <button className="btn btn--primary btn--block">Enviar pedido</button>
-                    </form>
-                  )}
-                </details>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <section className="card space-y-3 text-sm">
-        <h2 className="card__title">Calendário do celular</h2>
-        {token ? (
-          <>
-            <p className="campo break-all text-xs">/agenda/ics/{token}</p>
-            <p className="text-xs text-muted">
-              Assine este endereço (com o domínio do portal) no app de calendário. Quem tiver o link vê sua agenda.
-            </p>
-            <form action={revogarLinkCalendario}>
-              <button className="btn btn--danger btn--block">Revogar link</button>
-            </form>
-          </>
-        ) : (
-          <form action={gerarLinkCalendario}>
-            <button className="btn btn--primary btn--block">Gerar link do calendário</button>
-          </form>
-        )}
-        <Link href="/agenda/trocas" className="btn btn--block">
-          Aprovar trocas (líderes)
-        </Link>
-      </section>
+      <CalendarioAgenda escalas={escalas} folgas={folgas} />
     </div>
   );
 }
