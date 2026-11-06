@@ -61,7 +61,7 @@ test("líder aprova o pedido de entrada e a função desejada de um voluntário 
     await sql.end();
   }
 
-  await admin.goto(`/lider/equipe?m=${idMinisterio}`);
+  await admin.goto(`/lider/equipe?ministerio=${idMinisterio}`);
   await expect(admin.getByText("1 pessoa quer servir em Iluminação")).toBeVisible();
   await expect(admin.getByText("Quer entrar no ministério")).toBeVisible();
   if (process.env.E2E_PRINTS) {

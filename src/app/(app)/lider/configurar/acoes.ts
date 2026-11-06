@@ -32,7 +32,7 @@ export async function salvarMinisterio(formData: FormData) {
   const banco = db() as unknown as AnyDb;
   const ministerio = await criarMinisterio(banco, admin, v.dados.ministerio);
   for (const nome of nomes) await criarFuncao(banco, admin, ministerio.id, nome);
-  redirect(`${BASE}?passo=2&m=${ministerio.id}`);
+  redirect(`${BASE}?passo=2&ministerio=${ministerio.id}`);
 }
 
 const esquemaCulto = z.object({
@@ -44,8 +44,8 @@ const esquemaCulto = z.object({
 
 export async function salvarCulto(formData: FormData) {
   const admin = await exigirPapel("admin");
-  const m = Number(formData.get("m")) || 0;
-  const volta = `${BASE}?passo=2${m ? `&m=${m}` : ""}`;
+  const m = Number(formData.get("ministerio")) || 0;
+  const volta = `${BASE}?passo=2${m ? `&ministerio=${m}` : ""}`;
   const v = validar(esquemaCulto, formData);
   if (!v.ok) redirect(`${volta}&erro=1`);
   const { nome, dia, horaInicio, horaFim } = v.dados;
@@ -88,12 +88,12 @@ export async function salvarCulto(formData: FormData) {
       .returning({ id: eventos.id });
     await criarVagasDosEventos(banco as unknown as AnyDb, admin.igrejaId, criados.map((e) => e.id));
   }
-  redirect(`${BASE}?passo=3${m ? `&m=${m}` : ""}`);
+  redirect(`${BASE}?passo=3${m ? `&ministerio=${m}` : ""}`);
 }
 
 export async function gerarLinkConvite(formData: FormData) {
   const admin = await exigirPapel("admin");
-  const m = Number(formData.get("m")) || 0;
+  const m = Number(formData.get("ministerio")) || 0;
   const [existe] = await db()
     .select({ id: ministerios.id })
     .from(ministerios)
@@ -101,5 +101,5 @@ export async function gerarLinkConvite(formData: FormData) {
     .limit(1);
   if (!existe) redirect(`${BASE}?passo=3&erro=1`);
   const token = await gerarConvite(db() as unknown as AnyDb, admin, existe.id);
-  redirect(`${BASE}?passo=3&m=${existe.id}&convite=${token}`);
+  redirect(`${BASE}?passo=3&ministerio=${existe.id}&convite=${token}`);
 }

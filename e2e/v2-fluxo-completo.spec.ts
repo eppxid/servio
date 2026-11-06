@@ -82,7 +82,7 @@ test("v2 de ponta a ponta: assistente, convite, aprovação, calendário, sugest
   await admin.getByRole("button", { name: "Salvar e continuar" }).click();
 
   await expect(admin.getByText("Passo 2 de 3")).toBeVisible();
-  const ministerioId = new URL(admin.url()).searchParams.get("m");
+  const ministerioId = new URL(admin.url()).searchParams.get("ministerio");
   await admin.getByLabel("Nome do culto").fill("Culto de domingo 18h");
   await admin.getByLabel("Quantidade de Projeção").fill("2");
   await admin.getByLabel("Quantidade de Transmissão").fill("1");

@@ -19,11 +19,11 @@ import { ListaMembros } from "./ListaMembros";
 export const dynamic = "force-dynamic";
 
 /** Equipe do líder: pedidos, recomendações, membros e funções de um ministério. */
-export default async function Equipe({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
+export default async function Equipe({ searchParams }: { searchParams: Promise<{ ministerio?: string }> }) {
   const usuario = await exigirUsuario();
   const meus = await ministeriosDoLider(db() as unknown as AnyDb, usuario);
-  const { m } = await searchParams;
-  const escolhido = meus.find((x) => x.id === idSeguro(m)) ?? meus[0];
+  const { ministerio } = await searchParams;
+  const escolhido = meus.find((x) => x.id === idSeguro(ministerio)) ?? meus[0];
   const equipe = escolhido ? await carregarEquipe(usuario, escolhido.id) : null;
 
   return (
@@ -34,7 +34,7 @@ export default async function Equipe({ searchParams }: { searchParams: Promise<{
           {meus.map((x) => (
             <Link
               key={x.id}
-              href={`/lider/equipe?m=${x.id}`}
+              href={`/lider/equipe?ministerio=${x.id}`}
               className={`tbtn ${x.id === escolhido.id ? "tbtn--p" : "tbtn--soft"}`}
               aria-current={x.id === escolhido.id ? "page" : undefined}
             >

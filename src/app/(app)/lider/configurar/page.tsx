@@ -19,7 +19,7 @@ const TOKEN = /^[0-9a-f]{64}$/;
 export default async function Configurar({
   searchParams,
 }: {
-  searchParams: Promise<{ passo?: string; m?: string; erro?: string; convite?: string }>;
+  searchParams: Promise<{ passo?: string; ministerio?: string; erro?: string; convite?: string }>;
 }) {
   const admin = await exigirPapel("admin");
   const q = await searchParams;
@@ -30,9 +30,9 @@ export default async function Configurar({
     .from(ministerios)
     .where(and(eq(ministerios.igrejaId, admin.igrejaId), isNull(ministerios.arquivadoEm)))
     .orderBy(asc(ministerios.id));
-  const pedido = Number(q.m);
+  const pedido = Number(q.ministerio);
   const ministerio = lista.find((m) => m.id === pedido) ?? lista[0] ?? null;
-  const sufixo = ministerio ? `&m=${ministerio.id}` : "";
+  const sufixo = ministerio ? `&ministerio=${ministerio.id}` : "";
 
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
@@ -95,7 +95,7 @@ export default async function Configurar({
       {passo === 2 && (
         <form action={salvarCulto} className="space-y-4">
           <p className="text-sm text-muted">Crie um tipo de culto que se repete toda semana.</p>
-          <input type="hidden" name="m" value={ministerio?.id ?? ""} />
+          <input type="hidden" name="ministerio" value={ministerio?.id ?? ""} />
           <label className="rotulo">
             Nome do culto
             <input name="nome" className="campo" required maxLength={120} defaultValue="Culto de domingo" />
@@ -166,7 +166,7 @@ export default async function Configurar({
                 </div>
               ) : (
                 <form action={gerarLinkConvite}>
-                  <input type="hidden" name="m" value={ministerio.id} />
+                  <input type="hidden" name="ministerio" value={ministerio.id} />
                   <button type="submit" className="btn btn--primary btn--block">
                     Gerar link do convite
                   </button>
