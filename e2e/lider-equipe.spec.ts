@@ -43,6 +43,8 @@ test("líder aprova o pedido de entrada e a função desejada de um voluntário 
   await voluntario.getByLabel("Senha", { exact: true }).fill(SENHA);
   await voluntario.getByRole("checkbox").check();
   await voluntario.getByRole("button", { name: "Criar conta e pedir para entrar" }).click();
+  // Desde a 021 o convite pergunta as funções desejadas; aqui só pede a entrada.
+  await voluntario.getByRole("button", { name: "Enviar pedido" }).click();
   await expect(voluntario.getByRole("heading", { name: "Pedido enviado" })).toBeVisible();
 
   // O PGlite aceita uma conexão só: espera o app soltar a dele (idle_timeout=1 na config).
