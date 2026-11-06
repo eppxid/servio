@@ -8,7 +8,7 @@ process.env.PG_LOCAL_PORT = String(PG_PORT);
 
 // Postgres local (PGlite por socket) e o app já compilado (`next build` roda antes, em `pnpm e2e`).
 const env = {
-  DATABASE_URL: `postgres://postgres:postgres@127.0.0.1:${PG_PORT}/postgres?max=1`, // PGlite atende bem uma conexão por vez
+  DATABASE_URL: `postgres://postgres:postgres@127.0.0.1:${PG_PORT}/postgres?max=1&idle_timeout=1`, // PGlite atende uma conexão por vez; o app solta a dele ao ficar ocioso
   SESSION_SECRET: "e2e-segredo-de-sessao-com-mais-de-32-caracteres",
   CRON_SECRET: "e2e-cron",
   PG_LOCAL_PORT: String(PG_PORT),
