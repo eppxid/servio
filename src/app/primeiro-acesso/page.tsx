@@ -49,7 +49,7 @@ async function criar(formData: FormData) {
   if (!usuario) redirect("/entrar");
 
   await abrirSessao(usuario);
-  redirect("/agenda");
+  redirect("/lider/configurar");
 }
 
 export default async function PrimeiroAcesso({

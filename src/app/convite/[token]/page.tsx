@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
+import { funcoes } from "@/db/schema";
 import { SENHA_MINIMA } from "@/lib/auth-core";
 import { usuarioAtual } from "@/lib/auth";
 import { abrirSessao } from "@/lib/lgpd/sessao";
 import { consentiu } from "@/lib/lgpd/termos";
 import { Publica } from "@/components/Publica";
 import { CampoConsentimento, RodapeLegal } from "@/lib/lgpd/ui";
+import type { AnyDb } from "@/lib/auth-core";
 import { aceitarConvite, cadastrarPorConvite, conviteValido } from "@/lib/ministerios/nucleo";
+import { pedirParaServir } from "@/lib/servir/nucleo";
 import { validar } from "@/lib/validar";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +42,7 @@ async function cadastrar(formData: FormData) {
   });
   if (!r.ok) redirect(caminho(token, `erro=${r.motivo}`));
   await abrirSessao(r.usuario);
-  redirect(caminho(token, "ok=1"));
+  redirect(caminho(token, "conta=1"));
 }
 
 async function pedirEntrada(formData: FormData) {
@@ -47,7 +51,16 @@ async function pedirEntrada(formData: FormData) {
   const token = String(formData.get("token") ?? "");
   if (!usuario) redirect("/entrar");
   const r = await aceitarConvite(db(), usuario, token);
-  redirect(caminho(token, r.ok ? "ok=1" : "erro=invalido"));
+  if (!r.ok) redirect(caminho(token, "erro=invalido"));
+  const convite = await conviteValido(db(), token);
+  if (!convite) redirect(caminho(token, "erro=invalido"));
+  const ids = formData.getAll("funcoes").map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  try {
+    await pedirParaServir(db() as unknown as AnyDb, usuario, convite.ministerioId, ids);
+  } catch {
+    redirect(caminho(token, "erro=invalido"));
+  }
+  redirect(caminho(token, "ok=1"));
 }
 
 export default async function Convite({
@@ -55,10 +68,10 @@ export default async function Convite({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ erro?: string; ok?: string }>;
+  searchParams: Promise<{ erro?: string; ok?: string; conta?: string }>;
 }) {
   const { token } = await params;
-  const { erro, ok } = await searchParams;
+  const { erro, ok, conta } = await searchParams;
   const convite = TOKEN.test(token) ? await conviteValido(db(), token) : null;
 
   if (!convite) {
@@ -84,6 +97,11 @@ export default async function Convite({
   }
 
   const usuario = await usuarioAtual();
+  const opcoes = await db()
+    .select({ id: funcoes.id, nome: funcoes.nome })
+    .from(funcoes)
+    .where(eq(funcoes.ministerioId, convite.ministerioId))
+    .orderBy(asc(funcoes.nome));
   const msg =
     erro === "email_em_uso"
       ? "Este e-mail já tem conta. Entre com ela."
@@ -95,7 +113,7 @@ export default async function Convite({
 
   return (
     <Publica>
-      <h1 className="title">Convite: {convite.ministerio}</h1>
+      <h1 className="title">{conta ? "Escolha onde quer servir" : `Convite: ${convite.ministerio}`}</h1>
       {msg && (
         <p role="alert" className="alerta alerta--bad">
           {msg}
@@ -104,8 +122,21 @@ export default async function Convite({
       {usuario && usuario.igrejaId === convite.igrejaId ? (
         <form action={pedirEntrada} className="space-y-4">
           <input type="hidden" name="token" value={token} />
-          <p className="text-sm text-muted">Entrar como {usuario.nome}.</p>
-          <button type="submit" className="btn btn--primary btn--block">Pedir para entrar</button>
+          <p className="text-sm text-muted">
+            {conta ? "Conta criada." : `Entrar como ${usuario.nome}.`} Escolha onde quer servir (pode pular).
+          </p>
+          {opcoes.length > 0 && (
+            <fieldset className="space-y-1">
+              <legend className="rotulo">Funções que desejo</legend>
+              {opcoes.map((f) => (
+                <label key={f.id} className="flex min-h-11 items-center gap-2 text-sm">
+                  <input type="checkbox" name="funcoes" value={f.id} className="caixa size-5" />
+                  {f.nome}
+                </label>
+              ))}
+            </fieldset>
+          )}
+          <button type="submit" className="btn btn--primary btn--block">Enviar pedido</button>
         </form>
       ) : (
         <>

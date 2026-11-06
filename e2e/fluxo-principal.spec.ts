@@ -14,6 +14,8 @@ async function cadastrarPorConvite(pagina: Page, link: string, nome: string, ema
   await pagina.getByLabel("Senha", { exact: true }).fill(SENHA);
   await pagina.getByRole("checkbox").check();
   await pagina.getByRole("button", { name: "Criar conta e pedir para entrar" }).click();
+  await expect(pagina.getByRole("heading", { name: "Escolha onde quer servir" })).toBeVisible();
+  await pagina.getByRole("button", { name: "Enviar pedido" }).click();
   await expect(pagina.getByRole("heading", { name: "Pedido enviado" })).toBeVisible();
 }
 
@@ -48,7 +50,7 @@ test("admin cria ministério, voluntário entra por convite, líder aprova, esca
   await admin.getByLabel("Senha", { exact: true }).fill(SENHA);
   await admin.getByRole("checkbox").check();
   await admin.getByRole("button", { name: "Criar" }).click();
-  await expect(admin).toHaveURL(/\/agenda/);
+  await expect(admin).toHaveURL(/\/lider\/configurar/);
 
   // 2. Admin cria o ministério e a função, e gera o convite.
   await admin.goto("/ministerios");

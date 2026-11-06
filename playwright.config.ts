@@ -3,6 +3,9 @@ import { defineConfig } from "@playwright/test";
 const PG_PORT = 54329;
 const APP_PORT = 3100;
 
+// Os testes que consultam o banco leem a porta daqui.
+process.env.PG_LOCAL_PORT = String(PG_PORT);
+
 // Postgres local (PGlite por socket) e o app já compilado (`next build` roda antes, em `pnpm e2e`).
 const env = {
   DATABASE_URL: `postgres://postgres:postgres@127.0.0.1:${PG_PORT}/postgres?max=1`, // PGlite atende bem uma conexão por vez
