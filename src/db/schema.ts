@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -11,11 +12,13 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const papelGlobal = pgEnum("papel_global", ["admin", "lider", "voluntario"]);
 export const papelMembro = pgEnum("papel_membro", ["lider", "voluntario"]);
 export const statusMembro = pgEnum("status_membro", ["pendente", "aprovado"]);
 export const statusEscala = pgEnum("status_escala", ["rascunho", "publicada"]);
+export const statusFuncao = pgEnum("status_funcao", ["desejada", "aprovada"]);
 export const statusItem = pgEnum("status_item", ["pendente", "confirmado", "recusado"]);
 export const statusTroca = pgEnum("status_troca", ["aberta", "aceita", "aprovada", "recusada"]);
 
@@ -58,6 +61,7 @@ export const ministerios = pgTable("ministerios", {
   descricao: text("descricao"),
   arquivadoEm: ts("arquivado_em"),
   trocaAutomatica: boolean("troca_automatica").notNull().default(false),
+  limiteMensal: integer("limite_mensal").notNull().default(4),
   criadoEm: ts("criado_em").notNull().defaultNow(),
 });
 
@@ -88,6 +92,7 @@ export const membroFuncoes = pgTable(
     igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
     membroId: integer("membro_id").notNull().references(() => membrosMinisterio.id),
     funcaoId: integer("funcao_id").notNull().references(() => funcoes.id),
+    status: statusFuncao("status").notNull().default("aprovada"),
   },
   (t) => [primaryKey({ columns: [t.membroId, t.funcaoId] })],
 );
@@ -99,7 +104,24 @@ export const recorrencias = pgTable("recorrencias", {
   horaInicio: text("hora_inicio").notNull(),
   horaFim: text("hora_fim"),
   ate: date("ate"),
+  nome: text("nome").notNull().default("Culto"),
 });
+
+export const vagasModelo = pgTable(
+  "vagas_modelo",
+  {
+    id: serial("id").primaryKey(),
+    igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
+    recorrenciaId: integer("recorrencia_id").notNull().references(() => recorrencias.id),
+    ministerioId: integer("ministerio_id").notNull().references(() => ministerios.id),
+    funcaoId: integer("funcao_id").notNull().references(() => funcoes.id),
+    quantidade: integer("quantidade").notNull(),
+  },
+  (t) => [
+    uniqueIndex("vagas_modelo_unico").on(t.recorrenciaId, t.ministerioId, t.funcaoId),
+    check("vagas_modelo_quantidade_positiva", sql`${t.quantidade} > 0`),
+  ],
+);
 
 export const eventos = pgTable(
   "eventos",

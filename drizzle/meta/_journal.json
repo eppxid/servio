@@ -57,6 +57,13 @@
       "when": 1793886184178,
       "tag": "0007_recusado_em",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793938054862,
+      "tag": "0008_app_v2_dados",
+      "breakpoints": true
     }
   ]
 }
