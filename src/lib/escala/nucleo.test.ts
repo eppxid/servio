@@ -10,6 +10,7 @@ import * as aviso from "@/lib/notificar";
 import {
   ErroEscala,
   dadosMontagem,
+  desfazerSugestao,
   escalasPublicadasDoEvento,
   listarEscalasFuturas,
   salvarEscala,
@@ -144,8 +145,10 @@ describe("montagem", () => {
   });
 
   it("sugerir mês preenche só escalas não publicadas, como rascunho", async () => {
-    const n = await sugerirMes(db, lider, louvor, "2099-03", new Date("2099-02-01T00:00:00Z"));
-    expect(n).toBe(1);
+    const r = await sugerirMes(db, lider, louvor, "2099-03", new Date("2099-02-01T00:00:00Z"));
+    expect(r.preenchidos).toHaveLength(1);
+    // Ensaio sem candidato e sem escala: não vira rascunho nem entra no resumo.
+    expect(r.semCandidato).toEqual([]);
     const [esc] = await db.select().from(schema.escalas).where(eq(schema.escalas.eventoId, culto2));
     expect(esc.status).toBe("rascunho");
     const [item] = await db.select().from(schema.escalaItens).where(eq(schema.escalaItens.escalaId, esc.id));
@@ -158,5 +161,94 @@ describe("montagem", () => {
       [ensaio, "sem_escala"],
       [culto2, "rascunho"],
     ]);
+  });
+});
+
+describe("sugestão com vagas do modelo", () => {
+  let som: number;
+  let mesa: number;
+  const x: Record<string, number> = {};
+  const itens: Record<string, number[]> = {};
+  const ev: Record<string, number> = {};
+
+  async function escalaCom(eventoId: number, status: "rascunho" | "publicada", usuarios: (number | null)[]) {
+    const [e] = await db.insert(schema.escalas).values({ igrejaId, eventoId, ministerioId: som, status }).returning();
+    const criados = await db
+      .insert(schema.escalaItens)
+      .values(usuarios.map((usuarioId) => ({ igrejaId, escalaId: e.id, funcaoId: mesa, usuarioId })))
+      .returning();
+    return criados.map((c) => c.id);
+  }
+
+  const doItem = async (id: number) =>
+    (await db.select().from(schema.escalaItens).where(eq(schema.escalaItens.id, id)))[0].usuarioId;
+
+  beforeAll(async () => {
+    [{ id: som }] = await db.insert(schema.ministerios).values({ igrejaId, nome: "Som", limiteMensal: 2 }).returning();
+    [{ id: mesa }] = await db.insert(schema.funcoes).values({ igrejaId, ministerioId: som, nome: "Mesa" }).returning();
+    await membro(lider.id, som, "lider");
+    for (const nome of ["x1", "x2", "x3", "x4"]) {
+      x[nome] = (await usuario(`${nome}@x.com`)).id;
+      if (nome !== "x3") await membro(x[nome], som, "voluntario", mesa);
+    }
+    // x3 só deseja a função: não é elegível.
+    const [m3] = await db
+      .insert(schema.membrosMinisterio)
+      .values({ igrejaId, usuarioId: x.x3, ministerioId: som, papel: "voluntario", status: "aprovado" })
+      .returning();
+    await db.insert(schema.membroFuncoes).values({ igrejaId, membroId: m3.id, funcaoId: mesa, status: "desejada" });
+
+    for (const [k, dia] of [["a", "05"], ["b", "12"], ["c", "19"], ["d", "26"]] as const) {
+      ev[k] = await evento("Culto", `2099-04-${dia}T22:00:00Z`, `2099-04-${dia}T23:59:00Z`);
+    }
+    itens.a = await escalaCom(ev.a, "rascunho", [null, null, x.x4]);
+    itens.b = await escalaCom(ev.b, "publicada", [null]);
+    itens.c = await escalaCom(ev.c, "rascunho", [null, null]);
+    itens.d = await escalaCom(ev.d, "rascunho", [null, null]);
+  });
+
+  it("preenche N vagas só com função aprovada, respeita mesmo culto, limite e publicada", async () => {
+    const r = await sugerirMes(db, lider, som, "2099-04", new Date("2099-03-15T00:00:00Z"));
+    expect(r.total).toBe(6);
+    expect(r.preenchidos).toHaveLength(5);
+    expect(r.semCandidato).toEqual([{ eventoId: ev.d, funcaoId: mesa, data: "2099-04-26" }]);
+
+    // Manual fica; x4 já está no culto A, então as 2 vagas vão para x1 e x2.
+    expect(await Promise.all(itens.a.map(doItem))).toEqual([x.x1, x.x2, x.x4]);
+    expect(await doItem(itens.b[0])).toBeNull();
+    expect(await Promise.all(itens.c.map(doItem))).toEqual([x.x1, x.x2]);
+    // x1 e x2 atingiram o limite (2): só x4 serve no dia 26; x3 (desejada) nunca entra.
+    expect(await Promise.all(itens.d.map(doItem))).toEqual([x.x4, null]);
+  });
+
+  it("rodar de novo não sobrescreve nada já preenchido", async () => {
+    const r = await sugerirMes(db, lider, som, "2099-04", new Date("2099-03-15T00:00:00Z"));
+    expect(r.preenchidos).toEqual([]);
+    expect(await doItem(itens.a[2])).toBe(x.x4);
+  });
+
+  it("desfazer limpa só o que a sugestão preencheu e ninguém mexeu depois", async () => {
+    // Refaz a partir do estado limpo para ter os ids da sugestão.
+    for (const id of [...itens.a.slice(0, 2), ...itens.c, itens.d[0]]) {
+      await db.update(schema.escalaItens).set({ usuarioId: null }).where(eq(schema.escalaItens.id, id));
+    }
+    const r = await sugerirMes(db, lider, som, "2099-04", new Date("2099-03-15T00:00:00Z"));
+    expect(r.preenchidos).toHaveLength(5);
+
+    // Outro líder não desfaz.
+    expect(await desfazerSugestao(db, outroLider, r.preenchidos, r.usuarios)).toBe(0);
+
+    // O líder trocou a pessoa de uma vaga depois da sugestão: essa fica.
+    await db.update(schema.escalaItens).set({ usuarioId: x.x3 }).where(eq(schema.escalaItens.id, itens.c[0]));
+    expect(await desfazerSugestao(db, lider, r.preenchidos, r.usuarios)).toBe(4);
+    expect(await Promise.all(itens.a.map(doItem))).toEqual([null, null, x.x4]);
+    expect(await Promise.all(itens.c.map(doItem))).toEqual([x.x3, null]);
+    expect(await Promise.all(itens.d.map(doItem))).toEqual([null, null]);
+  });
+
+  it("desfazer não mexe em escala publicada", async () => {
+    await db.update(schema.escalaItens).set({ usuarioId: x.x1 }).where(eq(schema.escalaItens.id, itens.b[0]));
+    expect(await desfazerSugestao(db, lider, [itens.b[0]])).toBe(0);
+    expect(await doItem(itens.b[0])).toBe(x.x1);
   });
 });

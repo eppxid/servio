@@ -1,89 +1,120 @@
 import { estaIndisponivel, type Indisponibilidade } from "@/lib/disponibilidade";
 import { mesmoDia, temConflito, type Intervalo, type Ocupacao } from "@/lib/escala/regras";
+import { dataLocal } from "@/lib/recorrencia";
 
 export interface EventoSugestao extends Intervalo {
   id: number;
 }
 
-export interface Atribuicao {
+/** Uma vaga vazia de uma escala (item sem pessoa). */
+export interface VagaSugestao {
+  itemId: number;
   eventoId: number;
   funcaoId: number;
-  usuarioId: number | null;
+}
+
+export interface AtribuicaoVaga extends VagaSugestao {
+  usuarioId: number;
 }
 
 export interface EntradaSugestao {
   eventos: readonly EventoSugestao[];
-  /** Ids das funções do ministério; cada função = uma vaga por evento. */
-  funcoes: readonly number[];
-  /** funcaoId → usuários aprovados que têm a função. */
+  /** Vagas vazias a preencher (N itens por função, vindos do modelo). */
+  vagas: readonly VagaSugestao[];
+  /** funcaoId → usuários aprovados no ministério com a função `aprovada`. */
   elegiveis: ReadonlyMap<number, readonly number[]>;
   indisponibilidades: readonly Indisponibilidade[];
-  /** Compromissos que já existem fora desta sugestão (outros ministérios, escalas publicadas). */
+  /**
+   * Compromissos que já existem (qualquer ministério, inclusive as escolhas do líder
+   * nos eventos sugeridos): geram conflito de horário, mesmo dia e mesmo culto.
+   */
   ocupacoes?: readonly Ocupacao[];
-  /** Escolhas já feitas pelo líder (rascunho): ficam como estão. */
-  fixas?: readonly Atribuicao[];
-  /** Escalas que cada usuário já tem no período (entram na conta do equilíbrio). */
-  contagemInicial?: ReadonlyMap<number, number>;
+  /**
+   * Escalas que cada pessoa já tem neste ministério (mês e 60 dias antes):
+   * base do rodízio e do limite mensal.
+   */
+  historico?: readonly { usuarioId: number; inicio: Date }[];
+  /** Máximo de escalas por pessoa no mês, neste ministério. */
+  limiteMensal?: number;
+}
+
+export interface SaidaSugestao {
+  atribuicoes: AtribuicaoVaga[];
+  semCandidato: VagaSugestao[];
+}
+
+const JANELA_RODIZIO_MS = 60 * 24 * 60 * 60 * 1000;
+
+function diaAnterior(dia: string) {
+  const d = new Date(`${dia}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
 }
 
 /**
- * Distribui os voluntários nas vagas do período de forma equilibrada.
- * Quem tem menos escalas no período vem primeiro; empate = menor id (determinístico).
- * Respeita indisponibilidade, conflito de horário, um evento por dia por pessoa
- * e uma função por pessoa no mesmo evento. Vaga sem candidato fica com `usuarioId: null`.
- * Função pura.
+ * Preenche as vagas vazias do período. Ordem das vagas: data do evento, depois função com
+ * menos candidatos, depois id do item. Candidato = elegível para a função, sem folga no dia,
+ * fora do mesmo culto, sem conflito de horário nem outro evento no mesmo dia e abaixo do
+ * limite mensal. Ordem dos candidatos: menos escalas nos 60 dias antes do evento, menos
+ * escalas no mês, sem escala no dia anterior, menor id. Vaga sem candidato fica vazia e
+ * volta em `semCandidato`. Função pura e determinística.
  */
-export function sugerirEscala(entrada: EntradaSugestao): Atribuicao[] {
-  const contagem = new Map(entrada.contagemInicial ?? []);
+export function sugerirEscala(entrada: EntradaSugestao): SaidaSugestao {
+  const eventos = new Map(entrada.eventos.map((e) => [e.id, e]));
   const ocupacoes: Ocupacao[] = [...(entrada.ocupacoes ?? [])];
-  const fixas = new Map<string, number | null>();
-  const chave = (eventoId: number, funcaoId: number) => `${eventoId}:${funcaoId}`;
-  const eventos = [...entrada.eventos].sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
+  const historico = [...(entrada.historico ?? [])];
+  const limite = entrada.limiteMensal ?? Number.POSITIVE_INFINITY;
+  const qtdCandidatos = (funcaoId: number) => entrada.elegiveis.get(funcaoId)?.length ?? 0;
 
-  for (const f of entrada.fixas ?? []) {
-    fixas.set(chave(f.eventoId, f.funcaoId), f.usuarioId);
-    if (f.usuarioId === null) continue;
-    const ev = eventos.find((e) => e.id === f.eventoId);
-    if (!ev) continue;
-    contagem.set(f.usuarioId, (contagem.get(f.usuarioId) ?? 0) + 1);
-    ocupacoes.push({ usuarioId: f.usuarioId, eventoId: ev.id, inicio: ev.inicio, fim: ev.fim });
-  }
+  const vagas = entrada.vagas
+    .filter((v) => eventos.has(v.eventoId))
+    .sort(
+      (a, b) =>
+        eventos.get(a.eventoId)!.inicio.getTime() - eventos.get(b.eventoId)!.inicio.getTime() ||
+        a.eventoId - b.eventoId ||
+        qtdCandidatos(a.funcaoId) - qtdCandidatos(b.funcaoId) ||
+        a.funcaoId - b.funcaoId ||
+        a.itemId - b.itemId,
+    );
 
-  const resultado: Atribuicao[] = [];
-  for (const evento of eventos) {
-    const noEvento = new Set(
-      (entrada.fixas ?? []).filter((f) => f.eventoId === evento.id && f.usuarioId !== null).map((f) => f.usuarioId),
-    );
-    // Funções com menos candidatos primeiro: evita gastar a única pessoa possível em outra vaga.
-    const funcoes = [...entrada.funcoes].sort(
-      (a, b) => (entrada.elegiveis.get(a)?.length ?? 0) - (entrada.elegiveis.get(b)?.length ?? 0),
-    );
-    const doEvento = new Map<number, number | null>();
-    for (const funcaoId of funcoes) {
-      const k = chave(evento.id, funcaoId);
-      if (fixas.has(k) && fixas.get(k) !== null) {
-        doEvento.set(funcaoId, fixas.get(k)!);
-        continue;
-      }
-      const candidatos = (entrada.elegiveis.get(funcaoId) ?? []).filter(
+  const atribuicoes: AtribuicaoVaga[] = [];
+  const semCandidato: VagaSugestao[] = [];
+  for (const vaga of vagas) {
+    const evento = eventos.get(vaga.eventoId)!;
+    const dia = dataLocal(evento.inicio);
+    const mes = dia.slice(0, 7);
+    const ontem = diaAnterior(dia);
+    const desde = evento.inicio.getTime() - JANELA_RODIZIO_MS;
+
+    const noMes = (u: number) =>
+      historico.filter((h) => h.usuarioId === u && dataLocal(h.inicio).startsWith(mes)).length;
+    const em60Dias = (u: number) =>
+      historico.filter(
+        (h) => h.usuarioId === u && h.inicio.getTime() >= desde && h.inicio.getTime() < evento.inicio.getTime(),
+      ).length;
+    const ontemEscalado = (u: number) =>
+      ocupacoes.some((o) => o.usuarioId === u && dataLocal(o.inicio) === ontem) ? 1 : 0;
+
+    const candidatos = (entrada.elegiveis.get(vaga.funcaoId) ?? [])
+      .filter(
         (u) =>
-          !noEvento.has(u) &&
+          !ocupacoes.some((o) => o.usuarioId === u && o.eventoId === evento.id) &&
           !estaIndisponivel(u, evento.inicio, evento.fim, entrada.indisponibilidades) &&
           !temConflito(u, evento, ocupacoes) &&
-          !mesmoDia(u, evento, ocupacoes),
-      );
-      candidatos.sort((a, b) => (contagem.get(a) ?? 0) - (contagem.get(b) ?? 0) || a - b);
-      const escolhido = candidatos[0] ?? null;
-      doEvento.set(funcaoId, escolhido);
-      if (escolhido !== null) {
-        noEvento.add(escolhido);
-        contagem.set(escolhido, (contagem.get(escolhido) ?? 0) + 1);
-        ocupacoes.push({ usuarioId: escolhido, eventoId: evento.id, inicio: evento.inicio, fim: evento.fim });
-      }
+          !mesmoDia(u, evento, ocupacoes) &&
+          noMes(u) < limite,
+      )
+      .map((u) => ({ u, c60: em60Dias(u), mes: noMes(u), ontem: ontemEscalado(u) }))
+      .sort((a, b) => a.c60 - b.c60 || a.mes - b.mes || a.ontem - b.ontem || a.u - b.u);
+
+    const escolhido = candidatos[0]?.u;
+    if (escolhido === undefined) {
+      semCandidato.push(vaga);
+      continue;
     }
-    for (const funcaoId of entrada.funcoes) {
-      resultado.push({ eventoId: evento.id, funcaoId, usuarioId: doEvento.get(funcaoId) ?? null });
-    }
+    atribuicoes.push({ ...vaga, usuarioId: escolhido });
+    ocupacoes.push({ usuarioId: escolhido, eventoId: evento.id, inicio: evento.inicio, fim: evento.fim });
+    historico.push({ usuarioId: escolhido, inicio: evento.inicio });
   }
-  return resultado;
+  return { atribuicoes, semCandidato };
 }

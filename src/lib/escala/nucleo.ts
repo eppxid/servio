@@ -4,7 +4,8 @@ import { temPapel, type AnyDb } from "@/lib/auth-core";
 import { estaIndisponivel, indisponiveisNoPeriodo } from "@/lib/disponibilidade";
 import { ErroAcesso, type Ator } from "@/lib/ministerios/nucleo";
 import { notificar } from "@/lib/notificar";
-import { sugerirEscala, type Atribuicao } from "@/lib/sugestao";
+import { sugerirEscala, type VagaSugestao } from "@/lib/sugestao";
+import { dataLocal } from "@/lib/recorrencia";
 import { DURACAO_PADRAO_MS, temConflito, type Ocupacao } from "./regras";
 
 export class ErroEscala extends Error {}
@@ -102,6 +103,7 @@ async function elegiveisPorFuncao(db: AnyDb, ministerioId: number) {
       and(
         eq(t.membrosMinisterio.ministerioId, ministerioId),
         eq(t.membrosMinisterio.status, "aprovado"),
+        eq(t.membroFuncoes.status, "aprovada"),
         isNull(t.usuarios.anonimizadoEm),
       ),
     )
@@ -273,90 +275,190 @@ export function limitesDoMes(mes: string) {
   return { de: new Date(`${mes}-01T00:00:00-03:00`), ate: new Date(`${prox}-01T00:00:00-03:00`) };
 }
 
+export interface ResultadoSugestao {
+  /** Itens preenchidos pela sugestão (guardar para desfazer). */
+  preenchidos: number[];
+  /** Pessoa posta em cada item de `preenchidos`, na mesma ordem. */
+  usuarios: number[];
+  semCandidato: { eventoId: number; funcaoId: number; data: string }[];
+  /** Total de vagas vazias que a sugestão tentou preencher. */
+  total: number;
+}
+
+const DIAS_RODIZIO_MS = 60 * 24 * 60 * 60 * 1000;
+
 /**
- * "Sugerir mês": preenche as vagas vazias das escalas não publicadas do ministério
- * nos eventos futuros do mês. Escolhas já feitas pelo líder ficam. Tudo vira rascunho.
- * Devolve quantas vagas foram preenchidas.
+ * "Sugerir mês": preenche as vagas vazias (itens sem pessoa) das escalas em rascunho do
+ * ministério nos eventos futuros do mês. Nunca mexe em item já escolhido nem em escala
+ * publicada. Evento sem escala neste ministério (sem modelo de vagas) conta com uma vaga
+ * por função e só ganha o rascunho se a sugestão preencher alguma delas.
  */
-export async function sugerirMes(db: AnyDb, ator: Ator, ministerioId: number, mes: string, agora = new Date()) {
-  await exigirLider(db, ator, ministerioId);
+export async function sugerirMes(
+  db: AnyDb,
+  ator: Ator,
+  ministerioId: number,
+  mes: string,
+  agora = new Date(),
+): Promise<ResultadoSugestao> {
+  const ministerio = await exigirLider(db, ator, ministerioId);
   const lim = limitesDoMes(mes);
   const de = lim.de > agora ? lim.de : agora;
+  const vazio: ResultadoSugestao = { preenchidos: [], usuarios: [], semCandidato: [], total: 0 };
   const evs = await db
     .select()
     .from(t.eventos)
     .where(and(eq(t.eventos.igrejaId, ator.igrejaId), gte(t.eventos.inicio, de), lt(t.eventos.inicio, lim.ate)))
     .orderBy(asc(t.eventos.inicio));
-  if (evs.length === 0) return 0;
+  if (evs.length === 0) return vazio;
 
   const funcoes = await db
     .select({ id: t.funcoes.id })
     .from(t.funcoes)
     .where(eq(t.funcoes.ministerioId, ministerioId));
+  const escalasExistentes = await db
+    .select()
+    .from(t.escalas)
+    .where(and(eq(t.escalas.ministerioId, ministerioId), inArray(t.escalas.eventoId, evs.map((e) => e.id))));
+  const comEscala = new Set(escalasExistentes.map((e) => e.eventoId));
+
+  const itensVazios = await db
+    .select({ itemId: t.escalaItens.id, eventoId: t.escalas.eventoId, funcaoId: t.escalaItens.funcaoId })
+    .from(t.escalaItens)
+    .innerJoin(t.escalas, eq(t.escalas.id, t.escalaItens.escalaId))
+    .where(
+      and(
+        eq(t.escalas.ministerioId, ministerioId),
+        eq(t.escalas.status, "rascunho"),
+        inArray(t.escalas.eventoId, evs.map((e) => e.id)),
+        isNull(t.escalaItens.usuarioId),
+      ),
+    );
+  // Evento sem escala: vagas virtuais (id negativo), gravadas só se a sugestão preencher alguma.
+  let virtual = 0;
+  const virtuais: VagaSugestao[] = evs
+    .filter((e) => !comEscala.has(e.id))
+    .flatMap((e) => funcoes.map((f) => ({ itemId: --virtual, eventoId: e.id, funcaoId: f.id })));
+  const vagas: VagaSugestao[] = [...itensVazios, ...virtuais];
+  if (vagas.length === 0) return vazio;
+
   const elegiveis = await elegiveisPorFuncao(db, ministerioId);
   const indisp = await indisponiveisNoPeriodo(ministerioId, lim.de, new Date(lim.ate.getTime() - 1), db);
-  const todas = await ocupacoesNoPeriodo(db, ator.igrejaId, lim.de, lim.ate);
+  const todas = await ocupacoesNoPeriodo(db, ator.igrejaId, new Date(lim.de.getTime() - DIAS_RODIZIO_MS), lim.ate);
 
-  const publicadas = new Set(
-    (
-      await db
-        .select({ eventoId: t.escalas.eventoId })
-        .from(t.escalas)
-        .where(
-          and(
-            eq(t.escalas.ministerioId, ministerioId),
-            eq(t.escalas.status, "publicada"),
-            inArray(t.escalas.eventoId, evs.map((e) => e.id)),
-          ),
-        )
-    ).map((e) => e.eventoId),
-  );
-  const alvo = evs.filter((e) => !publicadas.has(e.id));
-  const alvoIds = new Set(alvo.map((e) => e.id));
-  const doMinisterio = todas.filter((o) => o.ministerioId === ministerioId);
-
-  const contagemInicial = new Map<number, number>();
-  for (const o of doMinisterio) {
-    if (!alvoIds.has(o.eventoId)) contagemInicial.set(o.usuarioId, (contagemInicial.get(o.usuarioId) ?? 0) + 1);
-  }
-  // Rascunhos do líder neste ministério viram escolhas fixas; o resto é compromisso externo.
-  const rascunhos = alvo.length
-    ? await db
-        .select({ eventoId: t.escalas.eventoId, funcaoId: t.escalaItens.funcaoId, usuarioId: t.escalaItens.usuarioId })
-        .from(t.escalaItens)
-        .innerJoin(t.escalas, eq(t.escalas.id, t.escalaItens.escalaId))
-        .where(and(eq(t.escalas.ministerioId, ministerioId), inArray(t.escalas.eventoId, [...alvoIds])))
-    : [];
-  const fixas: Atribuicao[] = rascunhos.filter((r) => r.usuarioId !== null);
-  const ocupacoes = todas.filter((o) => !(o.ministerioId === ministerioId && alvoIds.has(o.eventoId)));
-
-  const sugestao = sugerirEscala({
-    eventos: alvo,
-    funcoes: funcoes.map((f) => f.id),
+  const { atribuicoes, semCandidato } = sugerirEscala({
+    eventos: evs,
+    vagas,
     elegiveis: new Map([...elegiveis].map(([f, us]) => [f, us.map((u) => u.usuarioId)])),
     indisponibilidades: indisp,
-    ocupacoes,
-    fixas,
-    contagemInicial,
+    ocupacoes: todas,
+    historico: todas.filter((o) => o.ministerioId === ministerioId),
+    limiteMensal: ministerio.limiteMensal,
   });
 
-  let preenchidas = 0;
-  for (const e of alvo) {
-    const escolhas = new Map<number, number | null>();
-    for (const a of sugestao.filter((s) => s.eventoId === e.id)) escolhas.set(a.funcaoId, a.usuarioId);
-    const novas = sugestao.filter(
-      (s) => s.eventoId === e.id && s.usuarioId !== null && !fixas.some((f) => f.eventoId === e.id && f.funcaoId === s.funcaoId),
-    ).length;
-    if (novas === 0) continue;
-    try {
-      await salvarEscala(db, ator, e.id, ministerioId, escolhas, false);
-      preenchidas += novas;
-    } catch (erro) {
-      // Escolha antiga do líder que ficou inválida (ex.: pessoa ficou indisponível): pula o evento.
-      if (!(erro instanceof ErroEscala)) throw erro;
+  const preenchidos: number[] = [];
+  const usuarios: number[] = [];
+  const reais = atribuicoes.filter((a) => a.itemId > 0);
+  for (const a of reais) {
+    // `usuario_id is null` no WHERE: se o líder escolheu alguém nesse meio-tempo, a escolha dele fica.
+    const feitos = await db
+      .update(t.escalaItens)
+      .set({ usuarioId: a.usuarioId, status: "pendente", checkinEm: null })
+      .where(and(eq(t.escalaItens.id, a.itemId), isNull(t.escalaItens.usuarioId)))
+      .returning({ id: t.escalaItens.id });
+    if (feitos.length) {
+      preenchidos.push(a.itemId);
+      usuarios.push(a.usuarioId);
     }
   }
-  return preenchidas;
+  const porEventoVirtual = new Map<number, Map<number, number>>();
+  for (const a of atribuicoes) {
+    if (a.itemId > 0) continue;
+    const m = porEventoVirtual.get(a.eventoId) ?? new Map<number, number>();
+    m.set(a.funcaoId, a.usuarioId);
+    porEventoVirtual.set(a.eventoId, m);
+  }
+  for (const [eventoId, escolhas] of porEventoVirtual) {
+    const [nova] = await db
+      .insert(t.escalas)
+      .values({ igrejaId: ator.igrejaId, eventoId, ministerioId })
+      .onConflictDoNothing()
+      .returning();
+    if (!nova) continue;
+    const criados = await db
+      .insert(t.escalaItens)
+      .values(
+        funcoes.map((f) => ({
+          igrejaId: ator.igrejaId,
+          escalaId: nova.id,
+          funcaoId: f.id,
+          usuarioId: escolhas.get(f.id) ?? null,
+        })),
+      )
+      .returning({ id: t.escalaItens.id, usuarioId: t.escalaItens.usuarioId });
+    for (const c of criados) {
+      if (c.usuarioId === null) continue;
+      preenchidos.push(c.id);
+      usuarios.push(c.usuarioId);
+    }
+  }
+  const dataDe = new Map(evs.map((e) => [e.id, dataLocal(e.inicio)]));
+  // Evento virtual sem nenhuma vaga preenchida não vira escala: não entra no resumo.
+  const virtuaisVazios = new Set(evs.filter((e) => !comEscala.has(e.id) && !porEventoVirtual.has(e.id)).map((e) => e.id));
+  return {
+    preenchidos,
+    usuarios,
+    semCandidato: semCandidato
+      .filter((v) => !virtuaisVazios.has(v.eventoId))
+      .map((v) => ({ eventoId: v.eventoId, funcaoId: v.funcaoId, data: dataDe.get(v.eventoId)! })),
+    total: vagas.filter((v) => !virtuaisVazios.has(v.eventoId)).length,
+  };
+}
+
+/**
+ * Desfaz uma sugestão: esvazia os itens indicados que ainda estão em escala rascunho de um
+ * ministério que o ator lidera e não foram mexidos depois (sem confirmação, check-in ou
+ * recusa; e, se `usuarios` vier, ainda com a mesma pessoa). Devolve quantos esvaziou.
+ */
+export async function desfazerSugestao(
+  db: AnyDb,
+  ator: Ator,
+  itemIds: readonly number[],
+  usuarios?: readonly number[],
+) {
+  if (itemIds.length === 0) return 0;
+  const esperado = new Map(itemIds.map((id, i) => [id, usuarios?.[i]]));
+  const itens = await db
+    .select({ id: t.escalaItens.id, usuarioId: t.escalaItens.usuarioId, ministerioId: t.escalas.ministerioId })
+    .from(t.escalaItens)
+    .innerJoin(t.escalas, eq(t.escalas.id, t.escalaItens.escalaId))
+    .where(
+      and(
+        eq(t.escalaItens.igrejaId, ator.igrejaId),
+        inArray(t.escalaItens.id, [...itemIds]),
+        eq(t.escalas.status, "rascunho"),
+        eq(t.escalaItens.status, "pendente"),
+        isNull(t.escalaItens.checkinEm),
+        isNull(t.escalaItens.recusadoEm),
+      ),
+    );
+  const permitidos = new Map<number, boolean>();
+  let n = 0;
+  for (const item of itens) {
+    if (item.usuarioId === null) continue;
+    const quem = esperado.get(item.id);
+    if (quem !== undefined && quem !== item.usuarioId) continue;
+    if (!permitidos.has(item.ministerioId)) {
+      permitidos.set(item.ministerioId, await temPapel(db, ator, "lider", item.ministerioId));
+    }
+    if (!permitidos.get(item.ministerioId)) continue;
+    const feitos = await db
+      .update(t.escalaItens)
+      .set({ usuarioId: null })
+      .where(and(eq(t.escalaItens.id, item.id), eq(t.escalaItens.usuarioId, item.usuarioId)))
+      .returning({ id: t.escalaItens.id });
+    n += feitos.length;
+  }
+  return n;
 }
 
 /** Escalas publicadas do evento (só nome dos escalados), para o detalhe do evento. */

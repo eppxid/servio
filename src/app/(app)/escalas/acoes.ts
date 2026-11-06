@@ -50,8 +50,11 @@ export async function sugerirMesAcao(formData: FormData) {
   const v = validar(esquemaSugestao, formData);
   if (!v.ok) voltar("/escalas", "erro", Object.values(v.erros)[0]);
   let n = 0;
+  let semCandidato = 0;
   try {
-    n = await sugerirMes(banco(), ator, v.dados.ministerio, v.dados.mes);
+    const r = await sugerirMes(banco(), ator, v.dados.ministerio, v.dados.mes);
+    n = r.preenchidos.length;
+    semCandidato = r.semCandidato.length;
   } catch (erro) {
     if (erro instanceof ErroAcesso) redirect("/escalas");
     throw erro;
@@ -60,6 +63,10 @@ export async function sugerirMesAcao(formData: FormData) {
   voltar(
     "/escalas",
     "ok",
-    n ? `${n} vaga(s) sugerida(s) como rascunho. Revise e publique.` : "Nenhuma vaga para sugerir.",
+    n
+      ? `${n} vaga(s) sugerida(s) como rascunho${semCandidato ? `; ${semCandidato} sem candidato` : ""}. Revise e publique.`
+      : semCandidato
+        ? `Nenhuma vaga preenchida: ${semCandidato} sem candidato.`
+        : "Nenhuma vaga para sugerir.",
   );
 }
