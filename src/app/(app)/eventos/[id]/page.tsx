@@ -8,7 +8,7 @@ import { exigirPapel } from "@/lib/auth";
 import { FUSO } from "@/lib/recorrencia";
 import { EscalasDoEvento } from "@/components/EscalasDoEvento";
 import { editarEvento, excluirRegra, gerarProximos } from "../acoes";
-import { Publica } from "@/components/Publica";
+import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
 
@@ -31,11 +31,12 @@ export default async function DetalheEvento({
 
   const f = (d: Date, p: string) => formatInTimeZone(d, FUSO, p);
   return (
-    <Publica>
-      <Link href={`/eventos?mes=${f(evento.inicio, "yyyy-MM")}`} className="link text-sm">
-        ← Eventos
-      </Link>
-      <h1 className="title">{evento.titulo}</h1>
+    <div className="tela">
+      <Cabecalho eyebrow="Modo líder" titulo={evento.titulo}>
+        <Link href={`/eventos?mes=${f(evento.inicio, "yyyy-MM")}`} className="tbtn">
+          ← Eventos
+        </Link>
+      </Cabecalho>
       {erro && (
         <p role="alert" className="alerta alerta--bad">
           {erro}
@@ -119,6 +120,6 @@ export default async function DetalheEvento({
       <section id="escalas-do-evento" aria-label="Escalas do evento">
         <EscalasDoEvento eventoId={evento.id} igrejaId={admin.igrejaId} />
       </section>
-    </Publica>
+    </div>
   );
 }

@@ -43,6 +43,8 @@ describe("modoDoCaminho", () => {
     expect(modoDoCaminho("/painel", "voluntario", true)).toBe("lider");
     expect(modoDoCaminho("/lider/equipe", "voluntario", true)).toBe("lider");
     expect(modoDoCaminho("/agenda/trocas", "voluntario", true)).toBe("lider");
+    expect(modoDoCaminho("/eventos/novo", "voluntario", true)).toBe("lider");
+    expect(modoDoCaminho("/chat/3", "lider", true)).toBe("lider");
     expect(modoDoCaminho("/agenda", "lider", true)).toBe("voluntario");
     expect(modoDoCaminho("/escalas", "lider", true)).toBe("lider");
     expect(modoDoCaminho("/ministerios", "voluntario", true)).toBe("voluntario");
