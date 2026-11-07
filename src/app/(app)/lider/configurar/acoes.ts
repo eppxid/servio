@@ -52,20 +52,25 @@ export async function salvarCulto(formData: FormData) {
   if (horaFim && horaFim <= horaInicio) redirect(`${volta}&erro=fim`);
 
   const banco = db();
+  const lista = m
+    ? await banco
+        .select({ id: funcoes.id })
+        .from(funcoes)
+        .where(and(eq(funcoes.ministerioId, m), eq(funcoes.igrejaId, admin.igrejaId)))
+    : [];
+  const vagas = lista.map((f) => ({
+    funcaoId: f.id,
+    quantidade: Math.max(0, Math.min(50, Number.parseInt(String(formData.get(`qtd_${f.id}`) ?? "0"), 10) || 0)),
+  }));
+  // Tipo sem vagas deixaria todos os cultos da série "sem vagas": não salva.
+  if (vagas.length > 0 && vagas.every((v) => v.quantidade === 0)) redirect(`${volta}&erro=vagas`);
+
   const [regra] = await banco
     .insert(recorrencias)
     .values({ igrejaId: admin.igrejaId, nome, diaSemana: dia, horaInicio, horaFim })
     .returning();
 
   if (m) {
-    const lista = await banco
-      .select({ id: funcoes.id })
-      .from(funcoes)
-      .where(and(eq(funcoes.ministerioId, m), eq(funcoes.igrejaId, admin.igrejaId)));
-    const vagas = lista.map((f) => ({
-      funcaoId: f.id,
-      quantidade: Math.max(0, Math.min(50, Number.parseInt(String(formData.get(`qtd_${f.id}`) ?? "0"), 10) || 0)),
-    }));
     await salvarModeloVagas(banco as unknown as AnyDb, admin, regra.id, m, vagas);
   }
 

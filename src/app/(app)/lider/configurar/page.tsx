@@ -51,7 +51,9 @@ export default async function Configurar({
   const mensagem =
     q.erro === "fim"
       ? "O fim deve ser depois do início."
-      : q.erro
+      : q.erro === "vagas"
+        ? "Defina pelo menos 1 vaga."
+        : q.erro
         ? "Confira os campos."
         : null;
 
@@ -131,7 +133,7 @@ export default async function Configurar({
                     type="number"
                     min={0}
                     max={50}
-                    defaultValue={0}
+                    defaultValue={1}
                     aria-label={`Quantidade de ${f.nome}`}
                     className="campo w-24"
                   />

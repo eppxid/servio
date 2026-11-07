@@ -7,7 +7,7 @@ import type { AnyDb } from "@/lib/auth-core";
 import { ErroEscala } from "@/lib/escala/nucleo";
 import { ErroAcesso } from "@/lib/ministerios/nucleo";
 import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
-import { copiarVagasDeTipo } from "@/lib/vagas/nucleo";
+import { copiarVagasDeTipo, definirVagasDoCulto } from "@/lib/vagas/nucleo";
 import { preencherVaga, publicarCulto } from "./vagas-culto";
 
 const banco = () => db() as unknown as AnyDb;
@@ -53,9 +53,31 @@ export async function copiarVagasAcao(formData: FormData) {
     await copiarVagasDeTipo(banco(), ator, eventoId, tipo);
   } catch (erro) {
     if (erro instanceof ErroAcesso) redirect("/lider/cultos");
+    if (erro instanceof ErroEscala) redirect(`${caminho}?tipoSemVagas=${tipo}`);
     throw erro;
   }
   revalidatePath(caminho);
   revalidatePath("/lider/cultos");
   redirect(caminho);
+}
+
+/** Define as vagas só deste culto para um ministério (cria a escala em rascunho se preciso). */
+export async function definirVagasAcao(
+  eventoId: number,
+  ministerioId: number,
+  vagas: { funcaoId: number; quantidade: number }[],
+): Promise<Resultado> {
+  const ator = await exigirUsuarioSemTroca();
+  const r = await comoResultado(() =>
+    definirVagasDoCulto(
+      banco(),
+      ator,
+      idSeguro(eventoId),
+      idSeguro(ministerioId),
+      vagas.map((v) => ({ funcaoId: idSeguro(v.funcaoId), quantidade: Number(v.quantidade) })),
+    ),
+  );
+  revalidatePath(`/lider/cultos/${idSeguro(eventoId)}`);
+  revalidatePath("/lider/cultos");
+  return r;
 }

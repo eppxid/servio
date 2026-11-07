@@ -5,10 +5,12 @@ import { and, eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import * as schema from "@/db/schema";
 import type { AnyDb } from "@/lib/auth-core";
+import { ErroEscala } from "@/lib/escala/nucleo";
 import { ErroAcesso, type Ator } from "@/lib/ministerios/nucleo";
 import {
   copiarVagasDeTipo,
   criarVagasDosEventos,
+  definirVagasDoCulto,
   preenchimentoDoMes,
   salvarModeloVagas,
 } from "./nucleo";
@@ -254,5 +256,84 @@ describe("preenchimentoDoMes", () => {
   it("voluntário é negado e mês inválido é recusado", async () => {
     await expect(preenchimentoDoMes(db, voluntario, "2099-05")).rejects.toBeInstanceOf(ErroAcesso);
     await expect(preenchimentoDoMes(db, admin, "2099-13")).rejects.toBeInstanceOf(RangeError);
+  });
+});
+
+describe("copiarVagasDeTipo sem vagas", () => {
+  it("tipo sem vagas para o ministério do líder é recusado com a mensagem", async () => {
+    const e = await evento("2099-06-01T22:00:00Z", null);
+    await expect(copiarVagasDeTipo(db, liderLouvor, e, outroTipo)).rejects.toThrow(
+      "O tipo Culto de quarta não tem vagas para Louvor.",
+    );
+    await expect(copiarVagasDeTipo(db, liderLouvor, e, outroTipo)).rejects.toBeInstanceOf(ErroEscala);
+    expect(await itens(e, louvor)).toBeNull();
+  });
+});
+
+describe("definirVagasDoCulto", () => {
+  it("culto sem escala: cria rascunho com os itens pedidos", async () => {
+    const e = await evento("2099-07-01T22:00:00Z", null);
+    await definirVagasDoCulto(db, liderLouvor, e, louvor, [
+      { funcaoId: vocal, quantidade: 2 },
+      { funcaoId: violao, quantidade: 0 },
+    ]);
+    const l = await itens(e, louvor);
+    expect(l!.escala.status).toBe("rascunho");
+    expect(conta(l!.itens, vocal)).toBe(2);
+    expect(conta(l!.itens, violao)).toBe(0);
+  });
+
+  it("sem escala e tudo em 0: recusa", async () => {
+    const e = await evento("2099-07-02T22:00:00Z", null);
+    await expect(definirVagasDoCulto(db, liderLouvor, e, louvor, [{ funcaoId: vocal, quantidade: 0 }])).rejects.toThrow(
+      "Defina pelo menos 1 vaga.",
+    );
+    expect(await itens(e, louvor)).toBeNull();
+  });
+
+  it("acrescenta vaga e tira vaga vazia", async () => {
+    const e = await evento("2099-07-03T22:00:00Z", null);
+    await definirVagasDoCulto(db, liderLouvor, e, louvor, [{ funcaoId: vocal, quantidade: 2 }]);
+    await definirVagasDoCulto(db, liderLouvor, e, louvor, [
+      { funcaoId: vocal, quantidade: 1 },
+      { funcaoId: violao, quantidade: 1 },
+    ]);
+    const l = await itens(e, louvor);
+    expect(conta(l!.itens, vocal)).toBe(1);
+    expect(conta(l!.itens, violao)).toBe(1);
+  });
+
+  it("recusa tirar vaga com pessoa, mas tira a vazia", async () => {
+    const e = await evento("2099-07-04T22:00:00Z", null);
+    await definirVagasDoCulto(db, liderLouvor, e, louvor, [{ funcaoId: vocal, quantidade: 2 }]);
+    const antes = await itens(e, louvor);
+    await db.update(schema.escalaItens).set({ usuarioId: voluntario.id }).where(eq(schema.escalaItens.id, antes!.itens[0].id));
+    await definirVagasDoCulto(db, liderLouvor, e, louvor, [{ funcaoId: vocal, quantidade: 1 }]);
+    const meio = await itens(e, louvor);
+    expect(meio!.itens.map((i) => i.usuarioId)).toEqual([voluntario.id]);
+    await expect(definirVagasDoCulto(db, liderLouvor, e, louvor, [{ funcaoId: vocal, quantidade: 0 }])).rejects.toThrow(
+      "Não dá para tirar uma vaga que já tem pessoa.",
+    );
+    expect(conta((await itens(e, louvor))!.itens, vocal)).toBe(1);
+  });
+
+  it("recusa escala publicada", async () => {
+    const e = await evento("2099-07-05T22:00:00Z", null);
+    await definirVagasDoCulto(db, liderLouvor, e, louvor, [{ funcaoId: vocal, quantidade: 1 }]);
+    await db.update(schema.escalas).set({ status: "publicada" }).where(eq(schema.escalas.eventoId, e));
+    await expect(definirVagasDoCulto(db, liderLouvor, e, louvor, [{ funcaoId: vocal, quantidade: 2 }])).rejects.toBeInstanceOf(
+      ErroEscala,
+    );
+    expect(conta((await itens(e, louvor))!.itens, vocal)).toBe(1);
+  });
+
+  it("recusa líder de outro ministério, voluntário e função alheia", async () => {
+    const e = await evento("2099-07-06T22:00:00Z", null);
+    const v = [{ funcaoId: vocal, quantidade: 1 }];
+    await expect(definirVagasDoCulto(db, liderMidia, e, louvor, v)).rejects.toBeInstanceOf(ErroAcesso);
+    await expect(definirVagasDoCulto(db, voluntario, e, louvor, v)).rejects.toBeInstanceOf(ErroAcesso);
+    await expect(
+      definirVagasDoCulto(db, liderLouvor, e, louvor, [{ funcaoId: camera, quantidade: 1 }]),
+    ).rejects.toBeInstanceOf(ErroAcesso);
   });
 });

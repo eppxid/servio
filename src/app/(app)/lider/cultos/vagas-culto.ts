@@ -36,6 +36,8 @@ export interface MinisterioCulto {
   nome: string;
   status: "sem_escala" | "rascunho" | "publicada";
   funcoes: FuncaoCulto[];
+  /** Todas as funções do ministério, com as vagas atuais deste culto (0 se não há). */
+  todasFuncoes: { id: number; nome: string; quantidade: number }[];
 }
 
 export interface DadosCulto {
@@ -98,6 +100,11 @@ export async function dadosCulto(db: AnyDb, ator: Ator, eventoId: number): Promi
       id: m.id,
       nome: m.nome,
       status: d.status,
+      todasFuncoes: d.funcoes.map((f) => ({
+        id: f.id,
+        nome: f.nome,
+        quantidade: itens.filter((i) => i.funcaoId === f.id).length,
+      })),
       funcoes: d.funcoes
         .map((f) => ({
           id: f.id,
