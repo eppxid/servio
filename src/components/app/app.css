@@ -1,6 +1,6 @@
 /* Casca do app v2 (maquete ESPECS/maquete-v2/app.css), por cima do kit layout-fluido.
    Celular primeiro: abas no rodapé, ação principal no polegar, folha inferior.
-   Desktop (>= 900 px): abas viram a barra de ícones à esquerda; conteúdo em coluna central. */
+   Desktop (>= 900 px): abas viram o trilho de ícones colado à coluna; conteúdo em coluna central. */
 
 /* Mesma ordem de camadas do Tailwind: vale qualquer que seja o arquivo carregado primeiro. */
 @layer theme, base, components, utilities;
@@ -55,6 +55,7 @@
   .row__tx b { display: block; font-size: var(--fs-lg); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .row__tx--quebra b { white-space: normal; }
   .row__tx span { display: block; font-size: var(--fs-sm); color: var(--muted); margin-top: 1px; }
+  .row__tx .vg { display: inline-flex; margin-top: 0; font-size: 10.5px; color: var(--c); }
   .row__end { flex-shrink: 0; display: flex; align-items: center; gap: 6px; color: var(--faint); }
   .row__end svg { width: 18px; height: 18px; }
 
@@ -146,10 +147,17 @@
   /* ---------- Desktop: coluna central + barra de ícones ---------- */
   @media (min-width: 900px) {
     :root { --tab-h: 0px; }
-    .app { padding-left: calc(76px + var(--gutter) * 2); }
-    .top { max-width: 1100px; margin-inline: auto; }
+    /* Contêiner único e centralizado: topo na 1ª linha, trilho + conteúdo na 2ª. */
+    .app {
+      max-width: 1180px; margin-inline: auto; padding-left: 0;
+      display: grid; grid-template-columns: calc(76px + var(--gutter)) minmax(0, 1fr); align-items: start;
+    }
+    .top { grid-column: 1 / -1; }
+    .main { grid-column: 2; grid-row: 2; width: 100%; margin-inline: 0; }
     .tabbar {
-      left: var(--gutter); right: auto; top: 50%; bottom: auto; translate: 0 -50%;
+      grid-column: 1; grid-row: 2; position: sticky; z-index: 40;
+      top: calc(var(--top-h) + 8px); left: auto; right: auto; bottom: auto;
+      margin-left: var(--gutter);
       width: 76px; height: auto; display: flex; flex-direction: column; gap: 4px; padding: 10px 0;
       border: 1px solid var(--line); border-radius: 38px; box-shadow: var(--shadow-pop);
     }
