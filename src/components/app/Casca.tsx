@@ -12,7 +12,6 @@ import { INICIO_DO_MODO, modoDoCaminho, type Modo } from "./modo-comum";
 
 /** Telas antigas que ainda não têm substituto nas abas novas. */
 const MAIS: { href: string; rotulo: string; icone: NomeIcone; soAdmin?: boolean; soLider?: boolean }[] = [
-  { href: "/escalas", rotulo: "Escalas", icone: "escalas" },
   { href: "/agenda/trocas", rotulo: "Trocas", icone: "escalar", soLider: true },
   { href: "/ministerios", rotulo: "Ministérios", icone: "ministerios" },
   { href: "/eventos", rotulo: "Eventos", icone: "agenda", soAdmin: true },
