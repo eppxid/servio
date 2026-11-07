@@ -98,7 +98,7 @@ test("admin cria ministério, voluntário entra por convite, líder aprova, esca
   await admin.getByLabel("Data (do primeiro culto)").fill(data);
   await admin.getByLabel("Início").fill(hora);
   await admin.getByRole("button", { name: "Salvar" }).click();
-  await expect(admin).toHaveURL(/\/eventos/);
+  await expect(admin).toHaveURL(/\/lider\/cultos/);
 
   // 7. Líder abre Escalar, sugere o mês, vê o resumo, desfaz, sugere de novo e publica o mês.
   await lider.goto(`/lider/escalar?mes=${mes}`);

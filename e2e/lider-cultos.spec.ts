@@ -37,7 +37,9 @@ test("líder define o modelo 2+1+1, vê Louvor 0/4 no calendário, preenche uma 
   await admin.getByLabel("Início").fill("18:00");
   await admin.getByLabel("Repetir toda semana").check();
   await admin.getByRole("button", { name: "Salvar" }).click();
-  await expect(admin).toHaveURL(/\/eventos/);
+  await expect(admin).toHaveURL(/\/lider\/cultos/);
+  await admin.goto("/eventos");
+  await expect(admin.locator("nav[aria-label=Principal]")).toBeVisible();
 
   // 2. Líder abre o tipo de culto e define 2 Vocal + 1 Violão + 1 Teclado.
   const lider = await entrar(browser, "lider@e2e.local");

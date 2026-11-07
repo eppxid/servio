@@ -14,7 +14,7 @@ import {
   mesValido,
   rotuloMes,
 } from "./mes";
-import { Publica } from "@/components/Publica";
+import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
 
@@ -42,16 +42,15 @@ export default async function Eventos({
   }
 
   return (
-    <Publica larga>
-      <header className="head !my-0">
-        <div>
-          <p className="eyebrow">Administração</p>
-          <h1 className="title">Eventos</h1>
-        </div>
-        <Link href="/eventos/novo" className="btn btn--primary">
+    <div className="tela">
+      <Cabecalho eyebrow="Modo líder" titulo="Eventos">
+        <Link href="/lider/cultos" className="tbtn">
+          ← Cultos
+        </Link>
+        <Link href="/eventos/novo" className="tbtn tbtn--soft">
           Novo
         </Link>
-      </header>
+      </Cabecalho>
 
       <nav aria-label="Mês" className="flex items-center justify-between text-sm">
         <Link href={`/eventos?mes=${deslocarMes(mes, -1)}`} className="btn btn--sm">
@@ -89,6 +88,6 @@ export default async function Eventos({
           </ul>
         </section>
       ))}
-    </Publica>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import { exigirPapel } from "@/lib/auth";
 import { criarEvento } from "../acoes";
-import { Publica } from "@/components/Publica";
+import Link from "next/link";
+import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,12 @@ export default async function NovoEvento({
   await exigirPapel("admin");
   const { erro } = await searchParams;
   return (
-    <Publica>
-      <h1 className="title">Novo evento</h1>
+    <div className="tela">
+      <Cabecalho eyebrow="Modo líder" titulo="Novo evento">
+        <Link href="/lider/cultos" className="tbtn">
+          ← Cultos
+        </Link>
+      </Cabecalho>
       {erro && (
         <p role="alert" className="alerta alerta--bad">
           {erro}
@@ -49,6 +54,6 @@ export default async function NovoEvento({
           Salvar
         </button>
       </form>
-    </Publica>
+    </div>
   );
 }

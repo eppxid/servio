@@ -92,7 +92,7 @@ export async function criarEvento(formData: FormData) {
     });
   }
   revalidatePath("/eventos");
-  redirect("/eventos?mes=" + data.slice(0, 7));
+  redirect("/lider/cultos?mes=" + data.slice(0, 7));
 }
 
 const esquemaEdicao = z.object({
