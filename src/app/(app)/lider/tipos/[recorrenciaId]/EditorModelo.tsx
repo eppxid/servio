@@ -9,13 +9,18 @@ const MAXIMO = 20;
 /**
  * Modelo de vagas de um ministério neste tipo de culto: quantidade por função com − / +.
  * A ação chega por prop (ver `VagasMinisterio`): evita uma segunda cópia do módulo do banco.
+ * Serve também para as vagas de um culto só: passe `alvoId` (o id do culto) e `legenda`.
  */
 export function EditorModelo({
   recorrenciaId,
+  alvoId,
+  legenda = "por culto",
   ministerio,
   salvar: salvarModelo,
 }: {
-  recorrenciaId: number;
+  recorrenciaId?: number;
+  alvoId?: number;
+  legenda?: string;
   ministerio: ModeloMinisterio;
   salvar: (
     recorrenciaId: number,
@@ -35,7 +40,7 @@ export function EditorModelo({
   const salvar = () =>
     iniciar(async () => {
       const r = await salvarModelo(
-        recorrenciaId,
+        (alvoId ?? recorrenciaId)!,
         ministerio.id,
         ministerio.funcoes.map((f) => ({ funcaoId: f.id, quantidade: qtd.get(f.id) ?? 0 })),
       );
@@ -48,7 +53,7 @@ export function EditorModelo({
         <h2 className="title" style={{ fontSize: "var(--fs-2xl)" }}>
           {ministerio.nome}
         </h2>
-        <p className="eyebrow">{total} {total === 1 ? "vaga" : "vagas"} por culto</p>
+        <p className="eyebrow">{total} {total === 1 ? "vaga" : "vagas"} {legenda}</p>
       </div>
       {ministerio.funcoes.length === 0 ? (
         <p className="list vazio">Cadastre as funções do ministério para definir as vagas.</p>

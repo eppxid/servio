@@ -1,6 +1,7 @@
-import { and, asc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNull, lt } from "drizzle-orm";
 import * as t from "@/db/schema";
 import { temPapel, type AnyDb } from "@/lib/auth-core";
+import { ErroEscala } from "@/lib/escala/nucleo";
 import { ErroAcesso, type Ator } from "@/lib/ministerios/nucleo";
 
 export type StatusPreenchimento = "completo" | "faltando" | "sem_escala";
@@ -179,22 +180,146 @@ export async function copiarVagasDeTipo(
     .limit(1);
   if (!ev || !rec || !(await temPapel(db, ator, "lider"))) throw new ErroAcesso();
 
-  let permitidos: Set<number> | undefined;
-  if (ator.papelGlobal !== "admin") {
-    const meus = await db
-      .select({ id: t.membrosMinisterio.ministerioId })
-      .from(t.membrosMinisterio)
-      .where(
-        and(
-          eq(t.membrosMinisterio.usuarioId, ator.id),
-          eq(t.membrosMinisterio.igrejaId, ator.igrejaId),
-          eq(t.membrosMinisterio.papel, "lider"),
-          eq(t.membrosMinisterio.status, "aprovado"),
-        ),
-      );
-    permitidos = new Set(meus.map((m) => m.id));
+  const permitidos = await ministeriosPermitidos(db, ator);
+  const comModelo = new Set(
+    (
+      await db
+        .select({ ministerioId: t.vagasModelo.ministerioId })
+        .from(t.vagasModelo)
+        .where(
+          and(
+            eq(t.vagasModelo.recorrenciaId, recorrenciaId),
+            eq(t.vagasModelo.igrejaId, ator.igrejaId),
+            gt(t.vagasModelo.quantidade, 0),
+          ),
+        )
+    ).map((m) => m.ministerioId),
+  );
+  const alvos = await ministeriosDaIgreja(db, ator.igrejaId, permitidos);
+  const sem = alvos.filter((m) => !comModelo.has(m.id));
+  if (alvos.length > 0 && sem.length === alvos.length) {
+    const [r] = await db.select({ nome: t.recorrencias.nome }).from(t.recorrencias).where(eq(t.recorrencias.id, recorrenciaId));
+    throw new ErroEscala(`O tipo ${r.nome} não tem vagas para ${sem.map((m) => m.nome).join(", ")}.`);
   }
   await aplicarModelo(db, ator.igrejaId, [{ id: eventoId, recorrenciaId }], permitidos);
+}
+
+/** Ids dos ministérios que o ator pode alterar: `undefined` para o admin (todos), senão os que lidera. */
+async function ministeriosPermitidos(db: AnyDb, ator: Ator): Promise<Set<number> | undefined> {
+  if (ator.papelGlobal === "admin") return undefined;
+  const meus = await db
+    .select({ id: t.membrosMinisterio.ministerioId })
+    .from(t.membrosMinisterio)
+    .where(
+      and(
+        eq(t.membrosMinisterio.usuarioId, ator.id),
+        eq(t.membrosMinisterio.igrejaId, ator.igrejaId),
+        eq(t.membrosMinisterio.papel, "lider"),
+        eq(t.membrosMinisterio.status, "aprovado"),
+      ),
+    );
+  return new Set(meus.map((m) => m.id));
+}
+
+async function ministeriosDaIgreja(db: AnyDb, igrejaId: number, ids?: Set<number>) {
+  const todos = await db
+    .select({ id: t.ministerios.id, nome: t.ministerios.nome })
+    .from(t.ministerios)
+    .where(and(eq(t.ministerios.igrejaId, igrejaId), isNull(t.ministerios.arquivadoEm)))
+    .orderBy(asc(t.ministerios.nome));
+  return ids ? todos.filter((m) => ids.has(m.id)) : todos;
+}
+
+/** Soma de vagas do modelo de cada tipo de culto, nos ministérios indicados. */
+export async function somaVagasPorTipo(db: AnyDb, ator: Ator, ministerioIds: number[]) {
+  const soma = new Map<number, number>();
+  if (ministerioIds.length === 0) return soma;
+  const linhas = await db
+    .select({ recorrenciaId: t.vagasModelo.recorrenciaId, quantidade: t.vagasModelo.quantidade })
+    .from(t.vagasModelo)
+    .where(and(eq(t.vagasModelo.igrejaId, ator.igrejaId), inArray(t.vagasModelo.ministerioId, ministerioIds)));
+  for (const l of linhas) soma.set(l.recorrenciaId, (soma.get(l.recorrenciaId) ?? 0) + l.quantidade);
+  return soma;
+}
+
+/**
+ * Define as vagas só deste culto para um ministério (quantidade por função). Cria a escala em rascunho
+ * se não existir; acrescenta vagas; tira vagas vazias. Nunca tira vaga com pessoa nem mexe em escala publicada.
+ */
+export async function definirVagasDoCulto(
+  db: AnyDb,
+  ator: Ator,
+  eventoId: number,
+  ministerioId: number,
+  vagas: Vaga[],
+) {
+  await exigirLiderDoMinisterio(db, ator, ministerioId);
+  const [ev] = await db
+    .select({ id: t.eventos.id })
+    .from(t.eventos)
+    .where(and(eq(t.eventos.id, eventoId), eq(t.eventos.igrejaId, ator.igrejaId)))
+    .limit(1);
+  if (!ev) throw new ErroAcesso();
+  for (const v of vagas) {
+    if (!Number.isInteger(v.quantidade) || v.quantidade < 0 || v.quantidade > 50) {
+      throw new RangeError("Quantidade inválida");
+    }
+  }
+  const funcaoIds = [...new Set(vagas.map((v) => v.funcaoId))];
+  if (funcaoIds.length > 0) {
+    const validas = await db
+      .select({ id: t.funcoes.id })
+      .from(t.funcoes)
+      .where(and(inArray(t.funcoes.id, funcaoIds), eq(t.funcoes.ministerioId, ministerioId)));
+    if (validas.length !== funcaoIds.length) throw new ErroAcesso();
+  }
+
+  const [existente] = await db
+    .select()
+    .from(t.escalas)
+    .where(and(eq(t.escalas.eventoId, eventoId), eq(t.escalas.ministerioId, ministerioId)))
+    .limit(1);
+  if (existente?.status === "publicada") throw new ErroEscala("A escala já foi publicada: as vagas não mudam.");
+  if (!existente && vagas.every((v) => v.quantidade === 0)) throw new ErroEscala("Defina pelo menos 1 vaga.");
+
+  const itens = existente
+    ? await db
+        .select({ id: t.escalaItens.id, funcaoId: t.escalaItens.funcaoId, usuarioId: t.escalaItens.usuarioId })
+        .from(t.escalaItens)
+        .where(eq(t.escalaItens.escalaId, existente.id))
+        .orderBy(asc(t.escalaItens.id))
+    : [];
+
+  const apagar: number[] = [];
+  const faltam: number[] = [];
+  for (const v of vagas) {
+    const atuais = itens.filter((i) => i.funcaoId === v.funcaoId);
+    const diff = v.quantidade - atuais.length;
+    if (diff > 0) {
+      for (let n = 0; n < diff; n++) faltam.push(v.funcaoId);
+      continue;
+    }
+    const vazias = atuais.filter((i) => i.usuarioId === null);
+    if (-diff > vazias.length) throw new ErroEscala("Não dá para tirar uma vaga que já tem pessoa.");
+    apagar.push(...vazias.slice(vazias.length + diff).map((i) => i.id));
+  }
+
+  let escalaId = existente?.id;
+  if (escalaId === undefined) {
+    const [nova] = await db
+      .insert(t.escalas)
+      .values({ igrejaId: ator.igrejaId, eventoId, ministerioId })
+      .onConflictDoNothing()
+      .returning({ id: t.escalas.id });
+    if (!nova) throw new ErroEscala("Tente de novo.");
+    escalaId = nova.id;
+  }
+  if (apagar.length > 0) await db.delete(t.escalaItens).where(inArray(t.escalaItens.id, apagar));
+  if (faltam.length > 0) {
+    await db
+      .insert(t.escalaItens)
+      .values(faltam.map((funcaoId) => ({ igrejaId: ator.igrejaId, escalaId: escalaId!, funcaoId })));
+  }
 }
 
 /** Preenchimento do mês ('YYYY-MM', fuso de São Paulo) por evento e por ministério que o ator lidera. */
