@@ -3,7 +3,8 @@
 .ativa { background: var(--raised); color: var(--text); box-shadow: var(--shadow); }
 .contador { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; display: inline-grid; place-items: center; background: var(--primary); color: var(--on-primary); font-size: var(--fs-2xs); font-weight: 700; }
 
-.reco { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--primary) 10%, transparent); font-size: var(--fs-sm); }
+.reco { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); background: color-mix(in srgb, var(--warn) 9%, var(--raised)); font-size: var(--fs-sm); }
+.reco svg { width: 20px; height: 20px; flex-shrink: 0; color: var(--warn); }
 
 .pedido { display: grid; gap: 12px; padding: 14px 16px; border-radius: 20px; background: var(--raised); border: 1px solid var(--line); }
 .quem { display: flex; align-items: center; gap: 12px; }

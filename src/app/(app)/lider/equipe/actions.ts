@@ -53,6 +53,14 @@ export async function aprovarFuncaoDesejada(formData: FormData) {
   atualizar();
 }
 
+/** Um toque: aprova a entrada (se pendente) e todas as funções pedidas pelo membro. */
+export async function aprovarPedidoInteiro(formData: FormData) {
+  const ator = await exigirUsuarioSemTroca();
+  const membroId = idSeguro(formData.get("membro"));
+  for (const funcao of formData.getAll("funcao")) await aprovarFuncao(db(), ator, membroId, idSeguro(funcao));
+  atualizar();
+}
+
 export async function recusarFuncaoDesejada(formData: FormData) {
   const ator = await exigirUsuarioSemTroca();
   await recusarFuncao(db(), ator, idSeguro(formData.get("membro")), idSeguro(formData.get("funcao")));

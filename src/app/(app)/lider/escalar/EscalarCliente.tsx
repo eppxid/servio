@@ -157,7 +157,7 @@ export function EscalarCliente({
                     {c.titulo} · {c.quando}
                   </b>
                   <span>
-                    <span className={`vg ${c.status === "sem_escala" ? "vg--sem" : "vg--falta"}`}>
+                    <span className={`vg ${c.status === "sem_escala" || c.preenchidas === 0 ? "vg--sem" : "vg--falta"}`}>
                       {ministerio} {c.status === "sem_escala" ? "–" : `${c.preenchidas}/${c.total}`}
                     </span>
                   </span>

@@ -48,6 +48,6 @@ export async function exigirUsuario() {
 
 export async function exigirPapel(papel: Papel, ministerioId?: number) {
   const usuario = await exigirUsuario();
-  if (!(await temPapel(db(), usuario, papel, ministerioId))) redirect("/agenda");
+  if (!(await temPapel(db(), usuario, papel, ministerioId))) redirect("/inicio");
   return usuario;
 }

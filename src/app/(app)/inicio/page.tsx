@@ -100,7 +100,7 @@ export default async function Inicio({
           <div className={css.quando}>
             <div className={css.data} aria-hidden="true">
               <b>{formatInTimeZone(proxima.evento.inicio, FUSO, "d")}</b>
-              <span>{formatInTimeZone(proxima.evento.inicio, FUSO, "EEE", { locale: ptBR }).replace(".", "")}</span>
+              <span>{["dom", "seg", "ter", "qua", "qui", "sex", "sáb"][Number(formatInTimeZone(proxima.evento.inicio, FUSO, "i")) % 7]}</span>
             </div>
             <div>
               <p className={css.rotulo}>

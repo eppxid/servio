@@ -47,7 +47,7 @@ test("líder define o modelo 2+1+1, vê Louvor 0/4 no calendário, preenche uma 
   const diaDoCulto = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long" }).format(
     new Date(`${data}T12:00:00-03:00`),
   );
-  await lider.getByRole("link", { name: new RegExp(`^Culto ${diaDoCulto}, 18:00`) }).click();
+  await lider.getByRole("link", { name: new RegExp(`^Culto semanal E2E ${diaDoCulto}, 18:00`) }).click();
   const mais = (funcao: string) => lider.getByRole("button", { name: `Mais uma vaga de ${funcao}` });
   await mais("Vocal").click();
   await mais("Vocal").click();

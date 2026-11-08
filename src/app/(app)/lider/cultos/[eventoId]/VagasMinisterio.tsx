@@ -292,7 +292,7 @@ export function VagasMinisterio({
       <FolhaInferior
         aberta={escolhendo !== null}
         aoFechar={() => setEscolhendo(null)}
-        titulo={escolhendo ? `Quem vai na ${escolhendo.funcao.nome}?` : "Escolher"}
+        titulo={escolhendo ? `Quem vai em ${escolhendo.funcao.nome}?` : "Escolher"}
         descricao={`${quando} · só quem tem a função e está livre`}
       >
         {livres.lista.length === 0 ? (

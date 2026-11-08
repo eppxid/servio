@@ -25,7 +25,7 @@ async function aceitar(formData: FormData) {
   if (!consentiu(formData.get("consentimento"))) redirect("/entrar/termos?erro=1");
   await registrarAceite(db() as unknown as AnyDb, usuario.id);
   await abrirSessao(usuario);
-  redirect("/agenda");
+  redirect("/");
 }
 
 async function recusar() {

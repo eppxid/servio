@@ -20,7 +20,7 @@ async function trocar(formData: FormData) {
   const s = await sessao();
   s.sessaoVersao = versao;
   await s.save();
-  redirect("/agenda");
+  redirect("/");
 }
 
 export default async function TrocarSenha({
@@ -29,7 +29,7 @@ export default async function TrocarSenha({
   searchParams: Promise<{ erro?: string }>;
 }) {
   const usuario = await exigirUsuario();
-  if (!usuario.trocarSenha) redirect("/agenda");
+  if (!usuario.trocarSenha) redirect("/");
   const { erro } = await searchParams;
   return (
     <Publica>

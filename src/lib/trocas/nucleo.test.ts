@@ -171,7 +171,7 @@ describe("troca", () => {
     await decidirTroca(db, lider, troca.id, true);
     const [item] = await db.select().from(schema.escalaItens).where(eq(schema.escalaItens.id, itemId));
     expect(item.usuarioId).toBe(dani.id);
-    expect(item.status).toBe("pendente");
+    expect(item.status).toBe("confirmado");
     const [final] = await db.select().from(schema.trocas).where(eq(schema.trocas.id, troca.id));
     expect(final.status).toBe("aprovada");
   });

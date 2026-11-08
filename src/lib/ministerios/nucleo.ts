@@ -365,7 +365,13 @@ export async function detalheMinisterio(db: AnyDb, ator: Ator, ministerioId: num
   const marcadas = await db
     .select({ membroId: t.membroFuncoes.membroId, funcaoId: t.membroFuncoes.funcaoId })
     .from(t.membroFuncoes)
-    .where(inArray(t.membroFuncoes.membroId, linhas.length ? linhas.map((l) => l.id) : [0]));
+    // Só as aprovadas: as `desejada` aparecem na aba Pedidos.
+    .where(
+      and(
+        inArray(t.membroFuncoes.membroId, linhas.length ? linhas.map((l) => l.id) : [0]),
+        eq(t.membroFuncoes.status, "aprovada"),
+      ),
+    );
   const membros = linhas.map((l) => ({
     ...l,
     funcaoIds: marcadas.filter((x) => x.membroId === l.id).map((x) => x.funcaoId),

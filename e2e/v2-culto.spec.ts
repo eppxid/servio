@@ -41,7 +41,7 @@ test("líder vê as funções agrupadas, escolhe, remove e desfaz, publica e usa
 
   // Escolhe a pessoa: aparece com avatar, status "Aguarda" e o contador sobe.
   await vocal.getByRole("button", { name: "Escolher" }).first().click();
-  await expect(lider.getByRole("dialog", { name: /Quem vai na Vocal/ })).toBeVisible();
+  await expect(lider.getByRole("dialog", { name: /Quem vai em Vocal/ })).toBeVisible();
   await lider.getByRole("button", { name: /Escolher Voluntario E2E/ }).click();
   const linha = vocal.getByRole("button", { name: /Voluntario E2E/ });
   await expect(linha).toContainText("Aguarda");

@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { indisponibilidades } from "@/db/schema";
 import { exigirUsuario } from "@/lib/auth";
 import { FUSO } from "@/lib/recorrencia";
+import { excluirIndisponibilidade, incluirDiasDaSemana } from "../perfil/acoes";
 import { CalendarioFolgas } from "./CalendarioFolgas";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ function diasDoPeriodo(inicio: string, fim: string): string[] {
 }
 
 const br = (iso: string) => iso.split("-").reverse().join("/");
+const DIAS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
 export default async function Folgas({
   searchParams,
@@ -28,7 +30,7 @@ export default async function Folgas({
   const { ok, erro } = await searchParams;
   const hoje = formatInTimeZone(new Date(), FUSO, "yyyy-MM-dd");
   const periodos = await db()
-    .select({ inicio: indisponibilidades.dataInicio, fim: indisponibilidades.dataFim })
+    .select({ id: indisponibilidades.id, inicio: indisponibilidades.dataInicio, fim: indisponibilidades.dataFim })
     .from(indisponibilidades)
     .where(
       and(
@@ -65,15 +67,48 @@ export default async function Folgas({
         ) : (
           <div className="list">
             {periodos.map((p) => (
-              <div key={p.inicio + p.fim} className="row">
+              <div key={p.id} className="row">
                 <span className="row__tx">
                   <b>{p.inicio === p.fim ? br(p.inicio) : `${br(p.inicio)} a ${br(p.fim)}`}</b>
                 </span>
+                <form action={excluirIndisponibilidade} className="row__end">
+                  <input type="hidden" name="id" value={p.id} />
+                  <button type="submit" className="tbtn" aria-label={`Excluir folga ${br(p.inicio)}`}>
+                    Excluir
+                  </button>
+                </form>
               </div>
             ))}
           </div>
         )}
       </section>
+      <details className="card">
+        <summary className="card__title" style={{ cursor: "pointer" }}>
+          Folga em todo dia da semana de um mês
+        </summary>
+        <form action={incluirDiasDaSemana} style={{ display: "grid", gap: 12, marginTop: 12 }}>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="rotulo">
+              Dia da semana
+              <select name="diaSemana" className="campo" defaultValue="0">
+                {DIAS.map((nome, i) => (
+                  <option key={nome} value={i}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="rotulo">
+              Mês
+              <input name="mes" type="month" required className="campo" />
+            </label>
+          </div>
+          <input type="hidden" name="motivo" value="" />
+          <button type="submit" className="tbtn tbtn--p">
+            Marcar os dias
+          </button>
+        </form>
+      </details>
     </div>
   );
 }
