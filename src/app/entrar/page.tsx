@@ -29,7 +29,7 @@ async function entrar(formData: FormData) {
     redirect("/entrar/termos");
   }
   await abrirSessao(r.usuario);
-  redirect("/agenda");
+  redirect("/");
 }
 
 export default async function Entrar({
@@ -37,7 +37,7 @@ export default async function Entrar({
 }: {
   searchParams: Promise<{ erro?: string; conta?: string }>;
 }) {
-  if (await usuarioAtual()) redirect("/agenda");
+  if (await usuarioAtual()) redirect("/");
   const [igreja] = await db().select({ id: igrejas.id }).from(igrejas).limit(1);
   if (!igreja) redirect("/primeiro-acesso");
   const { erro, conta } = await searchParams;

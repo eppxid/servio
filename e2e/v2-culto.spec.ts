@@ -24,7 +24,7 @@ function dataEmDias(dias: number) {
 test("líder vê as funções agrupadas, escolhe, remove e desfaz, publica e usa os atalhos", async ({ browser }) => {
   // O último culto do mês daqui a 60 dias é de uma série semanal ainda em rascunho.
   const admin = await entrar(browser, "admin@e2e.local");
-  await admin.goto(`/eventos?mes=${dataEmDias(60).slice(0, 7)}`);
+  await admin.goto(`/lider/cultos?mes=${dataEmDias(60).slice(0, 7)}`);
   const href = await admin.getByRole("link", { name: /Culto semanal E2E/ }).last().getAttribute("href");
   const eventoId = href!.split("/").pop()!;
 

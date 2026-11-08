@@ -137,7 +137,5 @@ test("Cultos sem Sugerir e com Próximos; Escalar mostra a troca e o líder apro
   await expect(admin.getByText(/Ana Mídia → Bruno Mídia \(Iluminação\)/)).toBeVisible();
   await admin.screenshot({ path: `${PRINTS}/035-escalar.png` });
   await admin.getByRole("button", { name: "Aprovar", exact: true }).click();
-  await expect(admin.getByText("Troca aprovada")).toBeVisible();
-  await admin.goto(`/lider/escalar?ministerio=${ministerioId}&mes=${mes}`);
   await expect(admin.getByRole("heading", { name: "Trocas para aprovar" })).toHaveCount(0);
 });

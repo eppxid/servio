@@ -23,7 +23,6 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
     <div className="app">
       <Casca
         ehLider={ehLider}
-        ehAdmin={usuario.papelGlobal === "admin"}
         modoSalvo={modoSalvo}
         iniciais={iniciais(usuario.nome)}
       />

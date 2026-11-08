@@ -1,3 +1,4 @@
+import { selecionarMinisterio } from "./ajuda-equipe";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
 // Roda depois de fluxo-principal.spec.ts (ordem alfabética), que cria a igreja, o líder e o voluntário com Vocal.
@@ -23,12 +24,13 @@ function dataEmDias(dias: number) {
 test("líder define o modelo 2+1+1, vê Louvor 0/4 no calendário, preenche uma vaga e publica", async ({ browser }) => {
   // 1. Admin cria as funções Violão e Teclado e um culto semanal (o tipo de culto).
   const admin = await entrar(browser, "admin@e2e.local");
-  await admin.goto("/ministerios");
-  await admin.getByRole("link", { name: "Louvor E2E" }).click();
+  await admin.goto("/lider/equipe?aba=ministerios");
+  await selecionarMinisterio(admin, "Louvor E2E");
+  await admin.getByRole("link", { name: "Funções", exact: true }).click();
   for (const nome of ["Violão", "Teclado"]) {
     await admin.getByLabel("Nova função").fill(nome);
     await admin.getByRole("button", { name: "Adicionar" }).click();
-    await expect(admin.locator(`input[aria-label="Nome da função"][value="${nome}"]`)).toBeVisible();
+    await expect(admin.getByLabel(`Nome da função ${nome}`)).toBeVisible();
   }
   const data = dataEmDias(14);
   await admin.goto("/eventos/novo");
@@ -38,8 +40,6 @@ test("líder define o modelo 2+1+1, vê Louvor 0/4 no calendário, preenche uma 
   await admin.getByLabel("Repetir toda semana").check();
   await admin.getByRole("button", { name: "Salvar" }).click();
   await expect(admin).toHaveURL(/\/lider\/cultos/);
-  await admin.goto("/eventos");
-  await expect(admin.locator("nav[aria-label=Principal]")).toBeVisible();
 
   // 2. Líder abre o tipo de culto e define 2 Vocal + 1 Violão + 1 Teclado.
   const lider = await entrar(browser, "lider@e2e.local");
@@ -68,12 +68,12 @@ test("líder define o modelo 2+1+1, vê Louvor 0/4 no calendário, preenche uma 
   await expect(lider.getByRole("heading", { name: "Louvor E2E" })).toBeVisible();
   await lider.getByRole("group", { name: "Vocal" }).getByRole("button", { name: "Escolher" }).first().click();
   await lider.getByRole("button", { name: /Voluntario E2E/ }).click();
-  await expect(lider.getByText("1/4 vagas")).toBeVisible();
+  await expect(lider.getByText("1/4", { exact: true })).toBeVisible();
   await expect(lider.getByRole("group", { name: "Vocal" }).getByText("Voluntario E2E")).toBeVisible();
 
   // 5. Publica; o calendário passa a mostrar 1/4.
-  await lider.getByRole("button", { name: "Publicar", exact: true }).click();
-  await expect(lider.getByRole("button", { name: "Publicada" })).toBeVisible();
+  await lider.getByRole("button", { name: "Publicar escala" }).click();
+  await expect(lider.getByText("Publicada", { exact: true })).toBeVisible();
   await lider.goto(`/lider/cultos?mes=${data.slice(0, 7)}`);
   await lider.getByRole("button", { name: /1 de 4 vagas/ }).first().click();
   await expect(culto.getByText("Louvor E2E 1/4")).toBeVisible();

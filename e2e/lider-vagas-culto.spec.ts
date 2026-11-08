@@ -25,7 +25,7 @@ async function novoCulto(pagina: Page, titulo: string, data: string, hora: strin
   await pagina.getByLabel("Início").fill(hora);
   if (repete) await pagina.getByLabel("Repetir toda semana").check();
   await pagina.getByRole("button", { name: "Salvar" }).click();
-  await expect(pagina).toHaveURL(/\/eventos/);
+  await expect(pagina).toHaveURL(/\/lider\/cultos/);
 }
 
 test("assistente não salva o tipo de culto com todas as vagas em 0", async ({ browser }) => {
@@ -48,7 +48,7 @@ test("culto avulso: copiar de tipo sem vagas avisa com link; 'Definir aqui' cria
   await novoCulto(admin, "Avulso vagas E2E", dataEmDias(45), "16:00", false);
 
   const lider = await entrar(browser, "lider@e2e.local");
-  await admin.goto(`/eventos?mes=${dataEmDias(45).slice(0, 7)}`);
+  await admin.goto(`/lider/cultos?mes=${dataEmDias(45).slice(0, 7)}`);
   const href = await admin.getByRole("link", { name: /Avulso vagas E2E/ }).getAttribute("href");
   await lider.goto(`/lider/cultos/${href!.split("/").pop()}`);
   await expect(lider.getByText(/não tem vagas para Louvor E2E/).first()).toBeVisible();
@@ -66,5 +66,6 @@ test("culto avulso: copiar de tipo sem vagas avisa com link; 'Definir aqui' cria
   await lider.getByRole("button", { name: "Mais uma vaga de Vocal" }).click();
   await lider.getByRole("button", { name: "Mais uma vaga de Vocal" }).click();
   await lider.getByRole("button", { name: "Salvar vagas de Louvor E2E" }).click();
-  await expect(lider.getByText("0/2 vagas · Rascunho")).toBeVisible();
+  await expect(lider.getByText("0/2", { exact: true }).first()).toBeVisible();
+  await expect(lider.getByText("Rascunho", { exact: true })).toBeVisible();
 });

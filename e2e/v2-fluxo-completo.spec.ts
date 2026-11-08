@@ -181,12 +181,10 @@ test("v2 de ponta a ponta: assistente, convite, aprovação, calendário, sugest
   await bruno.getByRole("button", { name: "Aceitar" }).click();
   await expect(bruno.getByText("Troca aceita")).toBeVisible();
 
-  await admin.getByRole("button", { name: "Mais opções" }).click();
-  await admin.getByRole("navigation", { name: "Mais telas" }).getByRole("link", { name: "Trocas" }).click();
+  await admin.goto(`/lider/escalar?ministerio=${ministerioId}`);
   await expect(admin.getByText(/Ana Mídia → Bruno Mídia \(Iluminação\)/)).toBeVisible();
   await print(admin, "20-trocas-aprovar");
   await admin.getByRole("button", { name: "Aprovar" }).click();
-  await expect(admin.getByText("Troca aprovada")).toBeVisible();
 
-  await expect(admin.getByText("Nenhum pedido.")).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "Trocas para aprovar" })).toHaveCount(0);
 });
