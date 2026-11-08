@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 export default async function Agenda({
   searchParams,
 }: {
-  searchParams: Promise<{ erro?: string; ok?: string }>;
+  searchParams: Promise<{ erro?: string; ok?: string; dia?: string }>;
 }) {
   const ator = await exigirUsuarioSemTroca();
   const banco = db() as unknown as AnyDb;
@@ -42,7 +42,8 @@ export default async function Agenda({
       itens.filter((i) => !i.troca && i.status !== "recusado").map(async (i) => [i.itemId, await listarSubstitutos(banco, ator, i.itemId)] as const),
     ),
   );
-  const { erro, ok } = await searchParams;
+  const { erro, ok, dia } = await searchParams;
+  const diaInicial = dia && /^\d{4}-\d{2}-\d{2}$/.test(dia) ? dia : null;
   const quando = (d: Date) => formatInTimeZone(d, FUSO, "dd/MM HH:mm");
   const hoje = formatInTimeZone(new Date(), FUSO, "yyyy-MM-dd");
   const periodos = await banco
@@ -73,6 +74,8 @@ export default async function Agenda({
       checkinAberto: i.checkinAberto,
       colegas: i.colegas.map((c) => `${c.nome} (${c.funcao})`),
       repertorio: r ? `/escalas/${r.eventoId}/${r.ministerioId}/repertorio` : null,
+      musicas: r?.musicas ?? 0,
+      chat: `/chat/${i.evento.id}`,
       troca: i.troca ? (i.troca.status as "aberta" | "aceita") : null,
       substitutos: (substitutos.get(i.itemId) ?? []).map((s) => ({ id: s.usuarioId, nome: s.nome })),
     };
@@ -99,9 +102,6 @@ export default async function Agenda({
                 <button className="btn btn--primary btn--block">Gerar link do calendário</button>
               </form>
             )}
-            <Link href="/agenda/trocas" className="btn btn--block">
-              Aprovar trocas (líderes)
-            </Link>
           </div>
         </details>
       </Cabecalho>
@@ -135,7 +135,7 @@ export default async function Agenda({
         </section>
       )}
 
-      <CalendarioAgenda escalas={escalas} folgas={folgas} />
+      <CalendarioAgenda escalas={escalas} folgas={folgas} diaInicial={diaInicial} />
     </div>
   );
 }

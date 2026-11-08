@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { AcaoPrincipal } from "@/components/app/AcaoPrincipal";
 import { FolhaInferior } from "@/components/app/FolhaInferior";
 import { checkinNoInicio, confirmarNoInicio, recusarNoInicio } from "./acoes";
+import css from "./inicio.module.css";
 
 /**
  * Resposta da próxima escala com 1 toque: Confirmar fica no polegar; Recusar abre a folha
@@ -23,27 +23,30 @@ export function RespostaEscala({
   jaFezCheckin: boolean;
 }) {
   const [recusando, setRecusando] = useState(false);
+  const unico = status !== "pendente" && !(podeCheckin && !jaFezCheckin);
   return (
     <>
-      {status === "pendente" && (
-        <form action={confirmarNoInicio}>
-          <input type="hidden" name="item" value={itemId} />
-          <AcaoPrincipal type="submit">
-            Confirmar presença
-          </AcaoPrincipal>
-        </form>
-      )}
-      {podeCheckin && status === "confirmado" && !jaFezCheckin && (
-        <form action={checkinNoInicio}>
-          <input type="hidden" name="item" value={itemId} />
-          <AcaoPrincipal type="submit">
-            Fazer check-in
-          </AcaoPrincipal>
-        </form>
-      )}
-      <button type="button" className="tbtn" style={{ width: "100%" }} onClick={() => setRecusando(true)}>
-        {status === "pendente" ? "Recusar" : "Não posso mais"}
-      </button>
+      <div className={`${css.acoes} ${unico ? css.unico : ""}`}>
+        <button type="button" className={`${css.grande} ${css.nao}`} onClick={() => setRecusando(true)}>
+          {status === "pendente" ? "Recusar" : "Não posso mais"}
+        </button>
+        {status === "pendente" && (
+          <form action={confirmarNoInicio}>
+            <input type="hidden" name="item" value={itemId} />
+            <button type="submit" className={`${css.grande} ${css.sim}`} aria-label="Confirmar presença">
+              Confirmar
+            </button>
+          </form>
+        )}
+        {podeCheckin && status === "confirmado" && !jaFezCheckin && (
+          <form action={checkinNoInicio}>
+            <input type="hidden" name="item" value={itemId} />
+            <button type="submit" className={`${css.grande} ${css.sim}`}>
+              Fazer check-in
+            </button>
+          </form>
+        )}
+      </div>
       <FolhaInferior
         aberta={recusando}
         aoFechar={() => setRecusando(false)}
