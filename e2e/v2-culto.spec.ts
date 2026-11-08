@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
-// Roda depois de todos os outros specs (ver `projects` em playwright.config.ts): usa o admin, o líder de
+// Roda depois de lider-cultos.spec.ts (ordem alfabética: "v2-c…"): usa o admin, o líder de
 // Louvor E2E, o voluntário com Vocal e o modelo de vagas que lider-cultos.spec.ts deixa nas séries semanais.
 const SENHA = "senha-e2e-12345";
 /** Com `GUIA_PRINTS=<pasta>`, grava o print do celular da tela do culto. */
