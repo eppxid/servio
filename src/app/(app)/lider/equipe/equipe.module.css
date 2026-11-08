@@ -1,0 +1,32 @@
+.abas { display: flex; gap: 4px; padding: 3px; background: var(--well); border-radius: var(--r-pill); overflow-x: auto; }
+.aba { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: var(--r-pill); font-weight: 600; font-size: var(--fs-sm); color: var(--muted); text-decoration: none; white-space: nowrap; }
+.ativa { background: var(--raised); color: var(--text); box-shadow: var(--shadow); }
+.contador { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; display: inline-grid; place-items: center; background: var(--primary); color: var(--on-primary); font-size: var(--fs-2xs); font-weight: 700; }
+
+.reco { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--primary) 10%, transparent); font-size: var(--fs-sm); }
+
+.pedido { display: grid; gap: 12px; padding: 14px 16px; border-radius: 20px; background: var(--raised); border: 1px solid var(--line); }
+.quem { display: flex; align-items: center; gap: 12px; }
+.quem div { display: grid; }
+.quem span:not(:first-child) { color: var(--muted); font-size: var(--fs-sm); }
+.funcao { display: flex; align-items: center; gap: 8px; }
+.funcao > span { flex: 1; }
+.pilulas { display: flex; flex-wrap: wrap; gap: 6px; }
+.pilula { height: 28px; padding: 0 12px; border-radius: 99px; display: inline-flex; align-items: center; background: color-mix(in srgb, var(--primary) 13%, transparent); color: var(--primary); font-size: var(--fs-sm); font-weight: 600; }
+.acoes { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+.convite { display: grid; gap: 10px; padding: 14px 16px; border-radius: 20px; background: var(--raised); border: 1px solid var(--line); }
+.convite p { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
+.copiar { display: grid; gap: 8px; }
+
+.linha { width: 100%; background: none; border: 0; text-align: left; font: inherit; color: inherit; }
+.fim { color: var(--muted); font-size: var(--fs-sm); }
+.folha { display: grid; gap: 14px; padding: 4px 12px; }
+.folha form { display: grid; gap: 6px; }
+.marca { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.aviso { padding: 10px 14px; border-radius: 14px; font-size: var(--fs-sm); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+.erro { background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.bloco { display: grid; gap: 8px; }
+.inline { display: flex; gap: 8px; align-items: center; }
+.inline .campo { flex: 1; min-width: 0; }
+.perigo { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }

@@ -5,11 +5,31 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
 import * as t from "@/db/schema";
-import { decidirMembro, criarFuncao, definirFuncoesDoMembro, definirLider, renomearFuncao } from "@/lib/ministerios/nucleo";
+import { redirect } from "next/navigation";
+import { SENHA_MINIMA } from "@/lib/auth-core";
+import {
+  arquivarMinisterio,
+  criarFuncao,
+  criarMinisterio,
+  decidirMembro,
+  definirFuncoesDoMembro,
+  definirLider,
+  definirSenhaTemporaria,
+  editarMinisterio,
+  excluirFuncao,
+  gerarConvite,
+  renomearFuncao,
+} from "@/lib/ministerios/nucleo";
 import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
 import { aprovarFuncao, aprovarMembro, recusarFuncao } from "@/lib/servir/nucleo";
 
 const nomeFuncao = z.string().trim().min(2).max(80);
+const nomeMinisterio = z.string().trim().min(2).max(120);
+const descricaoMinisterio = z.string().trim().max(500);
+
+function voltar(ministerio: number, aba: string, extra = "") {
+  return `/lider/equipe?ministerio=${ministerio}&aba=${aba}${extra}`;
+}
 
 function atualizar() {
   revalidatePath("/lider/equipe");
@@ -93,4 +113,63 @@ export async function renomearFuncaoAcao(formData: FormData) {
   if (!nome.success) return;
   await renomearFuncao(db(), ator, idSeguro(formData.get("funcao")), nome.data);
   atualizar();
+}
+
+export async function excluirFuncaoAcao(formData: FormData) {
+  const ator = await exigirUsuarioSemTroca();
+  await excluirFuncao(db(), ator, idSeguro(formData.get("funcao")));
+  atualizar();
+}
+
+/** Gera o convite e volta para Membros com o token na URL (a página monta o link). */
+export async function gerarConviteAcao(formData: FormData) {
+  const ator = await exigirUsuarioSemTroca();
+  const id = idSeguro(formData.get("ministerio"));
+  const token = await gerarConvite(db(), ator, id);
+  redirect(voltar(id, "membros", `&convite=${token}`));
+}
+
+export async function senhaTemporariaAcao(formData: FormData) {
+  const ator = await exigirUsuarioSemTroca();
+  const id = idSeguro(formData.get("ministerio"));
+  const senha = z.string().min(SENHA_MINIMA).max(200).safeParse(formData.get("senha"));
+  if (!senha.success) redirect(voltar(id, "membros", "&erro=senha"));
+  await definirSenhaTemporaria(db(), ator, idSeguro(formData.get("membro")), senha.data);
+  redirect(voltar(id, "membros", "&ok=senha"));
+}
+
+/** Tira o membro do ministério (mesma regra de recusar: apaga o vínculo e as funções). */
+export async function tirarDoMinisterio(formData: FormData) {
+  const ator = await exigirUsuarioSemTroca();
+  await decidirMembro(db(), ator, idSeguro(formData.get("membro")), false);
+  atualizar();
+}
+
+// ---- ministérios da igreja (só admin; a regra confere o papel em lib/ministerios) ----
+
+export async function criarMinisterioAcao(formData: FormData) {
+  const ator = await exigirUsuarioSemTroca();
+  const nome = nomeMinisterio.safeParse(formData.get("nome"));
+  if (!nome.success) redirect("/lider/equipe?aba=ministerios&erro=1");
+  const descricao = descricaoMinisterio.safeParse(formData.get("descricao") ?? "");
+  const criado = await criarMinisterio(db(), ator, nome.data, descricao.success ? descricao.data : undefined);
+  redirect(`/lider/equipe?ministerio=${criado.id}&aba=ministerios`);
+}
+
+export async function editarMinisterioAcao(formData: FormData) {
+  const ator = await exigirUsuarioSemTroca();
+  const nome = nomeMinisterio.safeParse(formData.get("nome"));
+  if (!nome.success) redirect("/lider/equipe?aba=ministerios&erro=1");
+  const descricao = descricaoMinisterio.safeParse(formData.get("descricao") ?? "");
+  await editarMinisterio(db(), ator, idSeguro(formData.get("ministerio")), {
+    nome: nome.data,
+    descricao: descricao.success ? descricao.data : undefined,
+  });
+  atualizar();
+}
+
+export async function arquivarMinisterioAcao(formData: FormData) {
+  const ator = await exigirUsuarioSemTroca();
+  await arquivarMinisterio(db(), ator, idSeguro(formData.get("ministerio")), true);
+  redirect("/lider/equipe?aba=ministerios");
 }
