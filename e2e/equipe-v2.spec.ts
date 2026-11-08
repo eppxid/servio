@@ -63,6 +63,7 @@ test("líder gere a equipe inteira na aba Equipe; admin cria e arquiva ministér
   }
   await print(admin, "ministerios");
   await admin.locator("summary", { hasText: "Equipe Descartável" }).click();
+  admin.once("dialog", (d) => d.accept());
   await admin.getByRole("button", { name: "Arquivar Equipe Descartável" }).click();
   await expect(admin.getByText("Equipe Descartável", { exact: true })).toHaveCount(0);
 
