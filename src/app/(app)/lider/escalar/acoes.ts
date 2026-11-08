@@ -18,6 +18,11 @@ const MES = /^\d{4}-(0[1-9]|1[0-2])$/;
 export interface RespostaSugestao {
   erro?: string;
   resumo?: string;
+  /** Vagas que a sugestão tentou preencher e quantas preencheu (anel do resumo). */
+  total?: number;
+  preenchidas?: number;
+  /** Vagas sem candidato, uma por culto e função. */
+  faltas?: { eventoId: number; funcao: string; data: string }[];
   /** Itens que a sugestão preencheu e a pessoa de cada um: voltam em `desfazerAcao`. */
   itens?: number[];
   usuarios?: number[];
@@ -52,6 +57,9 @@ export async function sugerirAcao(ministerioId: number, mes: string): Promise<Re
         (r.semVagas.length > 0
           ? ` ${r.semVagas.length} ${r.semVagas.length === 1 ? "culto" : "cultos"} sem vagas definidas.`
           : ""),
+      total: r.total,
+      preenchidas: r.preenchidos.length,
+      faltas: r.semCandidato.map((f) => ({ eventoId: f.eventoId, funcao: nomes.get(f.funcaoId) ?? "Função", data: f.data })),
       itens: r.preenchidos,
       usuarios: r.usuarios,
       semVagas: r.semVagas,

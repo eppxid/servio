@@ -46,7 +46,16 @@ function Pilula({ m, completa }: { m: CultoDoMes["ministerios"][number]; complet
 }
 
 /** Calendário do mês com a pílula "Mídia 3/4" por ministério; o dia escolhido lista os cultos dele. */
-export function CalendarioCultos({ mes, cultos }: { mes: string; cultos: CultoDoMes[] }) {
+export function CalendarioCultos({
+  mes,
+  cultos,
+  children,
+}: {
+  mes: string;
+  cultos: CultoDoMes[];
+  /** Ação principal: fica sob a lista "Próximos" (coluna da direita no desktop). */
+  children?: React.ReactNode;
+}) {
   const router = useRouter();
   const porDia = useMemo(() => {
     const mapa = new Map<string, CultoDoMes[]>();
@@ -77,7 +86,7 @@ export function CalendarioCultos({ mes, cultos }: { mes: string; cultos: CultoDo
   const lista = dia ? (porDia.get(dia) ?? []) : (futuros.length > 0 ? futuros : cultos).slice(0, PROXIMOS);
 
   return (
-    <>
+    <div className="duas-colunas">
       <Calendario
         mes={mes}
         aoMudarMes={(novo) => router.push(`/lider/cultos?mes=${novo}`)}
@@ -102,6 +111,7 @@ export function CalendarioCultos({ mes, cultos }: { mes: string; cultos: CultoDo
           </span>
         }
       />
+      <div className="lateral">
       <div className={estilo.titulo}>
         <h2>{dia ? nomeDoDia(dia) : "Próximos"}</h2>
         {dia && (
@@ -145,6 +155,8 @@ export function CalendarioCultos({ mes, cultos }: { mes: string; cultos: CultoDo
           )}
         </section>
       )}
-    </>
+      {children}
+      </div>
+    </div>
   );
 }

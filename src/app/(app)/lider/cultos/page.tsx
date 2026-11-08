@@ -38,12 +38,13 @@ export default async function Cultos({ searchParams }: { searchParams: Promise<{
           Tipos de culto
         </Link>
       </Cabecalho>
-      <CalendarioCultos mes={mes} cultos={cultos} />
-      {admin && (
-        <AcaoPrincipal href="/eventos/novo" icone="adicionar">
-          Novo culto
-        </AcaoPrincipal>
-      )}
+      <CalendarioCultos mes={mes} cultos={cultos}>
+        {admin && (
+          <AcaoPrincipal href="/eventos/novo" icone="adicionar">
+            Novo culto
+          </AcaoPrincipal>
+        )}
+      </CalendarioCultos>
     </div>
   );
 }
