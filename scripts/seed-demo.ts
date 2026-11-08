@@ -1,7 +1,8 @@
 /**
  * Igreja de demonstração: 1 admin, 2 líderes, 8 voluntários, 2 ministérios,
- * eventos de 1 mês (2 semanas atrás até 2 à frente), repertório em 2 eventos
- * e histórico de check-in para o painel e os pontos.
+ * cultos de 2 semanas atrás até o fim do mês seguinte (tipos de culto com vagas),
+ * escalas só com funções aprovadas (2 pessoas por função), mês seguinte em rascunho,
+ * repertório em 2 eventos e histórico de check-in para o painel e os pontos.
  * Uso: pnpm seed:demo  (DATABASE_URL apontando para um banco já migrado e vazio).
  */
 import { fromZonedTime } from "date-fns-tz";
@@ -15,7 +16,9 @@ import {
   membroFuncoes,
   membrosMinisterio,
   ministerios,
+  recorrencias,
   usuarios,
+  vagasModelo,
 } from "../src/db/schema";
 import { repertorioItens } from "../src/db/schema-repertorio";
 import { hashSenha } from "../src/lib/auth-core";
@@ -70,53 +73,94 @@ async function main() {
     await banco
       .insert(membrosMinisterio)
       .values({ igrejaId: igreja.id, usuarioId: lider.id, ministerioId: m.id, papel: "lider", status: "aprovado" });
+    // Cada voluntário tem 2 funções aprovadas (a dele e a seguinte); com 2 funções só, cada um fica com uma.
+    // Assim toda função tem ao menos 2 pessoas aprovadas.
+    const aprovadas = new Map<number, number[]>(fs.map((f) => [f.id, []]));
     for (const [i, u] of equipe.entries()) {
       const [mm] = await banco
         .insert(membrosMinisterio)
         .values({ igrejaId: igreja.id, usuarioId: u.id, ministerioId: m.id, status: "aprovado" })
         .returning();
-      await banco.insert(membroFuncoes).values({ igrejaId: igreja.id, membroId: mm.id, funcaoId: fs[i % fs.length].id });
+      const minhas = fs.length > 2 ? [fs[i % fs.length], fs[(i + 1) % fs.length]] : [fs[i % fs.length]];
+      for (const f of minhas) {
+        await banco.insert(membroFuncoes).values({ igrejaId: igreja.id, membroId: mm.id, funcaoId: f.id });
+        aprovadas.get(f.id)!.push(u.id);
+      }
     }
-    return { m, fs, equipe };
+    return { m, fs, equipe, aprovadas };
   }
   const L = await ministerio("Louvor", liderLouvor, ["Vocal", "Violão", "Teclado", "Bateria"], louvor);
   const M = await ministerio("Mídia", liderMidia, ["Câmera", "Projeção"], midia);
 
-  // Cultos de domingo 10h e quarta 20h, de 14 dias atrás até 14 dias à frente.
-  const hoje = new Date();
-  const dados: { id: number; inicio: Date; domingo: boolean }[] = [];
-  for (let d = -14; d <= 14; d++) {
-    const iso = new Date(hoje.getTime() + d * DIA).toLocaleDateString("sv-SE", { timeZone: FUSO });
-    const semana = new Date(`${iso}T12:00:00Z`).getUTCDay();
-    if (semana !== 0 && semana !== 3) continue;
-    const domingo = semana === 0;
-    const inicio = fromZonedTime(`${iso}T${domingo ? "10:00" : "20:00"}:00`, FUSO);
-    const fim = fromZonedTime(`${iso}T${domingo ? "12:00" : "21:30"}:00`, FUSO);
-    const [e] = await banco
-      .insert(eventos)
-      .values({ igrejaId: igreja.id, titulo: domingo ? "Culto de domingo" : "Culto de quarta", inicio, fim })
+  // Tipos de culto (domingo 10h, quarta 20h) com 1 vaga por função de cada ministério.
+  const tipos = [
+    { dia: 0, ini: "10:00", fim: "12:00", nome: "Culto de domingo" },
+    { dia: 3, ini: "20:00", fim: "21:30", nome: "Culto de quarta" },
+  ];
+  const recPorDia = new Map<number, number>();
+  for (const t of tipos) {
+    const [r] = await banco
+      .insert(recorrencias)
+      .values({ igrejaId: igreja.id, diaSemana: t.dia, horaInicio: t.ini, horaFim: t.fim, nome: t.nome })
       .returning();
-    dados.push({ id: e.id, inicio, domingo });
+    recPorDia.set(t.dia, r.id);
+    for (const min of [L, M])
+      await banco
+        .insert(vagasModelo)
+        .values(min.fs.map((f) => ({ igrejaId: igreja.id, recorrenciaId: r.id, ministerioId: min.m.id, funcaoId: f.id, quantidade: 1 })));
   }
 
-  // Escalas publicadas. Passado: confirmado + check-in (com algumas faltas). Futuro: pendente ou confirmado.
+  // Cultos de 14 dias atrás até o último dia do mês seguinte (fuso da igreja).
+  const hoje = new Date();
+  const hojeIso = hoje.toLocaleDateString("sv-SE", { timeZone: FUSO });
+  const [ano, mes] = hojeIso.split("-").map(Number);
+  const mesSeguinte = `${mes === 12 ? ano + 1 : ano}-${String(mes === 12 ? 1 : mes + 1).padStart(2, "0")}`;
+  const ultimoDia = new Date(Date.UTC(mes === 12 ? ano + 1 : ano, mes === 12 ? 1 : mes + 1, 0)).getUTCDate();
+  const limite = new Date(`${mesSeguinte}-${ultimoDia}T12:00:00Z`).getTime();
+  const dados: { id: number; inicio: Date; domingo: boolean; rascunho: boolean }[] = [];
+  for (let d = -14; ; d++) {
+    const ref = new Date(hoje.getTime() + d * DIA);
+    const iso = ref.toLocaleDateString("sv-SE", { timeZone: FUSO });
+    if (new Date(`${iso}T12:00:00Z`).getTime() > limite) break;
+    const semana = new Date(`${iso}T12:00:00Z`).getUTCDay();
+    const t = tipos.find((x) => x.dia === semana);
+    if (!t) continue;
+    const inicio = fromZonedTime(`${iso}T${t.ini}:00`, FUSO);
+    const fim = fromZonedTime(`${iso}T${t.fim}:00`, FUSO);
+    const [e] = await banco
+      .insert(eventos)
+      .values({ igrejaId: igreja.id, titulo: t.nome, inicio, fim, recorrenciaId: recPorDia.get(semana) })
+      .returning();
+    dados.push({ id: e.id, inicio, domingo: semana === 0, rascunho: iso.startsWith(mesSeguinte) });
+  }
+
+  // Escalas. Mês corrente: publicadas (passado confirmado + check-in com algumas faltas; futuro pendente ou confirmado),
+  // cada pessoa só numa função aprovada e sem repetir no mesmo culto. Mês seguinte: rascunho com vagas abertas.
   const escalaLouvor = new Map<number, number>();
   for (const [n, ev] of dados.entries()) {
     const passado = ev.inicio < hoje;
     for (const min of [L, M]) {
       const [esc] = await banco
         .insert(escalas)
-        .values({ igrejaId: igreja.id, eventoId: ev.id, ministerioId: min.m.id, status: "publicada" })
+        .values({ igrejaId: igreja.id, eventoId: ev.id, ministerioId: min.m.id, status: ev.rascunho ? "rascunho" : "publicada" })
         .returning();
       if (min === L) escalaLouvor.set(ev.id, esc.id);
+      const usados = new Set<number>();
       for (const [i, f] of min.fs.entries()) {
-        const u = min.equipe[(i + n) % min.equipe.length];
+        if (ev.rascunho) {
+          await banco.insert(escalaItens).values({ igrejaId: igreja.id, escalaId: esc.id, funcaoId: f.id, usuarioId: null });
+          continue;
+        }
+        const candidatos = min.aprovadas.get(f.id)!;
+        const livres = candidatos.filter((id) => !usados.has(id));
+        const uId = (livres.length ? livres : candidatos)[n % (livres.length || candidatos.length)];
+        usados.add(uId);
         const faltou = passado && (n + i) % 7 === 0;
         await banco.insert(escalaItens).values({
           igrejaId: igreja.id,
           escalaId: esc.id,
           funcaoId: f.id,
-          usuarioId: u.id,
+          usuarioId: uId,
           status: passado ? (faltou ? "pendente" : "confirmado") : n % 2 ? "confirmado" : "pendente",
           checkinEm: passado && !faltou ? new Date(ev.inicio.getTime() - 15 * 60 * 1000) : null,
         });
