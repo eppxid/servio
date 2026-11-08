@@ -1,0 +1,83 @@
+/* Cartão em destaque da próxima escala (maquete cel-inicio.png). */
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 26px;
+  padding: 20px;
+  color: #f4f7ff;
+  background:
+    radial-gradient(260px 200px at 100% 0%, #ffffff2e, transparent 70%),
+    linear-gradient(150deg, #2f6ef0, #1d4fc4 70%);
+  box-shadow: 0 22px 40px -22px #1d4fc4cc;
+  display: grid;
+  gap: 14px;
+}
+:global(html[data-theme="dark"]) .hero {
+  background:
+    radial-gradient(260px 200px at 100% 0%, #ffffff1c, transparent 70%),
+    linear-gradient(150deg, #2a58c9, #172f73 75%);
+}
+.quando { display: flex; align-items: center; gap: 14px; }
+.data {
+  width: 58px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  background: #ffffff24;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  line-height: 1;
+}
+.data b { font-size: 26px; font-weight: 700; }
+.data span { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.85; margin-top: 3px; }
+.rotulo { font-size: var(--fs-xs); opacity: 0.8; font-weight: 600; }
+.titulo { margin: 2px 0 0; font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+.pilulas { display: flex; flex-wrap: wrap; gap: 6px; }
+.pilula {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 99px;
+  background: #ffffff22;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  color: inherit;
+  text-decoration: none;
+}
+.equipe { display: flex; align-items: center; gap: 10px; font-size: var(--fs-sm); opacity: 0.92; }
+.rostos { display: flex; padding-right: 5px; }
+.rostos span {
+  width: 28px;
+  height: 28px;
+  margin-right: -5px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  background: #ffffff33;
+  color: #fff;
+  box-shadow: 0 0 0 2px #2357d6;
+}
+.avisos { display: flex; flex-wrap: wrap; gap: 6px; font-size: var(--fs-xs); font-weight: 600; }
+.acoes { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
+.acoes > form { display: contents; }
+.grande {
+  height: 52px;
+  border-radius: 16px;
+  border: 0;
+  font-weight: 700;
+  font-size: var(--fs-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  cursor: pointer;
+}
+.nao { background: #ffffff1f; color: #fff; box-shadow: inset 0 0 0 1px #ffffff40; }
+.sim { background: #fff; color: #1d4fc4; box-shadow: 0 10px 20px -12px #000a; }
+.unico { grid-template-columns: 1fr; }
+.ok { font-weight: 700; }

@@ -10,12 +10,12 @@ import { FUSO } from "@/lib/recorrencia";
 import { contagemPorEscala, linksDeRepertorio } from "@/lib/repertorio/nucleo";
 import { agendaDoUsuario, trocasParaMim } from "@/lib/trocas/nucleo";
 import { responderTrocaNoInicio } from "./acoes";
+import css from "./inicio.module.css";
 import { RespostaEscala } from "./RespostaEscala";
 
 export const dynamic = "force-dynamic";
 
 const STATUS = { pendente: "Aguardando confirmação", confirmado: "Confirmado", recusado: "Recusado" } as const;
-const STATUS_CHIP = { pendente: "chip--warn", confirmado: "chip--good", recusado: "chip--bad" } as const;
 const MS_48H = 48 * 60 * 60 * 1000;
 
 const maiuscula = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -42,6 +42,20 @@ export default async function Inicio({
   const hoje = maiuscula(formatInTimeZone(new Date(), FUSO, "EEEE, d 'de' MMMM", { locale: ptBR }));
   const quando = (d: Date) => maiuscula(formatInTimeZone(d, FUSO, "EEE, d 'de' MMM 'às' HH:mm", { locale: ptBR }));
   const hora = (d: Date) => formatInTimeZone(d, FUSO, "HH:mm");
+  const diaIso = (d: Date) => formatInTimeZone(d, FUSO, "yyyy-MM-dd");
+  const linkDoDia = (d: Date) => `/agenda?dia=${diaIso(d)}`;
+  const diasAte = (d: Date) =>
+    Math.round((Date.parse(`${diaIso(d)}T12:00:00Z`) - Date.parse(`${diaIso(new Date())}T12:00:00Z`)) / 86_400_000);
+  const quandoFaltam = (n: number) => (n <= 0 ? "Hoje" : n === 1 ? "Amanhã" : `Daqui a ${n} dias`);
+  const iniciais = (nome: string) =>
+    nome
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p.charAt(0).toUpperCase())
+      .join("");
+  const listaDeNomes = (nomes: string[]) =>
+    nomes.length <= 1 ? nomes.join("") : `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}`;
 
   const link = proxima ? links.get(proxima.escalaId) : undefined;
   const musicas = proxima ? (contagens.get(proxima.escalaId) ?? 0) : 0;
@@ -67,6 +81,9 @@ export default async function Inicio({
             {p.solicitante} pede para você assumir <strong>{p.funcao}</strong> ({p.ministerio}) em {p.titulo},{" "}
             {quando(p.inicio)}.
           </p>
+          <Link href={linkDoDia(p.inicio)} className="link text-sm">
+            Ver o dia na agenda
+          </Link>
           <div className="grid grid-cols-2 gap-3">
             <button name="acao" value="aceitar" className="tbtn tbtn--p">
               Aceitar
@@ -79,39 +96,54 @@ export default async function Inicio({
       ))}
 
       {proxima ? (
-        <section className="card space-y-3" data-enter aria-label="Próxima escala">
-          <p className="eyebrow">Sua próxima escala</p>
-          <div>
-            <h2 className="card__title" style={{ fontSize: "var(--fs-xl)" }}>
-              {proxima.evento.titulo}
-            </h2>
-            <p className="text-muted">
-              {quando(proxima.evento.inicio)}
-              {proxima.evento.fim ? `–${hora(proxima.evento.fim)}` : ""}
-            </p>
+        <section className={css.hero} data-enter aria-label="Próxima escala">
+          <div className={css.quando}>
+            <div className={css.data} aria-hidden="true">
+              <b>{formatInTimeZone(proxima.evento.inicio, FUSO, "d")}</b>
+              <span>{formatInTimeZone(proxima.evento.inicio, FUSO, "EEE", { locale: ptBR }).replace(".", "")}</span>
+            </div>
+            <div>
+              <p className={css.rotulo}>
+                {quandoFaltam(diasAte(proxima.evento.inicio))} · {quando(proxima.evento.inicio)}
+                {proxima.evento.fim ? `–${hora(proxima.evento.fim)}` : ""}
+              </p>
+              <h2 className={css.titulo}>{proxima.evento.titulo}</h2>
+            </div>
           </div>
-          <p>
-            <strong>{proxima.funcao}</strong> · {proxima.ministerio}
-          </p>
-          <p>
-            <span className={`chip ${STATUS_CHIP[proxima.status]}`}>{STATUS[proxima.status]}</span>
-            {proxima.checkinEm && (
-              <span className="text-xs text-muted"> check-in às {hora(proxima.checkinEm)}</span>
+          <div className={css.pilulas}>
+            <span className={css.pilula}>
+              {proxima.ministerio} · {proxima.funcao}
+            </span>
+            {link ? (
+              <Link href={`/escalas/${link.eventoId}/${link.ministerioId}/repertorio`} className={css.pilula}>
+                Repertório{musicas ? ` · ${musicas} ${musicas === 1 ? "música" : "músicas"}` : ""}
+              </Link>
+            ) : (
+              <span className={css.pilula}>Repertório ainda vazio</span>
             )}
-          </p>
-          {proxima.colegas.length > 0 && (
-            <p className="text-sm text-muted">
-              Com: {proxima.colegas.map((c) => `${c.nome} (${c.funcao})`).join(", ")}
-            </p>
-          )}
-          {link && (
-            <Link href={`/escalas/${link.eventoId}/${link.ministerioId}/repertorio`} className="link block text-sm">
-              Repertório{musicas ? ` (${musicas} ${musicas === 1 ? "música" : "músicas"})` : ""}
+            <Link href={`/chat/${proxima.evento.id}`} className={css.pilula}>
+              Chat da equipe
             </Link>
+          </div>
+          {proxima.colegas.length > 0 && (
+            <div className={css.equipe}>
+              <span className={css.rostos} aria-hidden="true">
+                {proxima.colegas.slice(0, 3).map((c, n) => (
+                  <span key={n}>{iniciais(c.nome)}</span>
+                ))}
+              </span>
+              <span>Com {listaDeNomes(proxima.colegas.map((c) => c.nome.split(" ")[0]))}</span>
+            </div>
           )}
-          {proxima.troca && (
-            <p className="alerta alerta--warn text-xs">
-              Troca {proxima.troca.status === "aberta" ? "aguardando o substituto" : "aguardando o líder"}.
+          {(proxima.status !== "pendente" || proxima.checkinEm || proxima.troca) && (
+            <p className={css.avisos}>
+              {proxima.status !== "pendente" && <span className={css.pilula}>{STATUS[proxima.status]}</span>}
+              {proxima.checkinEm && <span className={css.pilula}>Presente · check-in às {hora(proxima.checkinEm)}</span>}
+              {proxima.troca && (
+                <span className={css.pilula}>
+                  Troca {proxima.troca.status === "aberta" ? "aguardando o substituto" : "aguardando o líder"}
+                </span>
+              )}
             </p>
           )}
           <RespostaEscala
@@ -143,11 +175,11 @@ export default async function Inicio({
       {pendentes.length > 0 && (
         <section data-enter>
           <h2 className="card__title" style={{ margin: "4px 4px 8px" }}>
-            Aguardando sua resposta
+            Para você responder
           </h2>
           <div className="list">
             {pendentes.map((i) => (
-              <Link key={i.itemId} href="/agenda" className="row">
+              <Link key={i.itemId} href={linkDoDia(i.evento.inicio)} className="row">
                 <span className="row__tx">
                   <b>{i.evento.titulo}</b>
                   <span>
@@ -170,7 +202,7 @@ export default async function Inicio({
           </h2>
           <div className="list">
             {seguintes.map((i) => (
-              <Link key={i.itemId} href="/agenda" className="row">
+              <Link key={i.itemId} href={linkDoDia(i.evento.inicio)} className="row">
                 <span className="row__tx">
                   <b>{i.evento.titulo}</b>
                   <span>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Calendario, type DiaDoCalendario } from "@/components/app/Calendario";
 import { nomeDoDia } from "@/components/app/calendario-grade";
 import { FolhaInferior } from "@/components/app/FolhaInferior";
@@ -19,6 +19,8 @@ export interface EscalaDoDia {
   checkinAberto: boolean;
   colegas: string[];
   repertorio: string | null;
+  musicas: number;
+  chat: string;
   troca: "aberta" | "aceita" | null;
   substitutos: { id: number; nome: string }[];
 }
@@ -27,10 +29,24 @@ const STATUS = { pendente: "Aguardando confirmação", confirmado: "Confirmado",
 const STATUS_CHIP = { pendente: "chip--warn", confirmado: "chip--good", recusado: "chip--bad" } as const;
 
 /** Calendário do mês com meus dias de escala e folgas; o toque no dia abre os detalhes na folha inferior. */
-export function CalendarioAgenda({ escalas, folgas }: { escalas: EscalaDoDia[]; folgas: string[] }) {
-  const [dia, setDia] = useState<string | null>(null);
-  // Cada ação recarrega a página com dados novos: fecha a folha.
-  useEffect(() => setDia(null), [escalas]);
+export function CalendarioAgenda({
+  escalas,
+  folgas,
+  diaInicial = null,
+}: {
+  escalas: EscalaDoDia[];
+  folgas: string[];
+  /** Dia que já abre o detalhe (`/agenda?dia=AAAA-MM-DD`, vindo do Início). */
+  diaInicial?: string | null;
+}) {
+  const [dia, setDia] = useState<string | null>(diaInicial);
+  const anteriores = useRef(escalas);
+  // Cada ação recarrega a página com dados novos: fecha a folha (a montagem não conta).
+  useEffect(() => {
+    if (anteriores.current === escalas) return;
+    anteriores.current = escalas;
+    setDia(null);
+  }, [escalas]);
   const dias = useMemo(() => {
     const mapa: Record<string, DiaDoCalendario> = {};
     for (const f of folgas) mapa[f] = { tipo: "folga" };
@@ -43,6 +59,7 @@ export function CalendarioAgenda({ escalas, folgas }: { escalas: EscalaDoDia[]; 
   return (
     <>
       <Calendario
+        mesInicial={diaInicial?.slice(0, 7)}
         dias={dias}
         selecionado={dia}
         aoEscolherDia={setDia}
@@ -92,10 +109,17 @@ export function CalendarioAgenda({ escalas, folgas }: { escalas: EscalaDoDia[]; 
               </p>
             </div>
             {e.colegas.length > 0 && <p className="text-xs text-muted">Com: {e.colegas.join(", ")}</p>}
-            {e.repertorio && (
-              <Link href={e.repertorio} className="link block text-sm">
-                Repertório
+            {e.status !== "recusado" && (
+              <Link href={e.chat} className="link block text-sm">
+                Chat da equipe
               </Link>
+            )}
+            {e.repertorio ? (
+              <Link href={e.repertorio} className="link block text-sm">
+                Repertório{e.musicas > 0 ? ` (${e.musicas} ${e.musicas === 1 ? "música" : "músicas"})` : ""}
+              </Link>
+            ) : (
+              <p className="text-sm text-muted">Repertório ainda vazio</p>
             )}
             {e.troca && (
               <p className="alerta alerta--warn text-xs">
