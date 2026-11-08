@@ -23,13 +23,17 @@ export default async function Tipos() {
       </Cabecalho>
       {tipos.length === 0 ? (
         <section className="list vazio">
-          <p>Nenhum tipo de culto ainda. Crie um culto que se repete toda semana para definir as vagas dele.</p>
-          {admin && (
-            <div className="vazio__acoes">
-              <Link href="/eventos/novo" className="tbtn tbtn--soft">
-                Criar culto semanal
-              </Link>
-            </div>
+          {admin ? (
+            <>
+              <p>Nenhum tipo de culto ainda. Crie um culto que se repete toda semana para definir as vagas dele.</p>
+              <div className="vazio__acoes">
+                <Link href="/eventos/novo" className="tbtn tbtn--soft">
+                  Criar culto semanal
+                </Link>
+              </div>
+            </>
+          ) : (
+            <p>Só o administrador cria cultos. Peça para ele criar o culto que se repete.</p>
           )}
         </section>
       ) : (

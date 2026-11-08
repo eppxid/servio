@@ -1,0 +1,96 @@
+.leg {
+  display: contents;
+}
+
+.leg span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.leg i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ok {
+  background: var(--good);
+}
+
+.falta {
+  background: var(--warn);
+}
+
+.sem {
+  background: var(--line-2);
+  box-shadow: inset 0 0 0 1.5px var(--faint);
+}
+
+.titulo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 2px 0;
+}
+
+.titulo h2 {
+  margin: 0;
+  font-size: var(--fs-lg, 1.125rem);
+  font-weight: 700;
+}
+
+.titulo button {
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  padding: 4px 0;
+}
+
+.culto {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.data {
+  flex: none;
+  width: 44px;
+  display: grid;
+  justify-items: center;
+  line-height: 1.1;
+}
+
+.data b {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+}
+
+.data span {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  text-transform: lowercase;
+}
+
+.tx {
+  flex: 1;
+  min-width: 0;
+}
+
+.tx b {
+  display: block;
+}
+
+.pilulas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}

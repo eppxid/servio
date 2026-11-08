@@ -1,0 +1,57 @@
+.trocas {
+  display: grid;
+  gap: 8px;
+}
+
+.titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 2px 0;
+}
+
+.titulo h2 {
+  margin: 0;
+  font-size: var(--fs-lg, 1.125rem);
+  font-weight: 700;
+}
+
+.contador {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 99px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.troca {
+  display: grid;
+  gap: 10px;
+  padding: 12px 16px;
+}
+
+.troca p {
+  margin: 0;
+}
+
+.troca b,
+.troca span {
+  display: block;
+}
+
+.troca span {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.botoes {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
