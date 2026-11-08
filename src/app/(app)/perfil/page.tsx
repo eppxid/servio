@@ -49,16 +49,6 @@ export default async function Perfil({
             className="campo"
           />
         </label>
-        <label className="rotulo">
-          Link da foto (opcional, https)
-          <input
-            name="fotoUrl"
-            type="url"
-            maxLength={500}
-            defaultValue={usuario.fotoUrl ?? ""}
-            className="campo"
-          />
-        </label>
         <button type="submit" className="btn btn--primary btn--block">
           Salvar
         </button>
