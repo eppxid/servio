@@ -8,7 +8,7 @@ import type { AnyDb } from "@/lib/auth-core";
 import { ErroEscala } from "@/lib/escala/nucleo";
 import { ErroAcesso, type Ator } from "@/lib/ministerios/nucleo";
 import { criarVagasDosEventos, salvarModeloVagas } from "@/lib/vagas/nucleo";
-import { ajustarCultosAoModelo, dadosCulto, preencherVaga, publicarCulto } from "./vagas-culto";
+import { aprovarEEscalar, ajustarCultosAoModelo, dadosCulto, preencherVaga, publicarCulto } from "./vagas-culto";
 
 vi.mock("@/lib/notificar", () => ({ notificar: vi.fn(async () => {}) }));
 
@@ -181,5 +181,51 @@ describe("ajustarCultosAoModelo", () => {
 
     // A escala publicada do primeiro culto não muda.
     expect((await itensDe(eventoId)).itens).toHaveLength(3);
+  });
+});
+
+describe("desfazer remoção e recomendação de função", () => {
+  it("devolve a pessoa com o status que ela tinha", async () => {
+    const [ev] = await db
+      .insert(schema.eventos)
+      .values({ igrejaId, titulo: "Culto", inicio: new Date("2099-04-05T21:00:00Z"), recorrenciaId: tipo })
+      .returning();
+    await criarVagasDosEventos(db, igrejaId, [ev.id]);
+    const [v1] = (await itensDe(ev.id)).itens.filter((i) => i.funcaoId === transmissao);
+    await preencherVaga(db, lider, v1.id, carla.id);
+    await db.update(schema.escalaItens).set({ status: "confirmado" }).where(eq(schema.escalaItens.id, v1.id));
+    await preencherVaga(db, lider, v1.id, null);
+    await preencherVaga(db, lider, v1.id, carla.id, "confirmado");
+    const depois = (await itensDe(ev.id)).itens.find((i) => i.id === v1.id)!;
+    expect(depois.usuarioId).toBe(carla.id);
+    expect(depois.status).toBe("confirmado");
+  });
+
+  it("lista o pedido de função e, ao aprovar, escala na vaga aberta", async () => {
+    const dani = await usuario("dani@x.com");
+    const [m] = await db
+      .insert(schema.membrosMinisterio)
+      .values({ igrejaId, usuarioId: dani.id, ministerioId: midia, papel: "voluntario", status: "aprovado" })
+      .returning();
+    await db.insert(schema.membroFuncoes).values({ igrejaId, membroId: m.id, funcaoId: transmissao, status: "desejada" });
+    const [ev] = await db
+      .insert(schema.eventos)
+      .values({ igrejaId, titulo: "Culto", inicio: new Date("2099-04-12T21:00:00Z"), recorrenciaId: tipo })
+      .returning();
+    await criarVagasDosEventos(db, igrejaId, [ev.id]);
+
+    const d = await dadosCulto(db, lider, ev.id);
+    expect(d.ministerios[0].pedidos).toEqual([
+      { membroId: m.id, usuarioId: dani.id, nome: "dani", funcaoId: transmissao, funcao: "Transmissão" },
+    ]);
+
+    await aprovarEEscalar(db, lider, ev.id, midia, m.id, transmissao);
+    const { itens } = await itensDe(ev.id);
+    expect(itens.filter((i) => i.usuarioId === dani.id)).toHaveLength(1);
+    expect((await dadosCulto(db, lider, ev.id)).ministerios[0].pedidos).toEqual([]);
+  });
+
+  it("quem não lidera o ministério não aprova", async () => {
+    await expect(aprovarEEscalar(db, outroLider, eventoId, midia, 1, transmissao)).rejects.toBeInstanceOf(ErroAcesso);
   });
 });

@@ -21,6 +21,11 @@ export default defineConfig({
   workers: 1,
   reporter: "list",
   use: { baseURL: `http://localhost:${APP_PORT}`, locale: "pt-BR", timezoneId: "America/Sao_Paulo" },
+  // culto-v2 usa o que os outros specs criam (igreja, líder, vagas): em projeto à parte, roda depois deles (1 worker = ordem dos projetos).
+  projects: [
+    { name: "principal", testIgnore: /culto-v2\.spec/ },
+    { name: "culto-v2", testMatch: /culto-v2\.spec/ },
+  ],
   webServer: [
     { command: "node scripts/postgres-local.mjs", port: PG_PORT, env, reuseExistingServer: false },
     {
