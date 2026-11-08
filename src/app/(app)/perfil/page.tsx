@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import AtivarAvisos from "@/components/AtivarAvisos";
+import { TemaPerfil } from "@/components/app/TemaPerfil";
 import ResumoPontos from "@/components/ResumoPontos";
 import { db } from "@/db";
 import { indisponibilidades } from "@/db/schema";
@@ -95,6 +96,15 @@ export default async function Perfil({
           <span>Escolha ministérios e funções</span>
         </span>
       </Link>
+
+      <Link href="/reconhecimento" className="card row" style={{ minHeight: 0 }}>
+        <span className="row__tx">
+          <b>Meus pontos e medalhas</b>
+          <span>Reconhecimento e conquistas</span>
+        </span>
+      </Link>
+
+      <TemaPerfil />
 
       <ResumoPontos usuario={usuario} />
 

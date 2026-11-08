@@ -5,7 +5,7 @@ export const COOKIE_MODO = "servio_modo";
 
 export const INICIO_DO_MODO: Record<Modo, string> = { voluntario: "/inicio", lider: "/lider/cultos" };
 
-const ROTAS_LIDER = ["/lider", "/painel", "/agenda/trocas", "/eventos"];
+const ROTAS_LIDER = ["/lider", "/painel"];
 const ROTAS_VOLUNTARIO = ["/inicio", "/agenda", "/folgas", "/perfil"];
 
 const dentro = (caminho: string, raizes: string[]) =>
@@ -15,7 +15,7 @@ export function lerModo(valor: string | undefined): Modo {
   return valor === "lider" ? "lider" : "voluntario";
 }
 
-/** A rota decide o modo quando pertence a um deles; nas demais (menu "Mais") vale a escolha salva. */
+/** A rota decide o modo quando pertence a um deles; nas demais vale a escolha salva. */
 export function modoDoCaminho(caminho: string, salvo: Modo, ehLider: boolean): Modo {
   if (!ehLider) return "voluntario";
   if (dentro(caminho, ROTAS_LIDER)) return "lider";

@@ -1,3 +1,4 @@
+import { criarMinisterioComConvite } from "./ajuda-equipe";
 import { mkdirSync } from "node:fs";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import postgres from "postgres";
@@ -29,21 +30,10 @@ async function entrar(browser: Browser, email: string): Promise<Page> {
 test("voluntária responde pelo Início, abre o dia na Agenda, usa o Chat e não vê 'Aprovar trocas'", async ({ browser }) => {
   if (PRINTS) mkdirSync(PRINTS, { recursive: true });
   const admin = await entrar(browser, "admin@e2e.local");
-  await admin.goto("/ministerios");
-  const novo = admin.locator("form", { hasText: "Novo ministério" });
-  await novo.getByLabel("Nome").fill("Apoio V036");
-  await novo.getByRole("button", { name: "Criar" }).click();
-  await admin.getByRole("link", { name: "Apoio V036" }).click();
-  await admin.getByLabel("Nova função").fill("Recepção");
-  await admin.getByRole("button", { name: "Adicionar" }).click();
-  await expect(admin.getByLabel("Nome da função")).toHaveValue("Recepção");
-  await admin.getByRole("button", { name: "Gerar convite" }).click();
-  await expect(admin).toHaveURL(/convite=[0-9a-f]{64}/);
-  const token = new URL(admin.url()).searchParams.get("convite");
-  const ministerioId = Number(admin.url().split("/ministerios/")[1].split("?")[0]);
+  const { id: ministerioId, link } = await criarMinisterioComConvite(admin, "Apoio V036", "Recepção");
 
   const cadastro = await novaPagina(browser);
-  await cadastro.goto(`/convite/${token}`);
+  await cadastro.goto(link);
   await cadastro.getByLabel("Nome", { exact: true }).fill("Vera Apoio");
   await cadastro.getByLabel("E-mail").fill("vera.apoio@e2e.local");
   await cadastro.getByLabel("Senha", { exact: true }).fill(SENHA);

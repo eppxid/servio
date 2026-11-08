@@ -1,3 +1,4 @@
+import { criarMinisterioComConvite } from "./ajuda-equipe";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import postgres from "postgres";
 
@@ -21,23 +22,12 @@ test("líder aprova o pedido de entrada e a função desejada de um voluntário 
   await admin.getByLabel("E-mail").fill("admin@e2e.local");
   await admin.getByLabel("Senha", { exact: true }).fill(SENHA);
   await admin.getByRole("button", { name: "Entrar" }).click();
-  await expect(admin).toHaveURL(/\/agenda/);
+  await expect(admin).not.toHaveURL(/\/entrar/);
 
-  await admin.goto("/ministerios");
-  const novo = admin.locator("form", { hasText: "Novo ministério" });
-  await novo.getByLabel("Nome").fill("Midia Equipe");
-  await novo.getByRole("button", { name: "Criar" }).click();
-  await admin.getByRole("link", { name: "Midia Equipe" }).click();
-  await admin.getByLabel("Nova função").fill("Iluminação");
-  await admin.getByRole("button", { name: "Adicionar" }).click();
-  await expect(admin.getByLabel("Nome da função")).toHaveValue("Iluminação");
-  await admin.getByRole("button", { name: "Gerar convite" }).click();
-  await expect(admin).toHaveURL(/convite=[0-9a-f]{64}/);
-  const token = new URL(admin.url()).searchParams.get("convite");
-  const idMinisterio = admin.url().split("/ministerios/")[1].split("?")[0];
+  const { id: idMinisterio, link } = await criarMinisterioComConvite(admin, "Midia Equipe", "Iluminação");
 
   const voluntario = await (await browser.newContext()).newPage();
-  await voluntario.goto(`/convite/${token}`);
+  await voluntario.goto(link);
   await voluntario.getByLabel("Nome", { exact: true }).fill("Ana Equipe");
   await voluntario.getByLabel("E-mail").fill("ana@e2e.local");
   await voluntario.getByLabel("Senha", { exact: true }).fill(SENHA);
@@ -77,7 +67,7 @@ test("líder aprova o pedido de entrada e a função desejada de um voluntário 
 
   const linha = admin.getByRole("button", { name: /Ana Equipe/ });
   await expect(linha).toContainText("Iluminação");
-  await expect(linha).toContainText("0 escalas no mês");
+  await expect(linha).toContainText("0 no mês");
   if (process.env.E2E_PRINTS) {
     for (const tema of ["light", "dark"] as const) {
       await trocarTema(admin, tema);

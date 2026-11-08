@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import postgres from "postgres";
+import { aprovarEntrada, criarMinisterioComConvite, darFuncoes, tornarLider } from "./ajuda-equipe";
 
 const SENHA = "senha-e2e-12345";
 
@@ -53,43 +54,25 @@ test("admin cria ministério, voluntário entra por convite, líder aprova, esca
   await admin.getByRole("button", { name: "Criar" }).click();
   await expect(admin).toHaveURL(/\/lider\/configurar/);
 
-  // 2. Admin cria o ministério e a função, e gera o convite.
-  await admin.goto("/ministerios");
-  const novo = admin.locator("form", { hasText: "Novo ministério" });
-  await novo.getByLabel("Nome").fill("Louvor E2E");
-  await novo.getByRole("button", { name: "Criar" }).click();
-  await admin.getByRole("link", { name: "Louvor E2E" }).click();
-  await admin.getByLabel("Nova função").fill("Vocal");
-  await admin.getByRole("button", { name: "Adicionar" }).click();
-  await expect(admin.getByLabel("Nome da função")).toHaveValue("Vocal");
-  await admin.getByRole("button", { name: "Gerar convite" }).click();
-  await expect(admin).toHaveURL(/convite=[0-9a-f]{64}/);
-  const token = new URL(admin.url()).searchParams.get("convite");
-  const link = `/convite/${token}`;
-  const urlMinisterio = admin.url().split("?")[0];
+  // 2. Admin cria o ministério e a função, e gera o convite (tudo na Equipe).
+  const { id: ministerioId, link } = await criarMinisterioComConvite(admin, "Louvor E2E", "Vocal");
 
   // 3. Futuro líder entra pelo convite; o admin aprova (sem função) e o torna líder.
   const lider = await novaPagina(browser);
   await cadastrarPorConvite(lider, link, "Lider E2E", "lider@e2e.local");
-  await admin.goto(urlMinisterio);
-  await admin.getByRole("button", { name: "Aprovar" }).click();
+  await aprovarEntrada(admin, ministerioId, "Lider E2E");
   await expect(admin.getByRole("heading", { name: "Membros (1)" })).toBeVisible();
-  await admin.goto("/ministerios");
-  await admin.getByText("Gerenciar").click();
-  await admin.getByLabel("Pessoa").selectOption({ label: "Lider E2E" });
-  await admin.getByLabel("Papel").selectOption({ label: "Líder" });
-  await admin.getByRole("button", { name: "Definir papel" }).click();
+  await tornarLider(admin, "Louvor E2E", "Lider E2E");
 
   // 4. Voluntário entra pelo convite.
   const voluntario = await novaPagina(browser);
   await cadastrarPorConvite(voluntario, link, "Voluntario E2E", "voluntario@e2e.local");
 
-  // 5. Líder aprova o voluntário com a função Vocal.
-  await lider.goto(urlMinisterio);
-  await expect(lider.getByRole("heading", { name: "Pendentes (1)" })).toBeVisible();
-  await lider.locator("section", { hasText: "Pendentes" }).getByRole("checkbox", { name: "Vocal" }).check();
-  await lider.getByRole("button", { name: "Aprovar" }).click();
-  await expect(lider.getByRole("heading", { name: "Pendentes (0)" })).toBeVisible();
+  // 5. Líder aprova o voluntário e marca a função Vocal.
+  await lider.goto(`/lider/equipe?ministerio=${ministerioId}`);
+  await expect(lider.getByRole("link", { name: /Pedidos/ })).toContainText("1");
+  await aprovarEntrada(lider, ministerioId, "Voluntario E2E");
+  await darFuncoes(lider, "Voluntario E2E", ["Vocal"]);
 
   // 6. Admin cria um evento que começa em 1 hora (o check-in abre 2 horas antes).
   const { data, hora, mes } = dataHoraSp(new Date(Date.now() + 60 * 60 * 1000));
@@ -105,7 +88,6 @@ test("admin cria ministério, voluntário entra por convite, líder aprova, esca
   const linkCulto = lider.getByRole("link", { name: /Culto E2E/ });
   const eventoId = (await linkCulto.getAttribute("href"))!.split("/").pop();
   // Culto avulso nasce sem vagas e a sugestão não as inventa: define 1 vaga de Vocal direto no banco.
-  const ministerioId = Number(urlMinisterio.split("/").pop());
   // O PGlite atende uma conexão por vez e o app mantém a dele por instantes: tenta de novo se a nossa cair.
   await expect(async () => {
     const sql = postgres(`postgres://postgres:postgres@127.0.0.1:${process.env.PG_LOCAL_PORT}/postgres`, { max: 1 });
@@ -163,7 +145,7 @@ test("admin cria ministério, voluntário entra por convite, líder aprova, esca
   await expect(voluntario.getByText(/check-in às \d\d:\d\d/)).toBeVisible();
 
   // 9. Líder vê o voluntário presente.
-  await lider.goto(`/escalas/${eventoId}/${urlMinisterio.split("/").pop()}`);
+  await lider.goto(`/escalas/${eventoId}/${ministerioId}`);
   await expect(lider.getByText(/Vocal: Voluntario E2E/)).toBeVisible();
   await expect(lider.getByText(/Presente \d\d:\d\d/)).toBeVisible();
 });
