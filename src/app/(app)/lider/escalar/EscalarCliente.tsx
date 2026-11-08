@@ -4,17 +4,28 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { AcaoPrincipal } from "@/components/app/AcaoPrincipal";
 import { FolhaInferior } from "@/components/app/FolhaInferior";
+import { semanaCurta } from "@/components/app/calendario-grade";
 import { IconeApp } from "@/components/app/icones";
 import type { RespostaSugestao } from "./acoes";
 
 export interface CultoAberto {
   eventoId: number;
+  /** AAAA-MM-DD */
+  data: string;
   titulo: string;
   /** "dd/MM · HH:mm" */
   quando: string;
   preenchidas: number;
   total: number;
   status: "completo" | "faltando" | "sem_escala";
+}
+
+const diaPorExtenso = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" });
+
+/** "Domingo, 15 nov" */
+function dataCurta(iso: string) {
+  const t = diaPorExtenso.format(new Date(`${iso}T12:00:00Z`)).replace(" de ", " ").replace(".", "");
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 /**
@@ -48,6 +59,7 @@ export function EscalarCliente({
 
   const abertos = cultos.filter((c) => c.status !== "completo");
   const completos = cultos.length - abertos.length;
+  const preenchidos = cultos.filter((c) => c.preenchidas > 0);
 
   const aoSugerir = () =>
     iniciar(async () => {
@@ -84,6 +96,9 @@ export function EscalarCliente({
     });
 
   const desfazivel = (sugestao?.itens?.length ?? 0) > 0;
+  const faltas = sugestao?.faltas ?? [];
+  const semVagas = sugestao?.semVagas ?? [];
+  const recomendacoes = sugestao?.recomendacoes ?? [];
 
   return (
     <>
@@ -98,45 +113,119 @@ export function EscalarCliente({
         </p>
       )}
       {sugestao?.resumo && (
-        <section className="list" aria-label="Resumo da sugestão" role="status">
-          <div className="row">
-            <span className="row__tx row__tx--quebra">
-              <b>{sugestao.resumo}</b>
-              <span>Rascunho: revise nos cultos e publique o mês.</span>
-            </span>
-            {desfazivel && (
-              <span className="row__end">
-                <button type="button" className="tbtn tbtn--soft" disabled={pendente} onClick={aoDesfazer}>
-                  Desfazer
-                </button>
-              </span>
-            )}
-          </div>
-          {(sugestao.semVagas ?? []).map((v) => (
-            <Link key={v.eventoId} href={`/lider/cultos/${v.eventoId}`} className="row">
-              <span className="row__tx">
-                <b>{v.data.slice(8, 10)}/{v.data.slice(5, 7)} · sem vagas definidas</b>
-                <span>Defina as vagas do culto para entrar na sugestão</span>
-              </span>
-              <span className="row__end">
-                <IconeApp nome="dir" />
-              </span>
-            </Link>
-          ))}
-          {(sugestao.recomendacoes ?? []).map((r) => (
-            <Link key={r.funcaoId} href="/lider/equipe" className="row">
-              <span className="row__tx">
+        <>
+          <section className="list" aria-label="Resumo da sugestão" role="status">
+            <div className="row" style={{ padding: 16, gap: 18 }}>
+              {sugestao.total ? (
+                <span
+                  className="anel"
+                  style={{ ["--p" as string]: Math.round(((sugestao.preenchidas ?? 0) / sugestao.total) * 100) }}
+                  aria-hidden="true"
+                >
+                  <span>
+                    <b>{sugestao.preenchidas ?? 0}</b>
+                    <small>de {sugestao.total}</small>
+                  </span>
+                </span>
+              ) : null}
+              <span className="row__tx row__tx--quebra">
                 <b>
-                  {r.desejam} {r.desejam === 1 ? "pessoa deseja" : "pessoas desejam"} {r.funcao}
+                  {sugestao.total
+                    ? `${sugestao.preenchidas ?? 0} de ${sugestao.total} ${sugestao.total === 1 ? "vaga preenchida" : "vagas preenchidas"}`
+                    : sugestao.resumo}
                 </b>
-                <span>Aprove na Equipe para entrar nas próximas sugestões</span>
+                <span>Ainda é rascunho. Revise e publique.</span>
+                {desfazivel && (
+                  <button type="button" className="tbtn tbtn--soft" style={{ marginTop: 8 }} disabled={pendente} onClick={aoDesfazer}>
+                    Desfazer
+                  </button>
+                )}
               </span>
-              <span className="row__end">
-                <IconeApp nome="dir" />
-              </span>
-            </Link>
-          ))}
-        </section>
+            </div>
+          </section>
+
+          {faltas.length > 0 && (
+            <>
+              <h2 className="sec">Sem candidato</h2>
+              <section className="list" aria-label="Vagas sem candidato">
+                {faltas.map((f, i) => (
+                  <div key={`${f.eventoId}-${f.funcao}-${i}`} className="row">
+                    <span className="row__ic row__ic--vazio">
+                      <IconeApp nome="adicionar" />
+                    </span>
+                    <span className="row__tx">
+                      <b>{f.funcao}</b>
+                      <span>{dataCurta(f.data)}</span>
+                    </span>
+                    <span className="row__end">
+                      <Link href={`/lider/cultos/${f.eventoId}`} className="tbtn tbtn--soft">
+                        Escolher
+                      </Link>
+                    </span>
+                  </div>
+                ))}
+              </section>
+            </>
+          )}
+
+          {(semVagas.length > 0 || recomendacoes.length > 0) && (
+            <section className="list" aria-label="Pendências da sugestão">
+              {semVagas.map((v) => (
+                <Link key={v.eventoId} href={`/lider/cultos/${v.eventoId}`} className="row">
+                  <span className="row__tx">
+                    <b>
+                      {v.data.slice(8, 10)}/{v.data.slice(5, 7)} · sem vagas definidas
+                    </b>
+                    <span>Defina as vagas do culto para entrar na sugestão</span>
+                  </span>
+                  <span className="row__end">
+                    <IconeApp nome="dir" />
+                  </span>
+                </Link>
+              ))}
+              {recomendacoes.map((r) => (
+                <Link key={r.funcaoId} href="/lider/equipe" className="row">
+                  <span className="row__tx">
+                    <b>
+                      {r.desejam} {r.desejam === 1 ? "pessoa deseja" : "pessoas desejam"} {r.funcao}
+                    </b>
+                    <span>Aprove na Equipe para entrar nas próximas sugestões</span>
+                  </span>
+                  <span className="row__end">
+                    <IconeApp nome="dir" />
+                  </span>
+                </Link>
+              ))}
+            </section>
+          )}
+
+          {preenchidos.length > 0 && (
+            <>
+              <h2 className="sec">Preenchidas pela sugestão</h2>
+              <section className="list" aria-label="Cultos preenchidos">
+                {preenchidos.map((c) => (
+                  <Link key={c.eventoId} href={`/lider/cultos/${c.eventoId}`} className="row">
+                    <span className="dt">
+                      <b>{Number(c.data.slice(8))}</b>
+                      <span>{semanaCurta(c.data)}</span>
+                    </span>
+                    <span className="row__tx">
+                      <b>
+                        {c.preenchidas} {c.preenchidas === 1 ? "pessoa" : "pessoas"}
+                      </b>
+                      <span>{c.titulo}</span>
+                    </span>
+                    <span className="row__end">
+                      <span className={`vg ${c.status === "completo" ? "vg--ok" : "vg--falta"}`}>
+                        {c.preenchidas}/{c.total}
+                      </span>
+                    </span>
+                  </Link>
+                ))}
+              </section>
+            </>
+          )}
+        </>
       )}
 
       {cultos.length === 0 ? (
@@ -144,50 +233,70 @@ export function EscalarCliente({
           <p>Nenhum culto neste mês.</p>
         </section>
       ) : (
-        <section className="list" aria-label="Cultos com vaga aberta">
-          {abertos.length === 0 ? (
-            <p className="vazio" style={{ padding: 16 }}>
-              Todos os cultos do mês estão completos em {ministerio}.
-            </p>
-          ) : (
-            abertos.map((c) => (
-              <Link key={c.eventoId} href={`/lider/cultos/${c.eventoId}`} className="row">
-                <span className="row__tx">
-                  <b>
-                    {c.titulo} · {c.quando}
-                  </b>
-                  <span>
-                    <span className={`vg ${c.status === "sem_escala" || c.preenchidas === 0 ? "vg--sem" : "vg--falta"}`}>
-                      {ministerio} {c.status === "sem_escala" ? "–" : `${c.preenchidas}/${c.total}`}
+        !sugestao?.resumo && (
+          <section className="list" aria-label="Cultos com vaga aberta">
+            {abertos.length === 0 ? (
+              <p className="vazio" style={{ padding: 16 }}>
+                Todos os cultos do mês estão completos em {ministerio}.
+              </p>
+            ) : (
+              abertos.map((c) => (
+                <Link key={c.eventoId} href={`/lider/cultos/${c.eventoId}`} className="row">
+                  <span className="row__tx">
+                    <b>
+                      {c.titulo} · {c.quando}
+                    </b>
+                    <span>
+                      <span className={`vg ${c.status === "sem_escala" || c.preenchidas === 0 ? "vg--sem" : "vg--falta"}`}>
+                        {ministerio} {c.status === "sem_escala" ? "–" : `${c.preenchidas}/${c.total}`}
+                      </span>
                     </span>
                   </span>
-                </span>
-                <span className="row__end">
-                  <IconeApp nome="dir" />
-                </span>
-              </Link>
-            ))
-          )}
-        </section>
+                  <span className="row__end">
+                    <IconeApp nome="dir" />
+                  </span>
+                </Link>
+              ))
+            )}
+          </section>
+        )
       )}
-      {completos > 0 && abertos.length > 0 && (
+      {!sugestao?.resumo && completos > 0 && abertos.length > 0 && (
         <p className="eyebrow">
           {completos} {completos === 1 ? "culto completo" : "cultos completos"} não aparecem aqui.
         </p>
       )}
 
-      <button
-        type="button"
-        className="tbtn tbtn--p"
-        style={{ height: 48 }}
-        disabled={pendente || rascunhos === 0}
-        onClick={() => setConfirmando(true)}
-      >
-        Publicar mês
-      </button>
-      <AcaoPrincipal icone="magia" disabled={pendente} onClick={aoSugerir}>
-        {pendente ? "Trabalhando…" : "Sugerir escala do mês"}
-      </AcaoPrincipal>
+      {sugestao?.resumo ? (
+        <>
+          <div className="cta-espaco" aria-hidden="true" />
+          <div className="barra-cta">
+            {preenchidos[0] && (
+              <Link href={`/lider/cultos/${preenchidos[0].eventoId}`} className="cta cta--sec">
+                Revisar
+              </Link>
+            )}
+            <button type="button" className="cta" disabled={pendente || rascunhos === 0} onClick={() => setConfirmando(true)}>
+              Publicar mês
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            className="tbtn tbtn--p"
+            style={{ height: 48 }}
+            disabled={pendente || rascunhos === 0}
+            onClick={() => setConfirmando(true)}
+          >
+            Publicar mês
+          </button>
+          <AcaoPrincipal icone="magia" disabled={pendente} onClick={aoSugerir}>
+            {pendente ? "Trabalhando…" : "Sugerir escala do mês"}
+          </AcaoPrincipal>
+        </>
+      )}
 
       <FolhaInferior
         aberta={confirmando}

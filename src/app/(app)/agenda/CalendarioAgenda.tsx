@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Calendario, type DiaDoCalendario } from "@/components/app/Calendario";
-import { nomeDoDia } from "@/components/app/calendario-grade";
+import { AcaoPrincipal } from "@/components/app/AcaoPrincipal";
+import { hojeIso, nomeDoDia, semanaCurta } from "@/components/app/calendario-grade";
 import { FolhaInferior } from "@/components/app/FolhaInferior";
 import { checkinAcao, confirmarEscala, pedirTrocaAcao, recusarEscala } from "./acoes";
 
@@ -27,6 +28,23 @@ export interface EscalaDoDia {
 }
 
 const STATUS = { pendente: "Aguardando confirmação", confirmado: "Confirmado", recusado: "Recusado" } as const;
+const SELO = { pendente: ["Responder", "chip--warn"], confirmado: ["Confirmada", "chip--good"], recusado: ["Recusada", "chip--bad"] } as const;
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const MES_POR_EXTENSO = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+/** Agrupa dias `AAAA-MM-DD` consecutivos em períodos de folga. */
+function periodosDeFolga(dias: string[]): { inicio: string; fim: string }[] {
+  const ordenados = [...new Set(dias)].sort();
+  const periodos: { inicio: string; fim: string }[] = [];
+  for (const d of ordenados) {
+    const ultimo = periodos.at(-1);
+    const seguinte = ultimo && new Date(new Date(`${ultimo.fim}T12:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10);
+    if (ultimo && seguinte === d) ultimo.fim = d;
+    else periodos.push({ inicio: d, fim: d });
+  }
+  return periodos;
+}
+
 const STATUS_CHIP = { pendente: "chip--warn", confirmado: "chip--good", recusado: "chip--bad" } as const;
 
 /** Calendário do mês com meus dias de escala e folgas; o toque no dia abre os detalhes na folha inferior. */
@@ -42,6 +60,7 @@ export function CalendarioAgenda({
 }) {
   const [dia, setDia] = useState<string | null>(diaInicial);
   const [recusando, setRecusando] = useState<number | null>(null);
+  const [mes, setMes] = useState((diaInicial ?? hojeIso()).slice(0, 7));
   const anteriores = useRef(escalas);
   // Cada ação recarrega a página com dados novos: fecha a folha (a montagem não conta).
   useEffect(() => {
@@ -55,6 +74,19 @@ export function CalendarioAgenda({
     for (const e of escalas) if (e.status !== "recusado") mapa[e.dia] = { tipo: "minha", rotulo: e.titulo };
     return mapa;
   }, [escalas, folgas]);
+  // Lista "Em <mês>": minhas escalas e folgas do mês que o calendário mostra, na ordem das datas.
+  const lista = useMemo(() => {
+    const primeiro = `${mes}-01`;
+    const itens: { dia: string; chave: string; escala?: EscalaDoDia; folgaAte?: string }[] = escalas
+      .filter((e) => e.dia.startsWith(mes))
+      .map((e) => ({ dia: e.dia, chave: `e${e.itemId}`, escala: e }));
+    for (const p of periodosDeFolga(folgas)) {
+      if (p.fim < primeiro || p.inicio.slice(0, 7) > mes) continue;
+      const inicio = p.inicio < primeiro ? primeiro : p.inicio;
+      itens.push({ dia: inicio, chave: `f${p.inicio}`, folgaAte: p.fim });
+    }
+    return itens.sort((a, b) => a.dia.localeCompare(b.dia));
+  }, [escalas, folgas, mes]);
   const doDia = dia ? escalas.filter((e) => e.dia === dia) : [];
   const folga = dia ? folgas.includes(dia) : false;
 
@@ -62,6 +94,7 @@ export function CalendarioAgenda({
     <>
       <Calendario
         mesInicial={diaInicial?.slice(0, 7)}
+        aoMudarMes={setMes}
         dias={dias}
         selecionado={dia}
         aoEscolherDia={setDia}
@@ -81,6 +114,45 @@ export function CalendarioAgenda({
           ? "Toque num dia marcado para confirmar, pedir troca ou ver quem serve com você."
           : "Nenhuma escala com você ainda. Quando o líder publicar, o dia aparece marcado aqui."}
       </p>
+      <h2 className="sec">Em {MES_POR_EXTENSO[Number(mes.slice(5)) - 1]}</h2>
+      <section className="list" aria-label={`Escalas e folgas em ${MES_POR_EXTENSO[Number(mes.slice(5)) - 1]}`}>
+        {lista.length === 0 ? (
+          <p className="vazio" style={{ padding: 16 }}>
+            Nada neste mês.
+          </p>
+        ) : (
+          lista.map((i) => (
+            <button key={i.chave} type="button" className={`row${i.folgaAte ? " row--folga" : ""}`} onClick={() => setDia(i.dia)}>
+              <span className="dt">
+                <b>{Number(i.dia.slice(8))}</b>
+                <span>{semanaCurta(i.dia)}</span>
+              </span>
+              <span className="row__tx">
+                {i.escala ? (
+                  <>
+                    <b>{i.escala.funcao}</b>
+                    <span>
+                      {i.escala.titulo} · {i.escala.horario.slice(0, 5)}
+                    </span>
+                  </>
+                ) : (
+                  <b>
+                    Folga{i.folgaAte && i.folgaAte !== i.dia ? ` até ${Number(i.folgaAte.slice(8))} ${MESES[Number(i.folgaAte.slice(5, 7)) - 1]}` : ""}
+                  </b>
+                )}
+              </span>
+              {i.escala && (
+                <span className="row__end">
+                  <span className={`chip ${SELO[i.escala.status][1]}`}>{SELO[i.escala.status][0]}</span>
+                </span>
+              )}
+            </button>
+          ))
+        )}
+      </section>
+      <AcaoPrincipal href="/folgas" icone="folga">
+        Marcar folga
+      </AcaoPrincipal>
       <FolhaInferior
         aberta={dia !== null}
         aoFechar={() => setDia(null)}

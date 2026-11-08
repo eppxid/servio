@@ -53,3 +53,10 @@ export function hojeIso(fuso = "America/Sao_Paulo"): string {
     new Date(),
   );
 }
+
+const SEMANA_CURTA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+
+/** "dom", "qua"… (a folha de estilo põe em maiúsculas onde a maquete pede). */
+export function semanaCurta(dataIso: string): string {
+  return SEMANA_CURTA[new Date(`${dataIso}T12:00:00Z`).getUTCDay()];
+}

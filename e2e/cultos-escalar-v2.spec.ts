@@ -103,6 +103,15 @@ test("Cultos sem Sugerir e com Próximos; Escalar mostra a troca e o líder apro
   await expect(admin.getByRole("link", { name: /Culto de domingo 18h/ }).first().getByText("Mídia 0/4")).toBeVisible();
   for (const texto of ["Completo", "Faltando gente", "Sem escala"]) await expect(admin.getByText(texto, { exact: true })).toBeVisible();
   await admin.screenshot({ path: `${PRINTS}/035-cultos.png` });
+  // 042: Cultos no desktop (calendário à esquerda, Próximos + ação à direita), claro e escuro.
+  await admin.setViewportSize({ width: 1440, height: 900 });
+  for (const tema of ["light", "dark"] as const) {
+    await admin.emulateMedia({ colorScheme: tema });
+    await admin.waitForTimeout(400);
+    await admin.screenshot({ path: `${PRINTS}/042-desk-cultos-${tema === "light" ? "claro" : "escuro"}.png` });
+  }
+  await admin.emulateMedia({ colorScheme: "light" });
+  await admin.setViewportSize(CELULAR);
   // Escolher um dia troca a lista para o dia; "Ver próximos" volta.
   await admin.getByRole("button", { name: diaDoDomingo }).click();
   await expect(admin.getByRole("heading", { name: /^domingo, / })).toBeVisible();
@@ -115,12 +124,25 @@ test("Cultos sem Sugerir e com Próximos; Escalar mostra a troca e o líder apro
   await expect(admin.getByRole("heading", { name: "Trocas para aprovar" })).toHaveCount(0);
   await admin.getByRole("button", { name: "Sugerir escala do mês" }).click();
   await expect(admin.getByText(/de \d+ vagas? preenchidas?/)).toBeVisible();
+  for (const tema of ["light", "dark"] as const) {
+    await admin.emulateMedia({ colorScheme: tema });
+    await admin.waitForTimeout(400);
+    await admin.screenshot({ path: `${PRINTS}/042-escalar-${tema === "light" ? "claro" : "escuro"}.png` });
+  }
+  await admin.emulateMedia({ colorScheme: "light" });
   await admin.getByRole("button", { name: "Publicar mês" }).click();
   await admin.getByRole("button", { name: "Publicar e avisar" }).click();
   await expect(admin.getByText(/Mês publicado: \d+ escalas? publicadas?/)).toBeVisible();
 
   // 6. Ana pede troca para o Bruno; ele aceita.
   await ana.goto("/agenda");
+  await expect(ana.getByRole("heading", { name: /^Em / })).toBeVisible();
+  for (const tema of ["light", "dark"] as const) {
+    await ana.emulateMedia({ colorScheme: tema });
+    await ana.waitForTimeout(400);
+    await ana.screenshot({ path: `${PRINTS}/042-agenda-${tema === "light" ? "claro" : "escuro"}.png` });
+  }
+  await ana.emulateMedia({ colorScheme: "light" });
   await ana.getByRole("button", { name: /tenho escala/ }).first().click();
   await ana.getByText("Pedir troca", { exact: true }).click();
   await ana.getByLabel("Substituto").selectOption({ label: "Bruno Mídia" });

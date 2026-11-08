@@ -68,6 +68,7 @@ export default async function Escalar({ searchParams }: { searchParams: Promise<
         mes={mes}
         cultos={d.cultos.map((c) => ({
           eventoId: c.eventoId,
+          data: c.data,
           titulo: c.titulo,
           quando: `${formatInTimeZone(c.inicio, FUSO, "dd/MM")} · ${formatInTimeZone(c.inicio, FUSO, "HH:mm")}`,
           preenchidas: c.preenchidas,
