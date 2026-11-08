@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { usuarios } from "@/db/schema";
 import { listarMinisterios, type Ator } from "@/lib/ministerios/nucleo";
 import { alterarPapel, arquivarMinisterioAcao, criarMinisterioAcao, editarMinisterioAcao } from "./actions";
+import { FormConfirmar } from "./FormConfirmar";
 import estilo from "./equipe.module.css";
 
 /** Ministérios da igreja: criar, renomear, definir líder e arquivar (só admin). */
@@ -52,12 +53,12 @@ export async function MinisteriosAdmin({ ator }: { ator: Ator }) {
                   Definir papel
                 </button>
               </form>
-              <form action={arquivarMinisterioAcao}>
+              <FormConfirmar action={arquivarMinisterioAcao} pergunta={`Arquivar o ministério ${m.nome}?`}>
                 <input type="hidden" name="ministerio" value={m.id} />
                 <button type="submit" className={`tbtn ${estilo.perigo}`} style={{ justifySelf: "start" }}>
                   Arquivar {m.nome}
                 </button>
-              </form>
+              </FormConfirmar>
             </div>
           </details>
         ))}

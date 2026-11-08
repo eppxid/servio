@@ -34,6 +34,8 @@ test("telas antigas redirecionam para as abas novas", async ({ browser }) => {
     ["/eventos", /\/lider\/cultos$/],
     ["/eventos?mes=2026-12", /\/lider\/cultos\?mes=2026-12$/],
     ["/agenda/trocas", /\/lider\/escalar$/],
+    ["/escalas", /\/lider\/escalar$/],
+    ["/escalas/1/1", /\/lider\/cultos\/1$/],
   ];
   for (const [de, para] of casos) {
     await admin.goto(de);

@@ -146,6 +146,6 @@ test("admin cria ministério, voluntário entra por convite, líder aprova, esca
 
   // 9. Líder vê o voluntário presente.
   await lider.goto(`/escalas/${eventoId}/${ministerioId}`);
-  await expect(lider.getByText(/Vocal: Voluntario E2E/)).toBeVisible();
-  await expect(lider.getByText(/Presente \d\d:\d\d/)).toBeVisible();
+  await expect(lider).toHaveURL(new RegExp(`/lider/cultos/${eventoId}$`));
+  await expect(lider.getByRole("button", { name: /Voluntario E2E, Vocal: Confirmou/ })).toBeVisible();
 });
