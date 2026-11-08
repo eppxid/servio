@@ -22,11 +22,6 @@ function volta(chave: "ok" | "erro", valor: string, tela = "/perfil"): never {
 const esquemaPerfil = z.object({
   nome: z.string().trim().min(1, "Informe o nome").max(120),
   telefone: z.string().max(30).transform(vazioNulo),
-  fotoUrl: z
-    .string()
-    .max(500)
-    .transform(vazioNulo)
-    .refine((v) => v === null || /^https:\/\/\S+$/.test(v), "A foto precisa ser um link https"),
 });
 
 export async function salvarPerfil(formData: FormData) {
@@ -35,7 +30,8 @@ export async function salvarPerfil(formData: FormData) {
   if (!v.ok) volta("erro", Object.values(v.erros)[0]);
   await db()
     .update(usuarios)
-    .set(v.dados)
+    // A foto deixou de ser coletada (a CSP bloqueia imagem externa); salvar limpa o link de cadastro antigo.
+    .set({ ...v.dados, fotoUrl: null })
     .where(and(eq(usuarios.id, usuario.id), eq(usuarios.igrejaId, usuario.igrejaId)));
   revalidatePath("/perfil");
   volta("ok", "Perfil salvo");

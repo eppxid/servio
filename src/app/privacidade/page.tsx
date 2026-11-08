@@ -29,7 +29,6 @@ export default function Privacidade() {
           <li>Nome: identificar você na escala, no chat e no reconhecimento.</li>
           <li>E-mail e senha (guardada só como hash bcrypt): entrar no portal.</li>
           <li>Telefone (opcional): o líder do ministério fala com você sobre a escala.</li>
-          <li>Foto (opcional, link): mostrar seu rosto para os colegas da escala.</li>
           <li>Ministérios, funções e escalas: montar a escala e enviar lembretes.</li>
           <li>Datas em que você não pode servir e o motivo (opcional): evitar escalar você nessas datas.</li>
           <li>Confirmação, presença (check-in) e trocas: organizar o culto e gerar os indicadores do ministério.</li>
@@ -52,7 +51,7 @@ export default function Privacidade() {
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">4. Quem vê o quê</h2>
         <ul className="list-disc space-y-1 pl-5">
-          <li>Colegas de escala veem só o seu nome e a sua foto.</li>
+          <li>Colegas de escala veem só o seu nome.</li>
           <li>O líder do ministério e o administrador veem também o seu e-mail e o seu telefone.</li>
           <li>O motivo da indisponibilidade só você vê; o líder vê apenas &quot;indisponível&quot;.</li>
           <li>No ranking do ministério você aparece só se deixar a opção ligada no perfil.</li>
@@ -77,7 +76,7 @@ export default function Privacidade() {
           <li>Tentativas de login: apagadas depois de {RETENCAO.tentativasLoginDias} dia.</li>
           <li>Convites: apagados quando expiram.</li>
           <li>
-            Conta excluída: nome, e-mail, telefone e foto são apagados. A presença nas escalas passadas fica sem
+            Conta excluída: nome, e-mail, telefone e o link de foto de cadastros antigos são apagados. A presença nas escalas passadas fica sem
             identificação, só para os números do ministério.
           </li>
         </ul>
