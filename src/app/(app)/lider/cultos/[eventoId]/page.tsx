@@ -1,17 +1,44 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
-import { Cabecalho } from "@/components/Cabecalho";
+import { IconeApp, type NomeIcone } from "@/components/app/icones";
 import { db } from "@/db";
 import type { AnyDb } from "@/lib/auth-core";
 import { ErroAcesso } from "@/lib/ministerios/nucleo";
 import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
 import { FUSO } from "@/lib/recorrencia";
 import { EditorModelo } from "../../tipos/[recorrenciaId]/EditorModelo";
-import { copiarVagasAcao, definirVagasAcao, escolherPessoaAcao, publicarAcao } from "../acoes";
+import {
+  aprovarEEscalarAcao,
+  copiarVagasAcao,
+  definirVagasAcao,
+  desfazerRemocaoAcao,
+  escolherPessoaAcao,
+  publicarAcao,
+} from "../acoes";
 import { somaVagasPorTipo } from "@/lib/vagas/nucleo";
 import { DIAS_SEMANA, dadosCulto, tiposDeCulto } from "../vagas-culto";
+import s from "./culto.module.css";
 import { VagasMinisterio } from "./VagasMinisterio";
+
+const DIAS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+function Atalho({ href, icone, texto }: { href: string; icone: NomeIcone; texto: string }) {
+  return (
+    <Link href={href} className="row">
+      <span className="row__ic">
+        <IconeApp nome={icone} />
+      </span>
+      <span className="row__tx">
+        <b>{texto}</b>
+      </span>
+      <span className="row__end">
+        <IconeApp nome="dir" />
+      </span>
+    </Link>
+  );
+}
 
 export const dynamic = "force-dynamic";
 
@@ -41,14 +68,40 @@ export default async function Culto({
   const quando = `${formatInTimeZone(d.evento.inicio, FUSO, "dd/MM")} · ${horaInicio}${
     d.evento.fim ? `–${formatInTimeZone(d.evento.fim, FUSO, "HH:mm")}` : ""
   }`;
+  const dia = `${DIAS[Number(formatInTimeZone(d.evento.inicio, FUSO, "i")) - 1]}, ${formatInTimeZone(d.evento.inicio, FUSO, "d")} ${
+    MESES[Number(formatInTimeZone(d.evento.inicio, FUSO, "M")) - 1]
+  }`;
+  const comVagas = d.ministerios.filter((m) => m.funcoes.length > 0);
+  const vagas = comVagas.flatMap((m) => m.funcoes.flatMap((f) => f.vagas));
+  const preenchidas = vagas.filter((v) => v.usuarioId !== null && v.status !== "recusado").length;
+  const fixo = comVagas.length === 1;
+  const reservaCta = fixo && comVagas[0].status !== "publicada";
 
   return (
-    <div className="tela">
-      <Cabecalho eyebrow={quando} titulo={d.evento.titulo}>
-        <Link href={`/lider/cultos?mes=${formatInTimeZone(d.evento.inicio, FUSO, "yyyy-MM")}`} className="tbtn">
-          ← Cultos
+    <div className={`tela ${reservaCta ? s.reserva : ""}`}>
+      <header className={s.topo}>
+        <Link
+          href={`/lider/cultos?mes=${formatInTimeZone(d.evento.inicio, FUSO, "yyyy-MM")}`}
+          className={s.voltar}
+          aria-label="Voltar para os cultos"
+        >
+          <IconeApp nome="esq" />
         </Link>
-      </Cabecalho>
+        <div className={s.titulo}>
+          <small>
+            {d.evento.titulo} · {comVagas.length === 1 ? comVagas[0].nome : quando}
+          </small>
+          <h1>{dia}</h1>
+        </div>
+        {vagas.length > 0 && (
+          <span
+            className={`vg ${s.selo} ${preenchidas === vagas.length ? "vg--ok" : "vg--falta"}`}
+            aria-label={`${preenchidas} de ${vagas.length} vagas preenchidas`}
+          >
+            {preenchidas}/{vagas.length}
+          </span>
+        )}
+      </header>
 
       {d.ministerios.map((m) =>
         m.funcoes.length > 0 ? (
@@ -57,7 +110,10 @@ export default async function Culto({
               eventoId={d.evento.id}
               quando={quando}
               ministerio={m}
+              fixo={fixo}
               escolher={escolherPessoaAcao}
+              desfazer={desfazerRemocaoAcao}
+              aprovar={aprovarEEscalarAcao}
               publicarCulto={publicarAcao}
             />
             {m.status !== "publicada" && (
@@ -85,6 +141,19 @@ export default async function Culto({
           </section>
         ),
       )}
+
+      <nav aria-label="Atalhos do culto" className={s.atalhos}>
+        <Atalho href={`/chat/${d.evento.id}`} icone="escalas" texto="Chat do culto" />
+        {comVagas.map((m) => (
+          <Atalho
+            key={m.id}
+            href={`/escalas/${d.evento.id}/${m.id}/repertorio`}
+            icone="agenda"
+            texto={comVagas.length > 1 ? `Repertório · ${m.nome}` : "Repertório"}
+          />
+        ))}
+        {ator.papelGlobal === "admin" && <Atalho href={`/eventos/${d.evento.id}`} icone="escalar" texto="Editar culto" />}
+      </nav>
 
       {semVagas.length > 0 && (
         <section className="list vazio">

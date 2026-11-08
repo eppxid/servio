@@ -1,10 +1,11 @@
-import { and, asc, count, eq, gte, inArray, lt, ne } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import * as t from "@/db/schema";
 import { temPapel, type AnyDb } from "@/lib/auth-core";
 import { dadosMontagem, ErroEscala, ministeriosDoLider, limitesDoMes } from "@/lib/escala/nucleo";
 import { ErroAcesso, type Ator } from "@/lib/ministerios/nucleo";
 import { notificar } from "@/lib/notificar";
 import { dataLocal } from "@/lib/recorrencia";
+import { aprovarFuncao } from "@/lib/servir/nucleo";
 import { criarVagasDosEventos } from "@/lib/vagas/nucleo";
 
 export type StatusItem = "pendente" | "confirmado" | "recusado";
@@ -31,11 +32,22 @@ export interface FuncaoCulto {
   candidatos: CandidatoCulto[];
 }
 
+/** Pessoa que pediu uma função ("Onde quero servir") e ainda espera aprovação. */
+export interface PedidoFuncao {
+  membroId: number;
+  usuarioId: number;
+  nome: string;
+  funcaoId: number;
+  funcao: string;
+}
+
 export interface MinisterioCulto {
   id: number;
   nome: string;
   status: "sem_escala" | "rascunho" | "publicada";
   funcoes: FuncaoCulto[];
+  /** Pedidos de função em aberto no ministério (menos os do próprio ator). */
+  pedidos: PedidoFuncao[];
   /** Todas as funções do ministério, com as vagas atuais deste culto (0 se não há). */
   todasFuncoes: { id: number; nome: string; quantidade: number }[];
 }
@@ -96,10 +108,33 @@ export async function dadosCulto(db: AnyDb, ator: Ator, eventoId: number): Promi
           .where(eq(t.escalaItens.escalaId, escala.id))
           .orderBy(asc(t.escalaItens.id))
       : [];
+    const pedidos = await db
+      .select({
+        membroId: t.membrosMinisterio.id,
+        usuarioId: t.usuarios.id,
+        nome: t.usuarios.nome,
+        funcaoId: t.funcoes.id,
+        funcao: t.funcoes.nome,
+      })
+      .from(t.membroFuncoes)
+      .innerJoin(t.membrosMinisterio, eq(t.membrosMinisterio.id, t.membroFuncoes.membroId))
+      .innerJoin(t.usuarios, eq(t.usuarios.id, t.membrosMinisterio.usuarioId))
+      .innerJoin(t.funcoes, eq(t.funcoes.id, t.membroFuncoes.funcaoId))
+      .where(
+        and(
+          eq(t.membroFuncoes.status, "desejada"),
+          eq(t.membroFuncoes.igrejaId, ator.igrejaId),
+          eq(t.membrosMinisterio.ministerioId, m.id),
+          eq(t.funcoes.ministerioId, m.id),
+          ne(t.usuarios.id, ator.id),
+        ),
+      )
+      .orderBy(asc(t.usuarios.nome), asc(t.funcoes.nome));
     ministerios.push({
       id: m.id,
       nome: m.nome,
       status: d.status,
+      pedidos,
       todasFuncoes: d.funcoes.map((f) => ({
         id: f.id,
         nome: f.nome,
@@ -134,7 +169,14 @@ export async function dadosCulto(db: AnyDb, ator: Ator, eventoId: number): Promi
  * está em outro culto no mesmo horário ou já ocupa outra vaga deste culto. Em escala já publicada,
  * avisa a pessoa nova.
  */
-export async function preencherVaga(db: AnyDb, ator: Ator, itemId: number, usuarioId: number | null) {
+export async function preencherVaga(
+  db: AnyDb,
+  ator: Ator,
+  itemId: number,
+  usuarioId: number | null,
+  /** Desfazer remoção: devolve a pessoa com o status que ela tinha, sem avisá-la de novo. */
+  restaurar?: StatusItem,
+) {
   const [item] = await db
     .select({
       id: t.escalaItens.id,
@@ -174,10 +216,67 @@ export async function preencherVaga(db: AnyDb, ator: Ator, itemId: number, usuar
 
   await db
     .update(t.escalaItens)
-    .set({ usuarioId, status: "pendente", checkinEm: null, recusadoEm: null })
+    .set({
+      usuarioId,
+      status: restaurar ?? "pendente",
+      checkinEm: null,
+      recusadoEm: restaurar === "recusado" ? new Date() : null,
+    })
     .where(eq(t.escalaItens.id, itemId));
-  if (usuarioId !== null && item.status === "publicada") {
+  if (usuarioId !== null && item.status === "publicada" && !restaurar) {
     await notificar({ tipo: "escala_publicada", eventoId: item.eventoId, usuarioIds: [usuarioId] });
+  }
+}
+
+/**
+ * Aprova a função pedida e, se o culto tem vaga aberta nela, põe a pessoa lá. A função fica aprovada
+ * mesmo quando a vaga não serve (folga, conflito): a mensagem de erro diz isso.
+ */
+export async function aprovarEEscalar(
+  db: AnyDb,
+  ator: Ator,
+  eventoId: number,
+  ministerioId: number,
+  membroId: number,
+  funcaoId: number,
+) {
+  if (!(await temPapel(db, ator, "lider", ministerioId))) throw new ErroAcesso();
+  const [membro] = await db
+    .select({ usuarioId: t.membrosMinisterio.usuarioId, nome: t.usuarios.nome })
+    .from(t.membrosMinisterio)
+    .innerJoin(t.usuarios, eq(t.usuarios.id, t.membrosMinisterio.usuarioId))
+    .where(
+      and(
+        eq(t.membrosMinisterio.id, membroId),
+        eq(t.membrosMinisterio.ministerioId, ministerioId),
+        eq(t.membrosMinisterio.igrejaId, ator.igrejaId),
+      ),
+    )
+    .limit(1);
+  if (!membro) throw new ErroAcesso();
+  await aprovarFuncao(db, ator, membroId, funcaoId);
+  const [vaga] = await db
+    .select({ id: t.escalaItens.id })
+    .from(t.escalaItens)
+    .innerJoin(t.escalas, eq(t.escalas.id, t.escalaItens.escalaId))
+    .where(
+      and(
+        eq(t.escalas.eventoId, eventoId),
+        eq(t.escalas.ministerioId, ministerioId),
+        eq(t.escalaItens.funcaoId, funcaoId),
+        isNull(t.escalaItens.usuarioId),
+      ),
+    )
+    .orderBy(asc(t.escalaItens.id))
+    .limit(1);
+  if (!vaga) return;
+  try {
+    await preencherVaga(db, ator, vaga.id, membro.usuarioId);
+  } catch (erro) {
+    if (erro instanceof ErroEscala) {
+      throw new ErroEscala(`${membro.nome} ganhou a função, mas não coube neste culto: ${erro.message}`);
+    }
+    throw erro;
   }
 }
 
