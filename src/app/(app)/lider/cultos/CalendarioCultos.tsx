@@ -31,8 +31,10 @@ const TEXTO = { completo: "completo", faltando: "faltando gente", sem_escala: "s
 
 function Pilula({ m, completa }: { m: CultoDoMes["ministerios"][number]; completa?: boolean }) {
   const contagem = m.status === "sem_escala" ? "–" : `${m.preenchidas}/${m.total}`;
+  // Vagas criadas e ninguém escolhido ainda contam como "sem escala" (cinza), como na legenda.
+  const status = m.status === "faltando" && m.preenchidas === 0 ? "sem_escala" : m.status;
   return (
-    <span className={`vg ${CLASSE[m.status]}`} title={`${m.nome}: ${TEXTO[m.status]}`}>
+    <span className={`vg ${CLASSE[status]}`} title={`${m.nome}: ${TEXTO[status]}`}>
       {completa ? `${m.nome} ${contagem}` : (
         <>
           <span className="lg">{m.nome} </span>

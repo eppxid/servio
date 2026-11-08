@@ -271,7 +271,8 @@ async function efetivar(db: AnyDb, c: Awaited<ReturnType<typeof trocaCompleta>>)
     const tx = txBruto as unknown as AnyDb;
     await tx
       .update(t.escalaItens)
-      .set({ usuarioId: substitutoId, status: "pendente", checkinEm: null })
+      // O substituto já disse que vai ao aceitar a troca: não pede confirmação de novo.
+      .set({ usuarioId: substitutoId, status: "confirmado", checkinEm: null })
       .where(eq(t.escalaItens.id, item.id));
     await tx.update(t.trocas).set({ status: "aprovada" }).where(eq(t.trocas.id, troca.id));
   });

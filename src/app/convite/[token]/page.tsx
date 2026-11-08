@@ -89,7 +89,7 @@ export default async function Convite({
       <Publica>
         <h1 className="title">Pedido enviado</h1>
         <p className="text-sm text-muted">O líder de {convite.ministerio} vai aprovar sua entrada.</p>
-        <Link href="/agenda" className="btn btn--primary btn--block">
+        <Link href="/" className="btn btn--primary btn--block">
           Abrir o app
         </Link>
       </Publica>

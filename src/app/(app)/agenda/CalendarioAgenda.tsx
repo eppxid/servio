@@ -17,6 +17,7 @@ export interface EscalaDoDia {
   status: "pendente" | "confirmado" | "recusado";
   checkinHora: string | null;
   checkinAberto: boolean;
+  dentroDe48h: boolean;
   colegas: string[];
   repertorio: string | null;
   musicas: number;
@@ -40,6 +41,7 @@ export function CalendarioAgenda({
   diaInicial?: string | null;
 }) {
   const [dia, setDia] = useState<string | null>(diaInicial);
+  const [recusando, setRecusando] = useState<number | null>(null);
   const anteriores = useRef(escalas);
   // Cada ação recarrega a página com dados novos: fecha a folha (a montagem não conta).
   useEffect(() => {
@@ -126,7 +128,7 @@ export function CalendarioAgenda({
                 Troca {e.troca === "aberta" ? "aguardando o substituto" : "aguardando o líder"}.
               </p>
             )}
-            {e.status !== "recusado" && (
+            {e.status !== "recusado" && !e.checkinHora && (
               <div className="grid grid-cols-2 gap-3">
                 {e.status === "pendente" && (
                   <form action={confirmarEscala}>
@@ -136,13 +138,21 @@ export function CalendarioAgenda({
                     </button>
                   </form>
                 )}
-                <form action={recusarEscala}>
-                  <input type="hidden" name="item" value={e.itemId} />
-                  <button className="tbtn" style={{ width: "100%" }}>
-                    Não posso
-                  </button>
-                </form>
+                <button type="button" className="tbtn" style={{ width: "100%" }} onClick={() => setRecusando(e.itemId)}>
+                  Não posso
+                </button>
               </div>
+            )}
+            {recusando === e.itemId && e.status !== "recusado" && (
+              <form action={recusarEscala} className="alerta alerta--warn text-sm" style={{ display: "grid", gap: 8 }}>
+                <input type="hidden" name="item" value={e.itemId} />
+                <span>
+                  {e.dentroDe48h
+                    ? "Faltam menos de 48 horas. O líder tem pouco tempo para achar alguém: avise-o também."
+                    : "O líder recebe o aviso e escolhe outra pessoa."}
+                </span>
+                <button className="tbtn tbtn--p">Sim, recusar</button>
+              </form>
             )}
             {e.checkinAberto && e.status !== "recusado" && !e.checkinHora && (
               <form action={checkinAcao}>

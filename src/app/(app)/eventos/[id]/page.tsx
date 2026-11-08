@@ -33,8 +33,8 @@ export default async function DetalheEvento({
   return (
     <div className="tela">
       <Cabecalho eyebrow="Modo líder" titulo={evento.titulo}>
-        <Link href={`/eventos?mes=${f(evento.inicio, "yyyy-MM")}`} className="tbtn">
-          ← Eventos
+        <Link href={`/lider/cultos/${evento.id}`} className="tbtn">
+          ← Culto
         </Link>
       </Cabecalho>
       {erro && (

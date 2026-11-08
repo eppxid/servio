@@ -1,28 +1,12 @@
-import { and, asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import AtivarAvisos from "@/components/AtivarAvisos";
 import { TemaPerfil } from "@/components/app/TemaPerfil";
 import ResumoPontos from "@/components/ResumoPontos";
-import { db } from "@/db";
-import { indisponibilidades } from "@/db/schema";
 import { exigirUsuario } from "@/lib/auth";
-import {
-  excluirIndisponibilidade,
-  incluirDiasDaSemana,
-  incluirIndisponibilidade,
-  mudarSenha,
-  salvarPerfil,
-} from "./acoes";
+import { mudarSenha, salvarPerfil } from "./acoes";
 import { Cabecalho } from "@/components/Cabecalho";
 
 export const dynamic = "force-dynamic";
-
-const DIAS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
-
-function formatar(d: string) {
-  const [a, m, dia] = d.split("-");
-  return `${dia}/${m}/${a}`;
-}
 
 export default async function Perfil({
   searchParams,
@@ -31,16 +15,6 @@ export default async function Perfil({
 }) {
   const usuario = await exigirUsuario();
   const { ok, erro } = await searchParams;
-  const periodos = await db()
-    .select()
-    .from(indisponibilidades)
-    .where(
-      and(
-        eq(indisponibilidades.usuarioId, usuario.id),
-        eq(indisponibilidades.igrejaId, usuario.igrejaId),
-      ),
-    )
-    .orderBy(asc(indisponibilidades.dataInicio));
 
   return (
     <div className="space-y-5">
@@ -110,82 +84,6 @@ export default async function Perfil({
 
       <AtivarAvisos />
 
-      <section className="card space-y-4">
-        <h2 className="card__title">Quando não posso servir</h2>
-        {periodos.length === 0 ? (
-          <p className="text-sm text-muted">Nenhum período marcado.</p>
-        ) : (
-          <ul className="space-y-2">
-            {periodos.map((p) => (
-              <li
-                key={p.id}
-                className="flex items-center justify-between gap-3 card text-sm"
-              >
-                <span>
-                  {p.dataInicio === p.dataFim
-                    ? formatar(p.dataInicio)
-                    : `${formatar(p.dataInicio)} a ${formatar(p.dataFim)}`}
-                  {p.motivo && <span className="block text-muted">{p.motivo}</span>}
-                </span>
-                <form action={excluirIndisponibilidade}>
-                  <input type="hidden" name="id" value={p.id} />
-                  <button type="submit" className="btn btn--sm btn--danger">
-                    Excluir
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <form action={incluirIndisponibilidade} className="space-y-3">
-          <h3 className="font-medium">Incluir período</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="rotulo">
-              De
-              <input name="dataInicio" type="date" required className="campo" />
-            </label>
-            <label className="rotulo">
-              Até
-              <input name="dataFim" type="date" required className="campo" />
-            </label>
-          </div>
-          <label className="rotulo">
-            Motivo (opcional; só você vê)
-            <input name="motivo" maxLength={200} className="campo" />
-          </label>
-          <button type="submit" className="btn btn--primary btn--block">
-            Incluir
-          </button>
-        </form>
-
-        <form action={incluirDiasDaSemana} className="space-y-3">
-          <h3 className="font-medium">Todo dia da semana num mês</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="rotulo">
-              Dia da semana
-              <select name="diaSemana" className="campo" defaultValue="0">
-                {DIAS.map((nome, i) => (
-                  <option key={nome} value={i}>
-                    {nome}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="rotulo">
-              Mês
-              <input name="mes" type="month" required className="campo" />
-            </label>
-          </div>
-          <label className="rotulo">
-            Motivo (opcional; só você vê)
-            <input name="motivo" maxLength={200} className="campo" />
-          </label>
-          <button type="submit" className="btn btn--primary btn--block">
-            Incluir dias
-          </button>
-        </form>
-      </section>
 
       <form action={mudarSenha} className="card space-y-4">
         <h2 className="card__title">Trocar senha</h2>

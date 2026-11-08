@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { and, asc, eq, gte } from "drizzle-orm";
 import { formatInTimeZone } from "date-fns-tz";
 import { db } from "@/db";
@@ -72,6 +73,7 @@ export default async function Agenda({
       status: i.status,
       checkinHora: i.checkinEm ? formatInTimeZone(i.checkinEm, FUSO, "HH:mm") : null,
       checkinAberto: i.checkinAberto,
+      dentroDe48h: i.evento.inicio.getTime() - Date.now() < 48 * 60 * 60 * 1000,
       colegas: i.colegas.map((c) => `${c.nome} (${c.funcao})`),
       repertorio: r ? `/escalas/${r.eventoId}/${r.ministerioId}/repertorio` : null,
       musicas: r?.musicas ?? 0,
@@ -81,6 +83,9 @@ export default async function Agenda({
     };
   });
 
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  const linkIcs = token ? `${h.get("x-forwarded-proto") ?? "https"}://${host}/agenda/ics/${token}` : "";
   return (
     <div className="tela">
       <Cabecalho eyebrow="Suas escalas" titulo="Agenda">
@@ -89,9 +94,12 @@ export default async function Agenda({
           <div className="card space-y-3 text-sm" style={{ marginTop: 8 }}>
             {token ? (
               <>
-                <p className="campo break-all text-xs">/agenda/ics/{token}</p>
+                <a href={linkIcs.replace(/^https?:/, "webcal:")} className="btn btn--primary btn--block">
+                  Assinar no calendário
+                </a>
+                <input readOnly aria-label="Link do calendário" value={linkIcs} className="campo text-xs" />
                 <p className="text-xs text-muted">
-                  Assine este endereço (com o domínio do portal) no app de calendário. Quem tiver o link vê sua agenda.
+                  Se o botão não abrir o app, copie o endereço e assine no app de calendário. Quem tiver o link vê sua agenda.
                 </p>
                 <form action={revogarLinkCalendario}>
                   <button className="btn btn--danger btn--block">Revogar link</button>

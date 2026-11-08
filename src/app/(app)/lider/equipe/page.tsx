@@ -11,6 +11,7 @@ import {
   adicionarFuncao,
   aprovarEntrada,
   aprovarFuncaoDesejada,
+  aprovarPedidoInteiro,
   excluirFuncaoAcao,
   gerarConviteAcao,
   recusarEntrada,
@@ -140,20 +141,35 @@ export default async function Equipe({
                     </form>
                   </div>
                 ))}
-                {p.status === "pendente" && (
+                {(p.status === "pendente" || p.funcoesDesejadas.length > 1) && (
                   <div className={estilo.acoes}>
-                    <form action={recusarEntrada}>
-                      <input type="hidden" name="membro" value={p.membroId} />
-                      <button type="submit" className="tbtn" aria-label={`Recusar entrada de ${p.nome}`}>
-                        Recusar
-                      </button>
-                    </form>
-                    <form action={aprovarEntrada}>
-                      <input type="hidden" name="membro" value={p.membroId} />
-                      <button type="submit" className="tbtn tbtn--p" aria-label={`Aprovar entrada de ${p.nome}`}>
-                        Aprovar entrada
-                      </button>
-                    </form>
+                    {p.status === "pendente" && (
+                      <>
+                        <form action={recusarEntrada}>
+                          <input type="hidden" name="membro" value={p.membroId} />
+                          <button type="submit" className="tbtn" aria-label={`Recusar entrada de ${p.nome}`}>
+                            Recusar
+                          </button>
+                        </form>
+                        <form action={aprovarEntrada}>
+                          <input type="hidden" name="membro" value={p.membroId} />
+                          <button type="submit" className="tbtn" aria-label={`Aprovar entrada de ${p.nome}`}>
+                            Só a entrada
+                          </button>
+                        </form>
+                      </>
+                    )}
+                    {p.funcoesDesejadas.length > 0 && (
+                      <form action={aprovarPedidoInteiro}>
+                        <input type="hidden" name="membro" value={p.membroId} />
+                        {p.funcoesDesejadas.map((f) => (
+                          <input key={f.funcaoId} type="hidden" name="funcao" value={f.funcaoId} />
+                        ))}
+                        <button type="submit" className="tbtn tbtn--p" aria-label={`Aprovar tudo de ${p.nome}`}>
+                          {p.funcoesDesejadas.length > 1 ? `Aprovar as ${p.funcoesDesejadas.length}` : "Aprovar tudo"}
+                        </button>
+                      </form>
+                    )}
                   </div>
                 )}
               </div>

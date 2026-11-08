@@ -48,8 +48,8 @@ Cada pessoa cria a conta pelo link e escolhe as funções onde quer servir. O pe
 | ![Pedidos na Equipe](prints/08-equipe-pedidos.png) | ![Membros](prints/09-equipe-membros.png) |
 
 1. Abra **Equipe**. Se você lidera mais de um ministério, toque no nome dele no topo.
-2. Em **Pedidos**, toque em **Aprovar** na linha "Quer entrar no ministério".
-3. Toque em **Aprovar** em cada linha "Quer servir em …". Só as funções aprovadas entram na escala.
+2. Em **Pedidos**, toque em **Aprovar tudo** (ou **Aprovar as 2**, **as 3**…). A pessoa entra no ministério com todas as funções que pediu.
+3. Para aprovar só parte, toque em **Aprovar** na linha da função. **Só a entrada** aprova a entrada sem funções. Só as funções aprovadas entram na escala.
 4. Para negar, toque em **Recusar**.
 
 Toque no nome de um membro para ver as funções e as escalas dele no mês.
@@ -68,7 +68,7 @@ A aba **Cultos** mostra o calendário. Cada culto tem uma pílula por ministéri
 2. Toque no culto para abrir as vagas.
 3. Use as setas para mudar o mês.
 4. Toque em **Tipos de culto** para mudar as vagas de um tipo. A mudança vale para os cultos futuros sem escala publicada.
-5. Toque em **Novo culto** para um culto avulso.
+5. Toque em **Novo culto** para um culto avulso. O app abre a tela do culto novo: defina as vagas ali. Com **Repetir toda semana**, o título vira o nome do tipo de culto.
 
 ### 4. Montar a escala do mês
 
@@ -132,10 +132,10 @@ Para mudar as funções depois, abra **Perfil → Onde quero servir**.
 
 1. Abra **Início**. O cartão mostra a próxima escala: dia, hora, culto, função e colegas.
 2. Toque em **Confirmar presença**.
-3. Se não puder, toque em **Recusar** o mais cedo possível. Recusar com menos de 48 horas tira pontos.
+3. Se não puder, toque em **Recusar** o mais cedo possível. O app pede confirmação e avisa quando faltam menos de 48 horas. Recusar com menos de 48 horas tira pontos.
 4. Em **Aguardando sua resposta**, toque em **Responder** nas outras escalas.
 
-O botão **Fazer check-in** aparece 2 horas antes do culto e fica até o fim dele. Toque nele ao chegar.
+O botão **Fazer check-in** aparece 2 horas antes do culto e fica até o fim dele. Toque nele ao chegar. Depois do check-in, o cartão não oferece mais recusar.
 
 ### 3. Marcar folga
 
@@ -143,7 +143,9 @@ O botão **Fazer check-in** aparece 2 horas antes do culto e fica até o fim del
 
 1. Abra **Folgas**.
 2. Toque no dia em que não pode servir e toque em **Marcar folga**.
-3. Para desmarcar, toque no mesmo dia e em **Remover folga**.
+3. Para um período, escreva o último dia em **Até** antes de tocar em **Marcar folga**.
+4. Para desmarcar, toque no mesmo dia e em **Remover folga**, ou toque em **Excluir** na lista **Próximas folgas**.
+5. Para folga em todo dia da semana de um mês (por exemplo, todas as quartas de dezembro), abra **Folga em todo dia da semana de um mês**, escolha o dia e o mês e toque em **Marcar os dias**.
 
 O líder vê só que você está de folga. A sugestão de escala não põe você nesse dia.
 
@@ -155,7 +157,7 @@ O líder vê só que você está de folga. A sugestão de escala não põe você
 2. Toque num dia marcado. Os detalhes abrem na folha inferior.
 3. Para trocar, toque em **Pedir troca**, escolha quem pode assumir e toque em **Enviar pedido**.
 4. A outra pessoa vê o pedido no **Início** e toca em **Aceitar** ou **Recusar**.
-5. O líder aprova. A escala muda para a outra pessoa.
+5. O líder aprova. A escala muda para a outra pessoa, já como confirmada.
 
 ![Troca recebida](prints/19-inicio-troca-recebida.png)
 
@@ -163,7 +165,8 @@ O líder vê só que você está de folga. A sugestão de escala não põe você
 
 - **Onde quero servir:** ministérios e funções desejadas.
 - **Avisos:** ligue os avisos do celular.
-- **Calendário do celular:** na **Agenda**, toque em **Calendário do celular** e em **Gerar link do calendário**. Assine o endereço no app de calendário. Toque em **Revogar link** para cancelar.
+- **Calendário do celular:** na **Agenda**, toque em **Calendário do celular** e em **Gerar link do calendário**. Toque em **Assinar no calendário**. Se o app de calendário não abrir, copie o endereço completo e assine nele. Toque em **Revogar link** para cancelar.
+- **Folgas:** ficam só na aba **Folgas**.
 - **Reconhecimento:** pontos, medalhas e ranking do mês.
 - **Privacidade:** baixe os seus dados ou exclua a conta.
 

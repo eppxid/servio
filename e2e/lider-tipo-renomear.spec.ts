@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// Roda depois de lider-cultos.spec.ts (que cria o tipo "Culto <dia>, 18:00"). Renomeia e restaura o nome.
+// Roda depois de lider-cultos.spec.ts (que cria o tipo "Culto semanal E2E <dia>, 18:00"). Renomeia e restaura o nome.
 const SENHA = "senha-e2e-12345";
 
 test("admin renomeia o tipo de culto e vê o nome novo na lista", async ({ browser }) => {
@@ -12,7 +12,7 @@ test("admin renomeia o tipo de culto e vê o nome novo na lista", async ({ brows
   await expect(admin).not.toHaveURL(/\/entrar/);
 
   await admin.goto("/lider/tipos");
-  await admin.getByRole("link", { name: /^Culto .*, 18:00/ }).click();
+  await admin.getByRole("link", { name: /^Culto semanal E2E .*, 18:00/ }).click();
   const original = await admin.getByLabel("Nome do tipo de culto").inputValue();
 
   await admin.getByLabel("Nome do tipo de culto").fill("Culto de celebração");

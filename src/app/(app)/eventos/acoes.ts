@@ -73,13 +73,16 @@ export async function criarEvento(formData: FormData) {
   if (fim && fim <= inicio) erroNovo("O fim deve ser depois do início");
 
   if (!repetir) {
-    await db().insert(eventos).values({ igrejaId: admin.igrejaId, titulo, inicio, fim });
+    const [novo] = await db().insert(eventos).values({ igrejaId: admin.igrejaId, titulo, inicio, fim }).returning({ id: eventos.id });
+    revalidatePath("/lider/cultos");
+    // Culto avulso abre direto na tela dele, onde o líder define as vagas.
+    redirect(`/lider/cultos/${novo.id}`);
   } else {
     const diaSemana = new Date(`${data}T00:00:00Z`).getUTCDay();
     await db().transaction(async (tx) => {
       const [regra] = await tx
         .insert(recorrencias)
-        .values({ igrejaId: admin.igrejaId, diaSemana, horaInicio, horaFim, ate })
+        .values({ igrejaId: admin.igrejaId, nome: titulo, diaSemana, horaInicio, horaFim, ate })
         .returning();
       await inserirOcorrencias(
         tx,

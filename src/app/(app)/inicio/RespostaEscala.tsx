@@ -24,6 +24,8 @@ export function RespostaEscala({
 }) {
   const [recusando, setRecusando] = useState(false);
   const unico = status !== "pendente" && !(podeCheckin && !jaFezCheckin);
+  // Quem já fez check-in está no culto: não há mais o que responder.
+  if (jaFezCheckin) return null;
   return (
     <>
       <div className={`${css.acoes} ${unico ? css.unico : ""}`}>

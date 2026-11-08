@@ -80,7 +80,7 @@ export default async function Repertorio({
         eyebrow={`${evento.titulo} · ${formatInTimeZone(evento.inicio, FUSO, "dd/MM/yyyy HH:mm")}`}
         titulo={`Repertório · ${nomeMinisterio}`}
       >
-        <Link href={r.lider ? `/escalas/${eventoId}/${ministerioId}` : "/agenda"} className="btn">
+        <Link href={r.lider ? `/lider/cultos/${eventoId}` : `/agenda`} className="btn">
           ← Voltar
         </Link>
       </Cabecalho>

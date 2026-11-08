@@ -15,8 +15,8 @@ const vazioNulo = (s: string) => (s.trim() === "" ? null : s.trim());
 const data = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida");
 const MAX_DIAS_PERIODO = 366;
 
-function volta(chave: "ok" | "erro", valor: string): never {
-  redirect(`/perfil?${chave}=${encodeURIComponent(valor)}`);
+function volta(chave: "ok" | "erro", valor: string, tela = "/perfil"): never {
+  redirect(`${tela}?${chave}=${encodeURIComponent(valor)}`);
 }
 
 const esquemaPerfil = z.object({
@@ -103,7 +103,7 @@ const esquemaDiasSemana = z.object({
 export async function incluirDiasDaSemana(formData: FormData) {
   const usuario = await exigirUsuario();
   const v = validar(esquemaDiasSemana, formData);
-  if (!v.ok) volta("erro", Object.values(v.erros)[0]);
+  if (!v.ok) volta("erro", Object.values(v.erros)[0], "/folgas");
   const [ano, mes] = v.dados.mes.split("-").map(Number);
   const dias = diasDaSemanaNoMes(ano, mes, v.dados.diaSemana);
   await db()
@@ -117,14 +117,14 @@ export async function incluirDiasDaSemana(formData: FormData) {
         motivo: v.dados.motivo,
       })),
     );
-  revalidatePath("/perfil");
-  volta("ok", `${dias.length} dias incluídos`);
+  revalidatePath("/folgas");
+  volta("ok", `${dias.length} dias incluídos`, "/folgas");
 }
 
 export async function excluirIndisponibilidade(formData: FormData) {
   const usuario = await exigirUsuario();
   const id = Number(formData.get("id"));
-  if (!Number.isInteger(id)) volta("erro", "Registro inválido");
+  if (!Number.isInteger(id)) volta("erro", "Registro inválido", "/folgas");
   // Filtra pelo dono: id vindo do formulário nunca vale sozinho.
   await db()
     .delete(indisponibilidades)
@@ -135,6 +135,6 @@ export async function excluirIndisponibilidade(formData: FormData) {
         eq(indisponibilidades.igrejaId, usuario.igrejaId),
       ),
     );
-  revalidatePath("/perfil");
-  volta("ok", "Período excluído");
+  revalidatePath("/folgas");
+  volta("ok", "Período excluído", "/folgas");
 }
