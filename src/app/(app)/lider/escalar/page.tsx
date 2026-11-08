@@ -6,9 +6,11 @@ import { db } from "@/db";
 import type { AnyDb } from "@/lib/auth-core";
 import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
 import { FUSO } from "@/lib/recorrencia";
+import { trocasParaAprovar } from "@/lib/trocas/nucleo";
 import { desfazerAcao, publicarMesAcao, sugerirAcao } from "./acoes";
 import { dadosEscalar } from "./dados";
 import { EscalarCliente } from "./EscalarCliente";
+import { TrocasParaAprovar } from "./TrocasParaAprovar";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +18,8 @@ export default async function Escalar({ searchParams }: { searchParams: Promise<
   const ator = await exigirUsuarioSemTroca();
   const { mes: pedido, ministerio: m } = await searchParams;
   const mes = pedido && /^\d{4}-(0[1-9]|1[0-2])$/.test(pedido) ? pedido : hojeIso().slice(0, 7);
-  const d = await dadosEscalar(db() as unknown as AnyDb, ator, mes, idSeguro(m) || undefined);
+  const banco = db() as unknown as AnyDb;
+  const [d, trocas] = await Promise.all([dadosEscalar(banco, ator, mes, idSeguro(m) || undefined), trocasParaAprovar(banco, ator)]);
   const nome = d.ministerios.find((x) => x.id === d.ministerioId)?.nome ?? "";
   const link = (mesAlvo: string, ministerioId: number | null) =>
     `/lider/escalar?mes=${mesAlvo}${ministerioId ? `&ministerio=${ministerioId}` : ""}`;
@@ -33,11 +36,8 @@ export default async function Escalar({ searchParams }: { searchParams: Promise<
   }
   return (
     <div className="tela">
-      <Cabecalho eyebrow="Modo líder" titulo="Escalar">
-        <Link href={`/lider/cultos?mes=${mes}`} className="tbtn">
-          Cultos
-        </Link>
-      </Cabecalho>
+      <Cabecalho eyebrow="Modo líder" titulo="Escalar" />
+      <TrocasParaAprovar trocas={trocas} />
       {d.ministerios.length > 1 && (
         <nav aria-label="Ministério" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {d.ministerios.map((x) => (

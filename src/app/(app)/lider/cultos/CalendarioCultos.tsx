@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { Calendario, type DiaDoCalendario } from "@/components/app/Calendario";
 import { hojeIso, nomeDoDia } from "@/components/app/calendario-grade";
 import { IconeApp } from "@/components/app/icones";
+import estilo from "./cultos.module.css";
 
 export interface CultoDoMes {
   eventoId: number;
@@ -21,6 +22,9 @@ export interface CultoDoMes {
     status: "completo" | "faltando" | "sem_escala";
   }[];
 }
+
+const SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+const PROXIMOS = 5;
 
 const CLASSE = { completo: "vg--ok", faltando: "vg--falta", sem_escala: "vg--sem" } as const;
 const TEXTO = { completo: "completo", faltando: "faltando gente", sem_escala: "sem escala" } as const;
@@ -49,10 +53,9 @@ export function CalendarioCultos({ mes, cultos }: { mes: string; cultos: CultoDo
   }, [cultos]);
 
   const hoje = hojeIso();
-  const inicial = porDia.has(hoje) ? hoje : (cultos[0]?.data ?? null);
-  const [escolhido, setEscolhido] = useState<{ mes: string; dia: string | null }>({ mes, dia: inicial });
-  // Mês novo (veio do servidor): volta para o primeiro dia com culto.
-  const dia = escolhido.mes === mes ? escolhido.dia : inicial;
+  // Sem dia escolhido, a lista "Próximos" mostra os 5 próximos cultos do mês.
+  const [escolhido, setEscolhido] = useState<{ mes: string; dia: string | null }>({ mes, dia: null });
+  const dia = escolhido.mes === mes ? escolhido.dia : null;
 
   const dias: Record<string, DiaDoCalendario> = {};
   for (const [data, lista] of porDia) {
@@ -68,7 +71,8 @@ export function CalendarioCultos({ mes, cultos }: { mes: string; cultos: CultoDo
       rotulo: ministerios.map((m) => `${m.nome} ${m.status === "sem_escala" ? "sem escala" : `${m.preenchidas} de ${m.total} vagas`}`).join(", "),
     };
   }
-  const doDia = dia ? (porDia.get(dia) ?? []) : [];
+  const futuros = cultos.filter((c) => c.data >= hoje);
+  const lista = dia ? (porDia.get(dia) ?? []) : (futuros.length > 0 ? futuros : cultos).slice(0, PROXIMOS);
 
   return (
     <>
@@ -78,42 +82,54 @@ export function CalendarioCultos({ mes, cultos }: { mes: string; cultos: CultoDo
         dias={dias}
         selecionado={dia}
         aoEscolherDia={(d) => {
-          setEscolhido({ mes, dia: d });
-          // No celular a lista do dia fica abaixo do calendário: rola até ela.
+          setEscolhido({ mes, dia: d === dia ? null : d });
+          // No celular a lista fica abaixo do calendário: rola até ela.
           requestAnimationFrame(() => document.getElementById("cultos-do-dia")?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
         }}
         legenda={
-          <>
+          <span className={estilo.leg}>
             <span>
-              <i style={{ ["--c" as string]: "var(--good)" }} /> Completo
+              <i className={estilo.ok} /> Completo
             </span>
             <span>
-              <i style={{ ["--c" as string]: "var(--warn)" }} /> Faltando gente
+              <i className={estilo.falta} /> Faltando gente
             </span>
             <span>
-              <i style={{ ["--c" as string]: "var(--faint)" }} /> Sem escala
+              <i className={estilo.sem} /> Sem escala
             </span>
-          </>
+          </span>
         }
       />
+      <div className={estilo.titulo}>
+        <h2>{dia ? nomeDoDia(dia) : "Próximos"}</h2>
+        {dia && (
+          <button type="button" onClick={() => setEscolhido({ mes, dia: null })}>
+            Ver próximos
+          </button>
+        )}
+      </div>
       {cultos.length === 0 ? (
         <section className="list vazio">
           <p>Nenhum culto neste mês.</p>
         </section>
       ) : (
-        <section id="cultos-do-dia" className="list" aria-label={dia ? nomeDoDia(dia) : "Cultos"} style={{ scrollMarginBottom: 150 }}>
-          {doDia.length === 0 ? (
+        <section id="cultos-do-dia" className="list" aria-label={dia ? nomeDoDia(dia) : "Próximos cultos"} style={{ scrollMarginBottom: 150 }}>
+          {lista.length === 0 ? (
             <p className="vazio" style={{ padding: 16 }}>
               Sem culto neste dia. Toque num dia com marcação.
             </p>
           ) : (
-            doDia.map((c) => (
-              <Link key={c.eventoId} href={`/lider/cultos/${c.eventoId}`} className="row">
-                <span className="row__tx">
+            lista.map((c) => (
+              <Link key={c.eventoId} href={`/lider/cultos/${c.eventoId}`} className={estilo.culto}>
+                <span className={estilo.data}>
+                  <b>{Number(c.data.slice(8))}</b>
+                  <span>{SEMANA[new Date(`${c.data}T12:00:00Z`).getUTCDay()]}</span>
+                </span>
+                <span className={estilo.tx}>
                   <b>
                     {c.titulo} · {c.hora}
                   </b>
-                  <span style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                  <span className={estilo.pilulas}>
                     {c.ministerios.map((m) => (
                       <Pilula key={m.id} m={m} completa />
                     ))}
