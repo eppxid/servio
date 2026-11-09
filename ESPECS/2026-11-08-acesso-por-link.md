@@ -39,6 +39,8 @@ celular da empresa, PC).
 | E-mail e senha | Ficam **opcionais**. `/entrar` continua para admin e contas antigas (recuperação quando não há líder para aprovar). Conta nova por link nasce sem e-mail e sem senha. | O admin precisa de uma porta de entrada que não depende de outro aprovador. |
 | Convite antigo por ministério (`/convite/<token>`) | A rota continua funcionando; o botão "Gerar convite" da Equipe passa a ser o convite pessoal. | Links antigos já enviados não quebram. |
 | iPhone: Safari × app instalado | São armazenamentos separados: instalar o PWA depois de abrir no Safari conta como aparelho novo (passa pelo líder uma vez). A tela de primeiro uso sugere instalar o app antes de tocar em "Entrar". | Limitação do iOS. |
+| Android: instalar o app | Componente `InstalarApp` (reusável): no Chrome/Edge/Samsung Internet captura `beforeinstallprompt` e mostra o botão "Instalar o app" (abre o diálogo nativo). Sem o evento (Firefox, diálogo já recusado, navegador do WhatsApp) mostra o passo a passo: "Abra no Chrome → menu ⋮ → Instalar app (ou Adicionar à tela inicial)". No iPhone mostra o passo do Safari. App já instalado (`display-mode: standalone`) → some. No Android o app instalado divide os cookies com o Chrome: instalar depois de entrar **não** vira aparelho novo. | Pedido do usuário (08/11): Android também precisa do caminho de instalação. |
+| Link aberto dentro do WhatsApp | O navegador interno do WhatsApp guarda cookies à parte e não instala o app. A tela do link detecta o navegador interno (user agent com `WhatsApp`/`wv`) e pede "Abra no Chrome (⋮ → Abrir no navegador)" / "Abra no Safari" antes do "Entrar". | Evita registrar um aparelho que some quando a pessoa sai do WhatsApp. |
 
 ## Modelo de dados (migração 0009)
 
