@@ -13,9 +13,13 @@ import {
   criarFuncao,
   criarMinisterio,
   decidirMembro,
+  definirAcessoAdmin,
+  definirAdmin,
   definirLider,
   definirSenhaTemporaria,
+  ErroUltimoAdmin,
   gerarConvite,
+  precisaDefinirAcesso,
   VALIDADE_CONVITE_MS,
   type Ator,
 } from "@/lib/ministerios/nucleo";
@@ -119,5 +123,106 @@ describe("senha temporária", () => {
     const [u] = await db.select().from(schema.usuarios).where(eq(schema.usuarios.id, r.usuario.id));
     expect(u.trocarSenha).toBe(true);
     expect(u.sessaoVersao).toBe(r.usuario.sessaoVersao + 1);
+  });
+});
+
+describe("administradores", () => {
+  /** Igreja própria: a contagem de admins não depende dos outros testes. */
+  async function igrejaComAdmin(sufixo: string) {
+    const [igreja] = await db.insert(schema.igrejas).values({ nome: sufixo }).returning();
+    return { igrejaId: igreja.id, dono: await usuario(igreja.id, `dono-${sufixo}@x.com`, "admin") };
+  }
+
+  async function semSenha(igrejaId: number, nome: string) {
+    const [u] = await db.insert(schema.usuarios).values({ igrejaId, nome }).returning();
+    return { id: u.id, igrejaId, papelGlobal: "voluntario" } as Ator;
+  }
+
+  const ler = async (id: number) => (await db.select().from(schema.usuarios).where(eq(schema.usuarios.id, id)))[0];
+
+  it("só admin promove e rebaixa; usuário de outra igreja não é alcançado", async () => {
+    const { igrejaId, dono } = await igrejaComAdmin("a");
+    const alvo = await semSenha(igrejaId, "Alvo");
+    await expect(definirAdmin(db, voluntario, alvo.id, true)).rejects.toBeInstanceOf(ErroAcesso);
+    await expect(definirAdmin(db, lider, alvo.id, true)).rejects.toBeInstanceOf(ErroAcesso);
+    await expect(definirAdmin(db, dono, voluntario.id, true)).rejects.toBeInstanceOf(ErroAcesso);
+    expect((await ler(alvo.id)).papelGlobal).toBe("voluntario");
+  });
+
+  it("promovido sem senha é levado à tela de definir acesso e define e-mail e senha", async () => {
+    const { igrejaId, dono } = await igrejaComAdmin("b");
+    const alvo = await semSenha(igrejaId, "Sem acesso");
+    await definirAdmin(db, dono, alvo.id, true);
+    const promovido = await ler(alvo.id);
+    expect(promovido).toMatchObject({ papelGlobal: "admin", trocarSenha: true });
+    expect(precisaDefinirAcesso(promovido)).toBe(true);
+
+    expect(await definirAcessoAdmin(db, alvo.id, { email: "x", senha: "senha-12345" })).toEqual({ ok: false, motivo: "email_invalido" });
+    expect(await definirAcessoAdmin(db, alvo.id, { email: "novo-b@x.com", senha: "curta" })).toEqual({ ok: false, motivo: "senha_curta" });
+    expect(await definirAcessoAdmin(db, alvo.id, { email: "dono-b@x.com", senha: "senha-12345" })).toEqual({ ok: false, motivo: "email_em_uso" });
+
+    const r = await definirAcessoAdmin(db, alvo.id, { email: "Novo-B@x.com", senha: "senha-12345" });
+    expect(r).toEqual({ ok: true, sessaoVersao: promovido.sessaoVersao + 1 });
+    const pronto = await ler(alvo.id);
+    expect(pronto).toMatchObject({ email: "novo-b@x.com", trocarSenha: false });
+    expect(precisaDefinirAcesso(pronto)).toBe(false);
+  });
+
+  it("definir acesso de admin é só para admin", async () => {
+    await expect(definirAcessoAdmin(db, voluntario.id, { email: "v2@x.com", senha: "senha-12345" })).rejects.toBeInstanceOf(ErroAcesso);
+  });
+
+  it("promovido que já tem e-mail e senha não passa pela tela", async () => {
+    const { igrejaId, dono } = await igrejaComAdmin("c");
+    const alvo = await usuario(igrejaId, "com-senha@x.com");
+    await definirAdmin(db, dono, alvo.id, true);
+    const u = await ler(alvo.id);
+    expect(u.trocarSenha).toBe(false);
+    expect(precisaDefinirAcesso(u)).toBe(false);
+  });
+
+  it("admin sem e-mail ou senha precisa definir acesso mesmo sem a flag", () => {
+    const base = { papelGlobal: "admin" as const, trocarSenha: false };
+    expect(precisaDefinirAcesso({ ...base, email: null, senhaHash: null })).toBe(true);
+    expect(precisaDefinirAcesso({ ...base, email: "a@x.com", senhaHash: null })).toBe(true);
+    expect(precisaDefinirAcesso({ ...base, email: "a@x.com", senhaHash: "h" })).toBe(false);
+    expect(precisaDefinirAcesso({ ...base, papelGlobal: "voluntario", email: null, senhaHash: null })).toBe(false);
+  });
+
+  it("não tira o último admin, nem por ele mesmo; com outro admin, rebaixa", async () => {
+    const { igrejaId, dono } = await igrejaComAdmin("d");
+    await expect(definirAdmin(db, dono, dono.id, false)).rejects.toBeInstanceOf(ErroUltimoAdmin);
+    const outro = await usuario(igrejaId, "outro-d@x.com");
+    await definirAdmin(db, dono, outro.id, true);
+    await definirAdmin(db, dono, dono.id, false);
+    expect((await ler(dono.id)).papelGlobal).toBe("voluntario");
+    const outroAdmin = { ...outro, papelGlobal: "admin" } as Ator;
+    await expect(definirAdmin(db, outroAdmin, outro.id, false)).rejects.toBeInstanceOf(ErroUltimoAdmin);
+  });
+
+  it("admin anonimizado não conta como outro admin", async () => {
+    const { igrejaId, dono } = await igrejaComAdmin("e");
+    const outro = await usuario(igrejaId, "anon-e@x.com", "admin");
+    await db.update(schema.usuarios).set({ anonimizadoEm: new Date() }).where(eq(schema.usuarios.id, outro.id));
+    await expect(definirAdmin(db, dono, dono.id, false)).rejects.toBeInstanceOf(ErroUltimoAdmin);
+  });
+
+  it("rebaixado sem senha sai da tela de definir acesso", async () => {
+    const { igrejaId, dono } = await igrejaComAdmin("f");
+    const alvo = await semSenha(igrejaId, "Volta");
+    await definirAdmin(db, dono, alvo.id, true);
+    await definirAdmin(db, dono, alvo.id, false);
+    const u = await ler(alvo.id);
+    expect(u).toMatchObject({ papelGlobal: "voluntario", trocarSenha: false });
+    expect(precisaDefinirAcesso(u)).toBe(false);
+  });
+
+  it("líder não define senha temporária de admin; outro admin define", async () => {
+    const alvo = await usuario(admin.igrejaId, "admin-membro@x.com", "admin");
+    await definirLider(db, admin, minId, alvo.id, true);
+    const [m] = await db.select().from(schema.membrosMinisterio).where(eq(schema.membrosMinisterio.usuarioId, alvo.id));
+    await expect(definirSenhaTemporaria(db, lider, m.id, "temporaria-1")).rejects.toBeInstanceOf(ErroAcesso);
+    await definirSenhaTemporaria(db, admin, m.id, "temporaria-1");
+    expect((await ler(alvo.id)).trocarSenha).toBe(true);
   });
 });

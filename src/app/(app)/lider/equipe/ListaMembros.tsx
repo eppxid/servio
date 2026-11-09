@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import { FolhaInferior } from "@/components/app/FolhaInferior";
-import { alterarPapel, gerarLinkDoMembroAcao, revogarAparelhoAcao, salvarFuncoesDoMembro, senhaTemporariaAcao, tirarDoMinisterio } from "./actions";
+import { alterarPapel, definirAdminAcao, gerarLinkDoMembroAcao, revogarAparelhoAcao, salvarFuncoesDoMembro, senhaTemporariaAcao, tirarDoMinisterio } from "./actions";
 import { iniciais } from "./Avatar";
 import estilo from "./equipe.module.css";
+import { FormConfirmar } from "./FormConfirmar";
+import { SeloPapel } from "./SeloPapel";
 
 export interface MembroLinha {
   id: number;
   usuarioId: number;
   nome: string;
   papel: "lider" | "voluntario";
+  papelGlobal: "admin" | "lider" | "voluntario";
   funcaoIds: number[];
   escalasNoMes: number;
   /** Só quem tem e-mail (conta antiga) pode ter senha temporária. */
@@ -38,6 +41,7 @@ export function ListaMembros({
   // Guarda só o id: a folha lê o membro das props, que se renovam depois de revogar um aparelho.
   const [abertoId, setAbertoId] = useState<number | null>(null);
   const aberto = membros.find((m) => m.id === abertoId) ?? null;
+  const abertoAdmin = aberto?.papelGlobal === "admin";
   const nomeDe = (id: number) => funcoes.find((f) => f.id === id)?.nome;
 
   return (
@@ -49,7 +53,7 @@ export function ListaMembros({
             <span className="row__tx">
               <b>
                 {m.nome}
-                {m.papel === "lider" ? " · líder" : ""}
+                <SeloPapel papel={m.papelGlobal === "admin" ? "admin" : m.papel} />
               </b>
               <span>{m.funcaoIds.map(nomeDe).filter(Boolean).join(", ") || "Sem funções"}</span>
             </span>
@@ -107,15 +111,17 @@ export function ListaMembros({
               </details>
             </div>
 
-            <form action={gerarLinkDoMembroAcao}>
-              <input type="hidden" name="ministerio" value={ministerioId} />
-              <input type="hidden" name="usuario" value={aberto.usuarioId} />
-              <button type="submit" className="tbtn tbtn--soft" style={{ justifySelf: "start" }}>
-                Gerar link de acesso
-              </button>
-            </form>
+            {(admin || !abertoAdmin) && (
+              <form action={gerarLinkDoMembroAcao}>
+                <input type="hidden" name="ministerio" value={ministerioId} />
+                <input type="hidden" name="usuario" value={aberto.usuarioId} />
+                <button type="submit" className="tbtn tbtn--soft" style={{ justifySelf: "start" }}>
+                  Gerar link de acesso
+                </button>
+              </form>
+            )}
 
-            {aberto.temEmail && (
+            {aberto.temEmail && (admin || !abertoAdmin) && (
             <form action={senhaTemporariaAcao}>
               <input type="hidden" name="ministerio" value={ministerioId} />
               <input type="hidden" name="membro" value={aberto.id} />
@@ -148,6 +154,21 @@ export function ListaMembros({
                   {aberto.papel === "lider" ? "Tirar de líder" : "Tornar líder"}
                 </button>
               </form>
+            )}
+
+            {admin && (
+              <FormConfirmar
+                action={definirAdminAcao}
+                pergunta={abertoAdmin ? `Tirar ${aberto.nome} de administrador?` : `Tornar ${aberto.nome} administrador? A pessoa poderá gerir toda a igreja.`}
+                aoEnviar={() => setAbertoId(null)}
+              >
+                <input type="hidden" name="ministerio" value={ministerioId} />
+                <input type="hidden" name="usuario" value={aberto.usuarioId} />
+                <input type="hidden" name="admin" value={abertoAdmin ? "0" : "1"} />
+                <button type="submit" className="tbtn tbtn--soft">
+                  {abertoAdmin ? "Tirar de administrador" : "Tornar administrador"}
+                </button>
+              </FormConfirmar>
             )}
 
             {aberto.papel !== "lider" && (

@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { exigirUsuario } from "@/lib/auth";
+import { precisaDefinirAcesso } from "@/lib/ministerios/nucleo";
 
-/** Como exigirUsuario, mas manda quem tem senha temporária para a troca obrigatória. */
+/** Como exigirUsuario, mas manda para a tela de acesso quem tem senha temporária ou é admin sem e-mail/senha. */
 export async function exigirUsuarioSemTroca() {
   const usuario = await exigirUsuario();
-  if (usuario.trocarSenha) redirect("/convite/trocar-senha");
+  if (precisaDefinirAcesso(usuario)) redirect("/convite/trocar-senha");
   return usuario;
 }
 

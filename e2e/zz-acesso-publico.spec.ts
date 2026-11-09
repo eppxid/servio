@@ -8,12 +8,17 @@ const sha = (v: string) => createHash("sha256").update(v).digest("hex");
 
 /** O PGlite aceita uma conexão só: espera o app soltar a dele (idle_timeout=1) antes de abrir a do teste. */
 async function comBanco<T>(fn: (sql: postgres.Sql) => Promise<T>): Promise<T> {
-  await new Promise((r) => setTimeout(r, 2500));
-  const sql = postgres(URL_BANCO, { max: 1 });
-  try {
-    return await fn(sql);
-  } finally {
-    await sql.end();
+  for (let tentativa = 1; ; tentativa++) {
+    await new Promise((r) => setTimeout(r, 2500));
+    const sql = postgres(URL_BANCO, { max: 1 });
+    try {
+      return await fn(sql);
+    } catch (e) {
+      // O app ainda segurava a conexão única: só esse erro de rede justifica tentar de novo.
+      if ((e as NodeJS.ErrnoException).code !== "ECONNRESET" || tentativa === 4) throw e;
+    } finally {
+      await sql.end({ timeout: 1 }).catch(() => undefined);
+    }
   }
 }
 

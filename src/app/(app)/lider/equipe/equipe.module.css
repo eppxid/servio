@@ -14,6 +14,7 @@
 .funcao > span { flex: 1; }
 .pilulas { display: flex; flex-wrap: wrap; gap: 6px; }
 .pilula { height: 28px; padding: 0 12px; border-radius: 99px; display: inline-flex; align-items: center; background: color-mix(in srgb, var(--primary) 13%, transparent); color: var(--primary); font-size: var(--fs-sm); font-weight: 600; }
+.selo { display: inline-flex; align-items: center; height: 20px; margin-left: 6px; padding: 0 8px; border-radius: 99px; background: color-mix(in srgb, var(--primary) 13%, transparent); color: var(--primary); font-size: var(--fs-2xs); font-weight: 700; vertical-align: middle; }
 .acoes { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 
 .convite { display: grid; gap: 10px; padding: 14px 16px; border-radius: 20px; background: var(--raised); border: 1px solid var(--line); }

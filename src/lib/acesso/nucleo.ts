@@ -3,12 +3,22 @@ import { and, asc, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import * as t from "@/db/schema";
 import { temPapel, type AnyDb } from "@/lib/auth-core";
 import { TERMOS_VERSAO } from "@/lib/lgpd/termos";
-import { ErroAcesso, ministerioDaIgreja, novoToken, VALIDADE_CONVITE_MS, type Ator } from "@/lib/ministerios/nucleo";
+import {
+  credenciaisDeAdmin,
+  ErroAcesso,
+  ministerioDaIgreja,
+  novoToken,
+  VALIDADE_CONVITE_MS,
+  type Ator,
+  type FalhaCredenciais,
+} from "@/lib/ministerios/nucleo";
 import { notificarUsuarios } from "@/lib/notificar";
 
 export const MAX_PEDIDOS_PENDENTES_POR_CONVITE = 5;
 export const MAX_PEDIDOS_POR_HORA_NA_IGREJA = 20;
 const UMA_HORA_MS = 60 * 60 * 1000;
+
+export type PapelConvite = (typeof t.papelConvite.enumValues)[number];
 
 /** O banco guarda só o hash dos tokens (LGPD art. 46): vazamento do banco não entrega links nem cookies válidos. */
 export function hashToken(token: string): string {
@@ -55,21 +65,28 @@ async function exigirLider(db: AnyDb, ator: Ator, ministerioId: number) {
 
 // ---- convite pessoal ----
 
-/** Líder do ministério (ou admin) gera o link. Com `usuarioId` é o link de acesso de um membro existente. */
+/**
+ * Líder do ministério (ou admin) gera o link; `papel` diferente de voluntário só o admin escolhe.
+ * Com `usuarioId` é o link de acesso de um membro existente: não muda o papel de ninguém.
+ */
 export async function gerarConvitePessoal(
   db: AnyDb,
   ator: Ator,
-  dados: { ministerioId: number; nome: string; sobrenome: string; usuarioId?: number },
+  dados: { ministerioId: number; nome: string; sobrenome: string; usuarioId?: number; papel?: PapelConvite },
   agora: Date = new Date(),
 ): Promise<{ token: string }> {
   await exigirLider(db, ator, dados.ministerioId);
+  const papel = dados.papel ?? "voluntario";
+  if (papel !== "voluntario" && ator.papelGlobal !== "admin") throw new ErroAcesso();
   if (dados.usuarioId !== undefined) {
     const [u] = await db
-      .select({ id: t.usuarios.id })
+      .select({ id: t.usuarios.id, papelGlobal: t.usuarios.papelGlobal })
       .from(t.usuarios)
       .where(and(eq(t.usuarios.id, dados.usuarioId), eq(t.usuarios.igrejaId, ator.igrejaId)))
       .limit(1);
     if (!u) throw new ErroAcesso();
+    // Este link registra o aparelho sem aprovação: em conta de admin, seria entrar no lugar dele.
+    if (u.papelGlobal === "admin" && ator.papelGlobal !== "admin") throw new ErroAcesso();
   }
   const token = novoToken();
   await db.insert(t.convitesPessoais).values({
@@ -80,6 +97,7 @@ export async function gerarConvitePessoal(
     tokenHash: hashToken(token),
     criadoPor: ator.id,
     usuarioId: dados.usuarioId ?? null,
+    papel: dados.usuarioId === undefined ? papel : "voluntario",
     expiraEm: new Date(agora.getTime() + VALIDADE_CONVITE_MS),
   });
   return { token };
@@ -92,6 +110,9 @@ export interface ConvitePessoal {
   ministerio: string;
   nome: string;
   sobrenome: string;
+  papel: PapelConvite;
+  /** O dono do link é admin: aparelho novo dele só outro admin aprova. */
+  donoAdmin: boolean;
   usado: boolean;
   /** Dono do link: preenchido depois do 1º uso (ou desde a criação, em link para membro existente). */
   usuarioId: number | null;
@@ -111,11 +132,14 @@ export async function lerConvitePessoal(
       ministerio: t.ministerios.nome,
       nome: t.convitesPessoais.nome,
       sobrenome: t.convitesPessoais.sobrenome,
+      papel: t.convitesPessoais.papel,
       usadoEm: t.convitesPessoais.usadoEm,
       usuarioId: t.convitesPessoais.usuarioId,
+      donoPapelGlobal: t.usuarios.papelGlobal,
     })
     .from(t.convitesPessoais)
     .innerJoin(t.ministerios, eq(t.ministerios.id, t.convitesPessoais.ministerioId))
+    .leftJoin(t.usuarios, eq(t.usuarios.id, t.convitesPessoais.usuarioId))
     .where(
       and(
         eq(t.convitesPessoais.tokenHash, hashToken(token)),
@@ -125,28 +149,33 @@ export async function lerConvitePessoal(
     )
     .limit(1);
   if (!c) return null;
-  const { usadoEm, ...resto } = c;
-  return { ...resto, usado: usadoEm !== null };
+  const { usadoEm, donoPapelGlobal, ...resto } = c;
+  return { ...resto, donoAdmin: donoPapelGlobal === "admin", usado: usadoEm !== null };
 }
 
 export type ResultadoPrimeiroUso =
   | { ok: true; usuario: typeof t.usuarios.$inferSelect; aparelhoId: number; aparelhoToken: string }
-  | { ok: false; motivo: "invalido" | "ja_usado" | "sem_consentimento" };
+  | { ok: false; motivo: "invalido" | "ja_usado" | "sem_consentimento" }
+  | FalhaCredenciais;
 
 /**
- * 1º uso do link: cria a conta (sem e-mail e sem senha), o membro aprovado e o aparelho.
+ * 1º uso do link: cria a conta, o membro aprovado e o aparelho. Só o convite de admin leva e-mail e senha:
+ * é a porta de recuperação se ele perder o aparelho e não houver outro admin para aprovar o novo.
  * Link de membro existente (`usuarioId`): não cria conta nem pede consentimento, só registra o aparelho.
  */
 export async function usarConvitePrimeiraVez(
   db: AnyDb,
   token: string,
-  dados: { consentimento: boolean; rotulo: string },
+  dados: { consentimento: boolean; rotulo: string; email?: string; senha?: string },
   agora: Date = new Date(),
 ): Promise<ResultadoPrimeiroUso> {
   const c = await lerConvitePessoal(db, token, agora);
   if (!c) return { ok: false, motivo: "invalido" };
   if (c.usado) return { ok: false, motivo: "ja_usado" };
   if (c.usuarioId === null && !dados.consentimento) return { ok: false, motivo: "sem_consentimento" };
+  const novoAdmin = c.usuarioId === null && c.papel === "admin";
+  const credenciais = novoAdmin ? await credenciaisDeAdmin(db, c.igrejaId, dados) : null;
+  if (credenciais && !credenciais.ok) return credenciais;
 
   return db.transaction(async (tx): Promise<ResultadoPrimeiroUso> => {
     const banco = tx as unknown as AnyDb;
@@ -165,6 +194,9 @@ export async function usarConvitePrimeiraVez(
         .values({
           igrejaId: c.igrejaId,
           nome: `${c.nome} ${c.sobrenome}`.trim(),
+          papelGlobal: novoAdmin ? "admin" : "voluntario",
+          email: credenciais?.email,
+          senhaHash: credenciais?.senhaHash,
           consentimentoEm: agora,
           termosVersao: TERMOS_VERSAO,
         })
@@ -175,7 +207,7 @@ export async function usarConvitePrimeiraVez(
           igrejaId: c.igrejaId,
           usuarioId: usuario.id,
           ministerioId: c.ministerioId,
-          papel: "voluntario",
+          papel: c.papel === "voluntario" ? "voluntario" : "lider",
           status: "aprovado",
         })
         .onConflictDoNothing();
@@ -266,7 +298,8 @@ async function dentroDoLimite(db: AnyDb, c: ConvitePessoal, agora: Date): Promis
   return naHora.n < MAX_PEDIDOS_POR_HORA_NA_IGREJA;
 }
 
-async function avisarLideres(db: AnyDb, c: ConvitePessoal, corpo: string) {
+/** Avisa quem decide o pedido: líderes do ministério e todos os admins ativos da igreja. */
+async function avisarQuemDecide(db: AnyDb, c: ConvitePessoal, corpo: string) {
   try {
     const lideres = await db
       .select({ usuarioId: t.membrosMinisterio.usuarioId })
@@ -278,13 +311,23 @@ async function avisarLideres(db: AnyDb, c: ConvitePessoal, corpo: string) {
           eq(t.membrosMinisterio.status, "aprovado"),
         ),
       );
+    const admins = await db
+      .select({ usuarioId: t.usuarios.id })
+      .from(t.usuarios)
+      .where(
+        and(
+          eq(t.usuarios.igrejaId, c.igrejaId),
+          eq(t.usuarios.papelGlobal, "admin"),
+          isNull(t.usuarios.anonimizadoEm),
+        ),
+      );
     await notificarUsuarios(
       c.igrejaId,
-      lideres.map((l) => l.usuarioId),
-      { titulo: "Pedido de acesso", corpo, url: "/lider/equipe" },
+      [...new Set([...lideres, ...admins].map((l) => l.usuarioId))],
+      { titulo: "Pedido de acesso", corpo, url: `/lider/equipe?ministerio=${c.ministerioId}&aba=membros` },
     );
   } catch (e) {
-    console.error("pedido de acesso: falha ao avisar líderes", (e as Error)?.message);
+    console.error("pedido de acesso: falha ao avisar", (e as Error)?.message);
   }
 }
 
@@ -310,7 +353,7 @@ export async function pedirAcessoMesmaPessoa(
       criadoEm: agora,
     })
     .returning({ id: t.pedidosAcesso.id });
-  await avisarLideres(db, c, `Aparelho novo de ${c.nome} ${c.sobrenome} pede acesso.`);
+  await avisarQuemDecide(db, c, `Aparelho novo de ${c.nome} ${c.sobrenome} pede acesso.`);
   return { ok: true, pedidoId: pedido.id, aparelhoToken };
 }
 
@@ -338,7 +381,7 @@ export async function pedirConviteOutraPessoa(
       criadoEm: agora,
     })
     .returning({ id: t.pedidosAcesso.id });
-  await avisarLideres(db, c, `${nome} ${sobrenome} pede um convite.`);
+  await avisarQuemDecide(db, c, `${nome} ${sobrenome} pede um convite.`);
   return { ok: true, pedidoId: pedido.id };
 }
 
@@ -377,9 +420,11 @@ async function pedidoDoLider(db: AnyDb, ator: Ator, pedidoId: number) {
       pedido: t.pedidosAcesso,
       ministerioId: t.convitesPessoais.ministerioId,
       usuarioId: t.convitesPessoais.usuarioId,
+      donoPapelGlobal: t.usuarios.papelGlobal,
     })
     .from(t.pedidosAcesso)
     .innerJoin(t.convitesPessoais, eq(t.convitesPessoais.id, t.pedidosAcesso.conviteId))
+    .leftJoin(t.usuarios, eq(t.usuarios.id, t.convitesPessoais.usuarioId))
     .where(and(eq(t.pedidosAcesso.id, pedidoId), eq(t.pedidosAcesso.igrejaId, ator.igrejaId)))
     .limit(1);
   if (!p) throw new ErroAcesso();
@@ -388,7 +433,10 @@ async function pedidoDoLider(db: AnyDb, ator: Ator, pedidoId: number) {
   return p;
 }
 
-/** Aprovar só existe para `mesma_pessoa` (registra o aparelho). `outra_pessoa`: recusar, ou `marcarPedidoAtendido`. */
+/**
+ * Aprovar só existe para `mesma_pessoa` (registra o aparelho). `outra_pessoa`: recusar, ou `marcarPedidoAtendido`.
+ * Aparelho de admin: só admin decide, e o dono do pedido não aprova o próprio aparelho.
+ */
 export async function decidirPedido(
   db: AnyDb,
   ator: Ator,
@@ -396,7 +444,10 @@ export async function decidirPedido(
   aprovar: boolean,
   agora: Date = new Date(),
 ): Promise<void> {
-  const { pedido, usuarioId } = await pedidoDoLider(db, ator, pedidoId);
+  const { pedido, usuarioId, donoPapelGlobal } = await pedidoDoLider(db, ator, pedidoId);
+  if (pedido.tipo === "mesma_pessoa" && donoPapelGlobal === "admin") {
+    if (ator.papelGlobal !== "admin" || (aprovar && ator.id === usuarioId)) throw new ErroAcesso();
+  }
   const hash = pedido.aparelhoTokenHash;
   if (aprovar && (pedido.tipo !== "mesma_pessoa" || !hash || usuarioId === null)) {
     throw new Error("Este pedido não se aprova: gere o convite novo");
@@ -434,8 +485,10 @@ export async function marcarPedidoAtendido(
     .where(eq(t.pedidosAcesso.id, pedido.id));
 }
 
-export async function listarPedidosPendentes(db: AnyDb, ator: Ator, ministerioId: number) {
-  await exigirLider(db, ator, ministerioId);
+/** Sem `ministerioId`: pedidos de todos os ministérios (só admin). */
+export async function listarPedidosPendentes(db: AnyDb, ator: Ator, ministerioId?: number) {
+  if (ministerioId !== undefined) await exigirLider(db, ator, ministerioId);
+  else if (ator.papelGlobal !== "admin") throw new ErroAcesso();
   return db
     .select({
       id: t.pedidosAcesso.id,
@@ -446,12 +499,26 @@ export async function listarPedidosPendentes(db: AnyDb, ator: Ator, ministerioId
       criadoEm: t.pedidosAcesso.criadoEm,
       conviteNome: t.convitesPessoais.nome,
       conviteSobrenome: t.convitesPessoais.sobrenome,
+      ministerioId: t.convitesPessoais.ministerioId,
+      ministerio: t.ministerios.nome,
+      donoId: t.convitesPessoais.usuarioId,
+      donoPapelGlobal: t.usuarios.papelGlobal,
+      donoPapelMembro: t.membrosMinisterio.papel,
     })
     .from(t.pedidosAcesso)
     .innerJoin(t.convitesPessoais, eq(t.convitesPessoais.id, t.pedidosAcesso.conviteId))
+    .innerJoin(t.ministerios, eq(t.ministerios.id, t.convitesPessoais.ministerioId))
+    .leftJoin(t.usuarios, eq(t.usuarios.id, t.convitesPessoais.usuarioId))
+    .leftJoin(
+      t.membrosMinisterio,
+      and(
+        eq(t.membrosMinisterio.usuarioId, t.convitesPessoais.usuarioId),
+        eq(t.membrosMinisterio.ministerioId, t.convitesPessoais.ministerioId),
+      ),
+    )
     .where(
       and(
-        eq(t.convitesPessoais.ministerioId, ministerioId),
+        ministerioId !== undefined ? eq(t.convitesPessoais.ministerioId, ministerioId) : undefined,
         eq(t.pedidosAcesso.igrejaId, ator.igrejaId),
         eq(t.pedidosAcesso.status, "pendente"),
       ),

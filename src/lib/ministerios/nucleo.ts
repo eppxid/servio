@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { z } from "zod";
 import * as t from "@/db/schema";
 import { SENHA_MINIMA, hashSenha, normalizarEmail, temPapel, type AnyDb } from "@/lib/auth-core";
 import { TERMOS_VERSAO } from "@/lib/lgpd/termos";
@@ -15,6 +16,13 @@ export interface Ator {
 export class ErroAcesso extends Error {
   constructor(msg = "Acesso negado") {
     super(msg);
+  }
+}
+
+/** Tirar este admin deixaria a igreja sem nenhum. */
+export class ErroUltimoAdmin extends Error {
+  constructor() {
+    super("A igreja precisa de ao menos um administrador");
   }
 }
 
@@ -98,6 +106,128 @@ export async function definirLider(
       target: [t.membrosMinisterio.usuarioId, t.membrosMinisterio.ministerioId],
       set: { papel: lider ? "lider" : "voluntario", status: "aprovado" },
     });
+}
+
+// ---- administradores ----
+
+interface ContaDeAcesso {
+  papelGlobal: Ator["papelGlobal"];
+  email: string | null;
+  senhaHash: string | null;
+  trocarSenha: boolean;
+}
+
+/** Admin sem e-mail ou senha não tem como recuperar o acesso se perder o aparelho. */
+export function faltaAcessoDeAdmin(u: Omit<ContaDeAcesso, "trocarSenha">): boolean {
+  return u.papelGlobal === "admin" && (!u.email || !u.senhaHash);
+}
+
+/** A pessoa precisa passar pela tela de definir acesso antes de usar o app. */
+export function precisaDefinirAcesso(u: ContaDeAcesso): boolean {
+  return u.trocarSenha || faltaAcessoDeAdmin(u);
+}
+
+export type FalhaCredenciais = { ok: false; motivo: "email_invalido" | "email_em_uso" | "senha_curta" };
+
+/** Confere e-mail (único na igreja, salvo o do próprio `usuarioId`) e senha; devolve o e-mail normalizado e o hash. */
+export async function credenciaisDeAdmin(
+  db: AnyDb,
+  igrejaId: number,
+  dados: { email?: string; senha?: string },
+  usuarioId?: number,
+): Promise<{ ok: true; email: string; senhaHash: string } | FalhaCredenciais> {
+  const email = normalizarEmail(dados.email ?? "");
+  if (!z.string().email().max(254).safeParse(email).success) return { ok: false, motivo: "email_invalido" };
+  const senha = dados.senha ?? "";
+  if (senha.length < SENHA_MINIMA || senha.length > 200) return { ok: false, motivo: "senha_curta" };
+  const [existe] = await db
+    .select({ id: t.usuarios.id })
+    .from(t.usuarios)
+    .where(and(eq(t.usuarios.igrejaId, igrejaId), eq(t.usuarios.email, email)))
+    .limit(1);
+  if (existe && existe.id !== usuarioId) return { ok: false, motivo: "email_em_uso" };
+  return { ok: true, email, senhaHash: await hashSenha(senha) };
+}
+
+/**
+ * Admin promove ou rebaixa outro admin. Promovido sem e-mail ou senha cai na tela de definir acesso.
+ * A trava nas linhas dos admins impede que dois rebaixamentos simultâneos deixem a igreja sem nenhum.
+ */
+export async function definirAdmin(db: AnyDb, ator: Ator, usuarioId: number, admin: boolean) {
+  await exigirAdmin(db, ator);
+  await db.transaction(async (tx) => {
+    const banco = tx as unknown as AnyDb;
+    const [u] = await banco
+      .select({ papelGlobal: t.usuarios.papelGlobal, email: t.usuarios.email, senhaHash: t.usuarios.senhaHash })
+      .from(t.usuarios)
+      .where(and(eq(t.usuarios.id, usuarioId), eq(t.usuarios.igrejaId, ator.igrejaId), isNull(t.usuarios.anonimizadoEm)))
+      .limit(1);
+    if (!u) throw new ErroAcesso();
+    if ((u.papelGlobal === "admin") === admin) return;
+
+    if (admin) {
+      await banco
+        .update(t.usuarios)
+        .set({ papelGlobal: "admin", ...(faltaAcessoDeAdmin({ ...u, papelGlobal: "admin" }) ? { trocarSenha: true } : {}) })
+        .where(eq(t.usuarios.id, usuarioId));
+      // Link ainda não usado registraria aparelho sem aprovação de outro admin.
+      await banco
+        .update(t.convitesPessoais)
+        .set({ revogadoEm: new Date() })
+        .where(
+          and(
+            eq(t.convitesPessoais.usuarioId, usuarioId),
+            isNull(t.convitesPessoais.usadoEm),
+            isNull(t.convitesPessoais.revogadoEm),
+          ),
+        );
+      return;
+    }
+
+    const admins = await banco
+      .select({ id: t.usuarios.id })
+      .from(t.usuarios)
+      .where(
+        and(
+          eq(t.usuarios.igrejaId, ator.igrejaId),
+          eq(t.usuarios.papelGlobal, "admin"),
+          isNull(t.usuarios.anonimizadoEm),
+        ),
+      )
+      .for("update");
+    if (!admins.some((a) => a.id !== usuarioId)) throw new ErroUltimoAdmin();
+    await banco
+      .update(t.usuarios)
+      .set({ papelGlobal: "voluntario", ...(u.senhaHash ? {} : { trocarSenha: false }) })
+      .where(eq(t.usuarios.id, usuarioId));
+  });
+}
+
+/** O próprio admin define e-mail e senha: limpa a flag e devolve a nova versão da sessão. */
+export async function definirAcessoAdmin(
+  db: AnyDb,
+  usuarioId: number,
+  dados: { email?: string; senha?: string },
+): Promise<{ ok: true; sessaoVersao: number } | FalhaCredenciais> {
+  const [u] = await db
+    .select({ igrejaId: t.usuarios.igrejaId, papelGlobal: t.usuarios.papelGlobal })
+    .from(t.usuarios)
+    .where(eq(t.usuarios.id, usuarioId))
+    .limit(1);
+  if (u?.papelGlobal !== "admin") throw new ErroAcesso();
+  const credenciais = await credenciaisDeAdmin(db, u.igrejaId, dados, usuarioId);
+  if (!credenciais.ok) return credenciais;
+  const [novo] = await db
+    .update(t.usuarios)
+    .set({
+      email: credenciais.email,
+      senhaHash: credenciais.senhaHash,
+      trocarSenha: false,
+      sessaoVersao: sql`${t.usuarios.sessaoVersao} + 1`,
+    })
+    .where(eq(t.usuarios.id, usuarioId))
+    .returning({ sessaoVersao: t.usuarios.sessaoVersao });
+  return { ok: true, sessaoVersao: novo.sessaoVersao };
 }
 
 // ---- funções (líder) ----
@@ -303,6 +433,13 @@ export async function definirSenhaTemporaria(
 ) {
   if (senha.length < SENHA_MINIMA) throw new Error("Senha curta demais");
   const m = await membroDoLider(db, ator, membroId);
+  const [alvo] = await db
+    .select({ papelGlobal: t.usuarios.papelGlobal })
+    .from(t.usuarios)
+    .where(eq(t.usuarios.id, m.usuarioId))
+    .limit(1);
+  // Com a senha temporária, o líder entraria na conta do admin.
+  if (alvo?.papelGlobal === "admin" && ator.papelGlobal !== "admin") throw new ErroAcesso();
   await db
     .update(t.usuarios)
     .set({
@@ -354,6 +491,7 @@ export async function detalheMinisterio(db: AnyDb, ator: Ator, ministerioId: num
       id: t.membrosMinisterio.id,
       status: t.membrosMinisterio.status,
       papel: t.membrosMinisterio.papel,
+      papelGlobal: t.usuarios.papelGlobal,
       nome: t.usuarios.nome,
       email: t.usuarios.email,
       telefone: t.usuarios.telefone,

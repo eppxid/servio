@@ -3,11 +3,10 @@ import { headers } from "next/headers";
 import { Cabecalho } from "@/components/Cabecalho";
 import { IconeApp } from "@/components/app/icones";
 import { db } from "@/db";
-import { lerConvitePessoal, listarAparelhos, listarPedidosPendentes } from "@/lib/acesso/nucleo";
-import { exigirUsuario } from "@/lib/auth";
+import { lerConvitePessoal, listarAparelhos, listarPedidosPendentes, type PapelConvite } from "@/lib/acesso/nucleo";
 import { SENHA_MINIMA, type AnyDb } from "@/lib/auth-core";
 import { ministeriosDoLider } from "@/lib/escala/nucleo";
-import { idSeguro } from "@/lib/ministerios/sessao";
+import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
 import {
   adicionarFuncao,
   aprovarEntrada,
@@ -26,6 +25,7 @@ import { carregarEquipe } from "./dados";
 import estilo from "./equipe.module.css";
 import { ListaMembros } from "./ListaMembros";
 import { MinisteriosAdmin } from "./MinisteriosAdmin";
+import { SeloPapel } from "./SeloPapel";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +46,7 @@ export default async function Equipe({
     erro?: string;
   }>;
 }) {
-  const usuario = await exigirUsuario();
+  const usuario = await exigirUsuarioSemTroca();
   const admin = usuario.papelGlobal === "admin";
   const meus = await ministeriosDoLider(db() as unknown as AnyDb, usuario);
   const { ministerio, aba: abaPedida, acesso, nome: nomePedido, sobrenome: sobrenomePedido, pedido, ok, erro } = await searchParams;
@@ -63,6 +63,7 @@ export default async function Equipe({
   const banco = db() as unknown as AnyDb;
   let link: string | null = null;
   let nomeDoConvite = "";
+  let papelDoConvite: PapelConvite = "voluntario";
   if (acesso && /^[0-9a-f]{64}$/.test(acesso)) {
     const dono = await lerConvitePessoal(banco, acesso);
     if (dono && dono.ministerioId === escolhido?.id) {
@@ -71,9 +72,10 @@ export default async function Equipe({
       const proto = h.get("x-forwarded-proto") ?? "https";
       link = `${proto}://${host}/acesso/${acesso}`;
       nomeDoConvite = dono.nome;
+      papelDoConvite = dono.papel;
     }
   }
-  const pedidosAcesso = equipe && escolhido && aba === "membros" ? await listarPedidosPendentes(banco, usuario, escolhido.id) : [];
+  const pedidosAcesso = equipe && escolhido && aba === "membros" ? await listarPedidosPendentes(banco, usuario, admin ? undefined : escolhido.id) : [];
   const aparelhosDe = new Map<number, Awaited<ReturnType<typeof listarAparelhos>>>();
   if (equipe && aba === "membros") {
     for (const m of equipe.membros) aparelhosDe.set(m.usuarioId, await listarAparelhos(banco, m.usuarioId));
@@ -116,7 +118,9 @@ export default async function Equipe({
             ? `A senha precisa de ${SENHA_MINIMA} caracteres ou mais.`
             : erro === "nome"
               ? "Digite o nome e o sobrenome, com 2 a 60 letras cada."
-              : "Confira os campos."}
+              : erro === "ultimo_admin"
+                ? "A igreja precisa de ao menos um administrador. Promova outra pessoa antes."
+                : "Confira os campos."}
         </p>
       )}
       {ok === "senha" && (
@@ -221,32 +225,46 @@ export default async function Equipe({
                 const mesma = p.tipo === "mesma_pessoa";
                 const dono = `${p.conviteNome} ${p.conviteSobrenome}`.trim();
                 const pedinte = `${p.nome ?? ""} ${p.sobrenome ?? ""}`.trim();
-                const dados = new URLSearchParams({ ministerio: String(escolhido.id), aba: "membros", nome: p.nome ?? "", sobrenome: p.sobrenome ?? "", pedido: String(p.id) });
+                const dados = new URLSearchParams({ ministerio: String(p.ministerioId), aba: "membros", nome: p.nome ?? "", sobrenome: p.sobrenome ?? "", pedido: String(p.id) });
+                const donoAdmin = mesma && p.donoPapelGlobal === "admin";
+                const podeRecusar = !donoAdmin || admin;
+                const podeAprovar = !donoAdmin || (admin && p.donoId !== usuario.id);
                 return (
                   <div key={p.id} className={estilo.pedido}>
                     <div className={estilo.quem}>
                       <span className="avatar">{iniciais(mesma ? dono : pedinte)}</span>
                       <div>
-                        <b>{mesma ? `Aparelho novo para ${dono}` : pedinte}</b>
-                        <span>{mesma ? p.rotulo : `Pediu um convite (abriu o link de ${dono})`}</span>
+                        <b>
+                          {mesma ? `Aparelho novo para ${dono}` : pedinte}
+                          {mesma && <SeloPapel papel={donoAdmin ? "admin" : (p.donoPapelMembro ?? "voluntario")} />}
+                        </b>
+                        <span>
+                          {mesma ? p.rotulo : `Pediu um convite (abriu o link de ${dono})`}
+                          {admin && p.ministerioId !== escolhido.id ? ` · ${p.ministerio}` : ""}
+                        </span>
                       </div>
                     </div>
                     <div className={estilo.acoes}>
-                      <form action={decidirPedidoAcessoAcao}>
-                        <input type="hidden" name="pedido" value={p.id} />
-                        <input type="hidden" name="aprovar" value="0" />
-                        <button type="submit" className="tbtn" aria-label={`Recusar pedido de ${mesma ? dono : pedinte}`}>
-                          Recusar
-                        </button>
-                      </form>
-                      {mesma ? (
+                      {!podeAprovar && <span className={estilo.fim}>Só outro administrador aprova este aparelho.</span>}
+                      {podeRecusar && (
                         <form action={decidirPedidoAcessoAcao}>
                           <input type="hidden" name="pedido" value={p.id} />
-                          <input type="hidden" name="aprovar" value="1" />
-                          <button type="submit" className="tbtn tbtn--p" aria-label={`Aprovar aparelho de ${dono}`}>
-                            Aprovar
+                          <input type="hidden" name="aprovar" value="0" />
+                          <button type="submit" className="tbtn" aria-label={`Recusar pedido de ${mesma ? dono : pedinte}`}>
+                            Recusar
                           </button>
                         </form>
+                      )}
+                      {mesma ? (
+                        podeAprovar && (
+                          <form action={decidirPedidoAcessoAcao}>
+                            <input type="hidden" name="pedido" value={p.id} />
+                            <input type="hidden" name="aprovar" value="1" />
+                            <button type="submit" className="tbtn tbtn--p" aria-label={`Aprovar aparelho de ${dono}`}>
+                              Aprovar
+                            </button>
+                          </form>
+                        )
                       ) : (
                         <Link href={`/lider/equipe?${dados}`} className="tbtn tbtn--p">
                           Gerar convite
@@ -266,11 +284,26 @@ export default async function Equipe({
               <input type="hidden" name="pedido" value={pedidoId} />
               <input name="nome" required minLength={2} maxLength={60} className="campo" aria-label="Nome" placeholder="Nome" defaultValue={nomePedido ?? ""} autoComplete="off" />
               <input name="sobrenome" required minLength={2} maxLength={60} className="campo" aria-label="Sobrenome" placeholder="Sobrenome" defaultValue={sobrenomePedido ?? ""} autoComplete="off" />
+              {admin && (
+                <select name="papel" defaultValue="voluntario" className="campo" aria-label="Papel">
+                  <option value="voluntario">Voluntário</option>
+                  <option value="lider">Líder do ministério</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              )}
               <button type="submit" className="tbtn tbtn--p">
                 Gerar convite
               </button>
             </form>
-            {link && <CompartilharConvite link={link} nome={nomeDoConvite} />}
+            {link && (
+              <>
+                <p>
+                  Convite para {nomeDoConvite}
+                  <SeloPapel papel={papelDoConvite} />
+                </p>
+                <CompartilharConvite link={link} nome={nomeDoConvite} />
+              </>
+            )}
           </section>
           <section aria-label="Membros" style={{ display: "grid", gap: 8 }}>
             <h2 className="eyebrow">Membros ({equipe.membros.length})</h2>
@@ -281,6 +314,7 @@ export default async function Equipe({
                 usuarioId: x.usuarioId,
                 nome: x.nome,
                 papel: x.papel,
+                papelGlobal: x.papelGlobal,
                 funcaoIds: x.funcaoIds,
                 escalasNoMes: x.escalasNoMes,
                 temEmail: !!x.email,

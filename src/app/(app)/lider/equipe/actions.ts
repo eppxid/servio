@@ -13,10 +13,12 @@ import {
   criarFuncao,
   criarMinisterio,
   decidirMembro,
+  definirAdmin,
   definirFuncoesDoMembro,
   definirLider,
   definirSenhaTemporaria,
   editarMinisterio,
+  ErroUltimoAdmin,
   excluirFuncao,
   renomearFuncao,
 } from "@/lib/ministerios/nucleo";
@@ -107,6 +109,18 @@ export async function alterarPapel(formData: FormData) {
   atualizar();
 }
 
+/** Só o admin promove ou rebaixa administrador; a regra recusa tirar o último. */
+export async function definirAdminAcao(formData: FormData) {
+  const ator = await exigirUsuarioSemTroca();
+  try {
+    await definirAdmin(db(), ator, idSeguro(formData.get("usuario")), formData.get("admin") === "1");
+  } catch (e) {
+    if (e instanceof ErroUltimoAdmin) redirect(voltar(idSeguro(formData.get("ministerio")), "membros", "&erro=ultimo_admin"));
+    throw e;
+  }
+  atualizar();
+}
+
 export async function adicionarFuncao(formData: FormData) {
   const ator = await exigirUsuarioSemTroca();
   const nome = nomeFuncao.safeParse(formData.get("nome"));
@@ -130,6 +144,7 @@ export async function excluirFuncaoAcao(formData: FormData) {
 }
 
 const nomePessoa = z.string().trim().min(2).max(60);
+const papelDoConvite = z.enum(["voluntario", "lider", "admin"]).catch("voluntario");
 
 /** Gera o convite pessoal e volta para Membros com o token na URL (a página monta o link). */
 export async function gerarConvitePessoalAcao(formData: FormData) {
@@ -143,7 +158,12 @@ export async function gerarConvitePessoalAcao(formData: FormData) {
     if (pedido) dados.set("pedido", String(pedido));
     redirect(voltar(id, "membros", `&erro=nome&${dados}`));
   }
-  const { token } = await gerarConvitePessoal(db(), ator, { ministerioId: id, nome: nome.data, sobrenome: sobrenome.data });
+  const { token } = await gerarConvitePessoal(db(), ator, {
+    ministerioId: id,
+    nome: nome.data,
+    sobrenome: sobrenome.data,
+    papel: papelDoConvite.parse(formData.get("papel")),
+  });
   if (pedido) await marcarPedidoAtendido(db(), ator, pedido);
   redirect(voltar(id, "membros", `&acesso=${token}`));
 }

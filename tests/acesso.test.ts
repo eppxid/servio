@@ -24,7 +24,7 @@ import {
   usarConvitePrimeiraVez,
 } from "@/lib/acesso/nucleo";
 import { TERMOS_VERSAO } from "@/lib/lgpd/termos";
-import { ErroAcesso, criarMinisterio, definirLider, VALIDADE_CONVITE_MS, type Ator } from "@/lib/ministerios/nucleo";
+import { ErroAcesso, criarMinisterio, definirAdmin, definirLider, VALIDADE_CONVITE_MS, type Ator } from "@/lib/ministerios/nucleo";
 
 const avisos = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock("@/lib/notificar", () => ({ notificarUsuarios: avisos }));
@@ -330,5 +330,133 @@ describe("aparelho", () => {
     if (sit?.status !== "aprovado") throw new Error();
     await revogarAparelho(db, lider, sit.aparelhoId);
     expect(await situacaoDoPedido(db, pedido.pedidoId, pedido.aparelhoToken)).toEqual({ status: "recusado" });
+  });
+});
+
+describe("convite com papel", () => {
+  const convite = (ator: Ator, papel: "voluntario" | "lider" | "admin", nome = "Nova") =>
+    gerarConvitePessoal(db, ator, { ministerioId: minId, nome, sobrenome: "Pessoa", papel });
+
+  it("líder só convida voluntário; admin convida os três papéis", async () => {
+    await expect(convite(lider, "lider")).rejects.toBeInstanceOf(ErroAcesso);
+    await expect(convite(lider, "admin")).rejects.toBeInstanceOf(ErroAcesso);
+    await expect(convite(lider, "voluntario")).resolves.toHaveProperty("token");
+    for (const papel of ["voluntario", "lider", "admin"] as const) {
+      const { token } = await convite(admin, papel);
+      expect((await lerConvitePessoal(db, token))?.papel).toBe(papel);
+    }
+  });
+
+  it("1º uso de convite de líder cria membro líder sem virar admin", async () => {
+    const { token } = await convite(admin, "lider");
+    const r = await usarConvitePrimeiraVez(db, token, { consentimento: true, rotulo: "x" });
+    if (!r.ok) throw new Error();
+    expect(r.usuario).toMatchObject({ papelGlobal: "voluntario", email: null, senhaHash: null });
+    const [membro] = await db.select().from(schema.membrosMinisterio).where(eq(schema.membrosMinisterio.usuarioId, r.usuario.id));
+    expect(membro).toMatchObject({ ministerioId: minId, papel: "lider", status: "aprovado" });
+  });
+
+  it("1º uso de admin sem e-mail ou senha válidos falha e não consome o link", async () => {
+    const { token } = await convite(admin, "admin");
+    const base = { consentimento: true, rotulo: "x" };
+    expect(await usarConvitePrimeiraVez(db, token, base)).toEqual({ ok: false, motivo: "email_invalido" });
+    expect(await usarConvitePrimeiraVez(db, token, { ...base, email: "nova@x.com" })).toEqual({ ok: false, motivo: "senha_curta" });
+    expect(await usarConvitePrimeiraVez(db, token, { ...base, email: "nova@x.com", senha: "curta" })).toEqual({ ok: false, motivo: "senha_curta" });
+    expect(await usarConvitePrimeiraVez(db, token, { ...base, email: " ADMIN@x.com", senha: "senha-12345" })).toEqual({ ok: false, motivo: "email_em_uso" });
+    expect(await usarConvitePrimeiraVez(db, token, { ...base, email: "nova@x.com", senha: "senha-12345", consentimento: false })).toEqual({ ok: false, motivo: "sem_consentimento" });
+    expect((await lerConvitePessoal(db, token))?.usado).toBe(false);
+  });
+
+  it("1º uso de admin com e-mail e senha cria admin, líder do ministério e entra por senha", async () => {
+    const { token } = await convite(admin, "admin");
+    const r = await usarConvitePrimeiraVez(db, token, { consentimento: true, rotulo: "x", email: "Nova.Admin@x.com", senha: "senha-12345" });
+    if (!r.ok) throw new Error();
+    expect(r.usuario).toMatchObject({ papelGlobal: "admin", email: "nova.admin@x.com" });
+    const [membro] = await db.select().from(schema.membrosMinisterio).where(eq(schema.membrosMinisterio.usuarioId, r.usuario.id));
+    expect(membro).toMatchObject({ ministerioId: minId, papel: "lider", status: "aprovado" });
+    expect((await autenticar(db, "nova.admin@x.com", "senha-12345")).ok).toBe(true);
+  });
+
+  it("link de membro existente ignora o papel e não muda a conta", async () => {
+    const existente = await usuario(admin.igrejaId, "existente@x.com");
+    const { token } = await gerarConvitePessoal(db, admin, { ministerioId: minId, nome: "E", sobrenome: "X", usuarioId: existente.id, papel: "admin" });
+    expect((await lerConvitePessoal(db, token))?.papel).toBe("voluntario");
+    const r = await usarConvitePrimeiraVez(db, token, { consentimento: false, rotulo: "x" });
+    if (!r.ok) throw new Error();
+    expect(r.usuario.papelGlobal).toBe("voluntario");
+  });
+});
+
+describe("pedidos de acesso e administradores", () => {
+  /** Admin criado por convite: devolve o token do link e o ator. */
+  async function novoAdmin(email: string) {
+    const { token } = await gerarConvitePessoal(db, admin, { ministerioId: minId, nome: "Adm", sobrenome: email, papel: "admin" });
+    const r = await usarConvitePrimeiraVez(db, token, { consentimento: true, rotulo: "x", email, senha: "senha-12345" });
+    if (!r.ok) throw new Error();
+    return { token, ator: { id: r.usuario.id, igrejaId: admin.igrejaId, papelGlobal: "admin" } as Ator };
+  }
+
+  it("pedido avisa líder e admins sem repetir", async () => {
+    const p = await pessoa();
+    avisos.mockClear();
+    const r = await pedirAcessoMesmaPessoa(db, p.token, "x");
+    if (!r.ok) throw new Error();
+    const destinos = (avisos.mock.calls[0] as unknown[])[1] as number[];
+    expect(destinos).toEqual(expect.arrayContaining([lider.id, admin.id]));
+    expect(new Set(destinos).size).toBe(destinos.length);
+  });
+
+  it("ministério sem líder avisa os admins; admin lista e decide o pedido", async () => {
+    const semLider = (await criarMinisterio(db, admin, "Sem líder")).id;
+    const { token } = await gerarConvitePessoal(db, admin, { ministerioId: semLider, nome: "Rita", sobrenome: "Luz" });
+    await usarConvitePrimeiraVez(db, token, { consentimento: true, rotulo: "x" });
+    avisos.mockClear();
+    const r = await pedirAcessoMesmaPessoa(db, token, "x");
+    if (!r.ok) throw new Error();
+    expect((avisos.mock.calls[0] as unknown[])[1]).toContain(admin.id);
+
+    const todos = await listarPedidosPendentes(db, admin);
+    expect(todos.find((x) => x.id === r.pedidoId)).toMatchObject({ ministerioId: semLider, ministerio: "Sem líder" });
+    expect((await listarPedidosPendentes(db, admin, minId)).some((x) => x.id === r.pedidoId)).toBe(false);
+    await expect(listarPedidosPendentes(db, lider)).rejects.toBeInstanceOf(ErroAcesso);
+    await decidirPedido(db, admin, r.pedidoId, true);
+    expect(await situacaoDoPedido(db, r.pedidoId, r.aparelhoToken)).toMatchObject({ status: "aprovado" });
+  });
+
+  it("aparelho de admin: líder não decide, o dono não aprova e outro admin aprova", async () => {
+    const novo = await novoAdmin("dono-admin@x.com");
+    const r = await pedirAcessoMesmaPessoa(db, novo.token, "Android · Chrome");
+    if (!r.ok) throw new Error();
+    expect((await lerConvitePessoal(db, novo.token))?.donoAdmin).toBe(true);
+
+    await expect(decidirPedido(db, lider, r.pedidoId, true)).rejects.toBeInstanceOf(ErroAcesso);
+    await expect(decidirPedido(db, lider, r.pedidoId, false)).rejects.toBeInstanceOf(ErroAcesso);
+    await expect(decidirPedido(db, novo.ator, r.pedidoId, true)).rejects.toBeInstanceOf(ErroAcesso);
+    expect(await aparelhoValido(db, r.aparelhoToken)).toBeNull();
+
+    await decidirPedido(db, admin, r.pedidoId, true);
+    expect(await aparelhoValido(db, r.aparelhoToken)).toMatchObject({ usuarioId: novo.ator.id });
+  });
+
+  it("o dono admin recusa um aparelho que não reconhece", async () => {
+    const novo = await novoAdmin("recusa-admin@x.com");
+    const r = await pedirAcessoMesmaPessoa(db, novo.token, "x");
+    if (!r.ok) throw new Error();
+    await decidirPedido(db, novo.ator, r.pedidoId, false);
+    expect(await situacaoDoPedido(db, r.pedidoId, r.aparelhoToken)).toEqual({ status: "recusado" });
+  });
+
+  it("líder não gera link de acesso para a conta de um admin", async () => {
+    const novo = await novoAdmin("link-admin@x.com");
+    const dados = { ministerioId: minId, nome: "Adm", sobrenome: "X", usuarioId: novo.ator.id };
+    await expect(gerarConvitePessoal(db, lider, dados)).rejects.toBeInstanceOf(ErroAcesso);
+    await expect(gerarConvitePessoal(db, admin, dados)).resolves.toHaveProperty("token");
+  });
+
+  it("promover revoga o link de acesso ainda não usado", async () => {
+    const alvo = await usuario(admin.igrejaId, "promovido-link@x.com");
+    const { token } = await gerarConvitePessoal(db, lider, { ministerioId: minId, nome: "P", sobrenome: "L", usuarioId: alvo.id });
+    await definirAdmin(db, admin, alvo.id, true);
+    expect(await lerConvitePessoal(db, token)).toBeNull();
   });
 });

@@ -13,7 +13,7 @@ import {
   usarConvitePrimeiraVez,
 } from "@/lib/acesso/nucleo";
 import { usuarioAtual } from "@/lib/auth";
-import type { AnyDb } from "@/lib/auth-core";
+import { SENHA_MINIMA, type AnyDb } from "@/lib/auth-core";
 import { abrirSessao, guardarAceitePendente } from "@/lib/lgpd/sessao";
 import { aceiteEmDia, consentiu } from "@/lib/lgpd/termos";
 import { CampoConsentimento, RodapeLegal } from "@/lib/lgpd/ui";
@@ -48,8 +48,13 @@ async function entrar(formData: FormData) {
   const r = await usarConvitePrimeiraVez(db() as unknown as AnyDb, token, {
     consentimento: consentiu(formData.get("consentimento")),
     rotulo: await rotulo(),
+    email: String(formData.get("email") ?? ""),
+    senha: String(formData.get("senha") ?? ""),
   });
-  if (!r.ok) redirect(caminho(token, r.motivo === "sem_consentimento" ? "erro=consentimento" : ""));
+  if (!r.ok) {
+    const erro = r.motivo === "sem_consentimento" ? "consentimento" : r.motivo === "invalido" || r.motivo === "ja_usado" ? "" : r.motivo;
+    redirect(caminho(token, erro && `erro=${erro}`));
+  }
   await gravarAparelhoCookie(r.aparelhoToken);
   if (!aceiteEmDia(r.usuario)) {
     await guardarAceitePendente(r.usuario, r.aparelhoId);
@@ -148,14 +153,14 @@ export default async function Acesso({
     redirect(atual && atual.id === convite.usuarioId ? "/inicio" : "/acesso/reentrar");
   }
 
-  const msgErro =
-    erro === "limite"
-      ? "Muitos pedidos. Tente mais tarde."
-      : erro === "consentimento"
-        ? "Marque a autorização para entrar."
-        : erro === "nome"
-          ? "Digite nome e sobrenome (2 a 60 letras cada)."
-          : null;
+  const msgErro = new Map([
+    ["limite", "Muitos pedidos. Tente mais tarde."],
+    ["consentimento", "Marque a autorização para entrar."],
+    ["nome", "Digite nome e sobrenome (2 a 60 letras cada)."],
+    ["email_invalido", "Digite um e-mail válido."],
+    ["email_em_uso", "Este e-mail já está em uso."],
+    ["senha_curta", `A senha precisa de ${SENHA_MINIMA} caracteres ou mais.`],
+  ]).get(erro ?? "");
   const alerta = msgErro && (
     <p role="alert" className="alerta alerta--bad">
       {msgErro}
@@ -171,6 +176,21 @@ export default async function Acesso({
         <form action={entrar} className="space-y-4">
           <input type="hidden" name="token" value={token} />
           {convite.usuarioId === null && <CampoConsentimento />}
+          {convite.usuarioId === null && convite.papel === "admin" && (
+            <>
+              <p className="text-sm">
+                <b>Defina e-mail e senha de administrador.</b> Com eles você recupera o acesso se perder o aparelho.
+              </p>
+              <label className="rotulo">
+                E-mail
+                <input name="email" type="email" required maxLength={254} autoComplete="email" className="campo" />
+              </label>
+              <label className="rotulo">
+                Senha
+                <input name="senha" type="password" required minLength={SENHA_MINIMA} maxLength={200} autoComplete="new-password" className="campo" />
+              </label>
+            </>
+          )}
           <button type="submit" className="btn btn--primary btn--block min-h-11">
             Entrar
           </button>
@@ -184,8 +204,13 @@ export default async function Acesso({
   if (Number.isInteger(pedidoId) && pedidoId > 0) {
     return (
       <Publica>
-        <h1 className="title">Aguardando o líder</h1>
+        <h1 className="title">{convite.donoAdmin ? "Aguardando outro administrador" : "Aguardando o líder"}</h1>
         <Aguardando pedidoId={pedidoId} />
+        {convite.donoAdmin && (
+          <Link href="/entrar" className="btn btn--block min-h-11">
+            Entrar com e-mail e senha
+          </Link>
+        )}
         <InstalarApp />
         <RodapeLegal />
       </Publica>

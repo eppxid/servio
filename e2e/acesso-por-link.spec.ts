@@ -156,3 +156,103 @@ test("acesso por link de ponta a ponta: convite, aparelho novo, outra pessoa, re
   await a.goto("/agenda");
   await expect(a).toHaveURL(/\/entrar/);
 });
+
+test("admin convida administrador e promove membro: e-mail e senha antes de entrar", async ({ browser }) => {
+  // 1. Admin entra (a igreja vem do teste anterior ou é criada agora) e abre um ministério.
+  const admin = await aparelho(browser);
+  await admin.goto("/entrar");
+  if (/\/primeiro-acesso/.test(admin.url())) {
+    igrejaCriadaAqui = true;
+    await admin.getByLabel("Nome da igreja").fill("Igreja Acesso E2E");
+    await admin.getByLabel("Seu nome").fill("Admin E2E");
+    await admin.getByLabel("E-mail").fill("admin@e2e.local");
+    await admin.getByLabel("Senha", { exact: true }).fill(SENHA);
+    await admin.getByRole("checkbox").check();
+    await admin.getByRole("button", { name: "Criar" }).click();
+    await expect(admin).toHaveURL(/\/lider\/configurar/);
+  } else {
+    await admin.getByLabel("E-mail").fill("admin@e2e.local");
+    await admin.getByLabel("Senha", { exact: true }).fill(SENHA);
+    await admin.getByRole("button", { name: "Entrar" }).click();
+    await expect(admin).not.toHaveURL(/\/entrar/);
+  }
+  await admin.goto("/lider/equipe?aba=ministerios");
+  await admin.getByLabel("Nome do novo ministério").fill("Mídia Convite");
+  await admin.getByRole("button", { name: "Criar ministério" }).click();
+  await expect(admin.locator("summary", { hasText: "Mídia Convite" })).toBeVisible();
+  await admin.getByRole("link", { name: "Membros", exact: true }).click();
+  await expect(admin).toHaveURL(/aba=membros/);
+  const equipe = admin.url();
+  const convidar = async (nome: string, papel: string) => {
+    await admin.goto(equipe);
+    await admin.getByLabel("Nome", { exact: true }).fill(nome);
+    await admin.getByLabel("Sobrenome").fill("Prado");
+    await admin.getByLabel("Papel").selectOption({ label: papel });
+    await admin.getByRole("button", { name: "Gerar convite" }).click();
+    await expect(admin.getByLabel("Link do convite")).toHaveValue(/\/acesso\/[0-9a-f]{64}$/);
+    return new URL(await admin.getByLabel("Link do convite").inputValue()).pathname;
+  };
+
+  // 2. Convite de administrador: o link gerado leva o selo Admin.
+  const linkAdmin = await convidar("Joana", "Administrador");
+  await expect(admin.getByText("Convite para Joana").getByText("Admin")).toBeVisible();
+
+  // 3. A pessoa consente, define e-mail e senha e entra.
+  const joana = await aparelho(browser, UA_ANDROID);
+  await joana.goto(linkAdmin);
+  await expect(joana.getByText("Defina e-mail e senha de administrador.")).toBeVisible();
+  await joana.getByRole("checkbox").check();
+  await joana.getByLabel("E-mail").fill("admin@e2e.local");
+  await joana.getByLabel("Senha", { exact: true }).fill(SENHA);
+  await joana.getByRole("button", { name: "Entrar" }).click();
+  await expect(joana.getByText("Este e-mail já está em uso.")).toBeVisible();
+  await joana.getByRole("checkbox").check();
+  await joana.getByLabel("E-mail").fill("joana@e2e.local");
+  await joana.getByLabel("Senha", { exact: true }).fill(SENHA);
+  await joana.getByRole("button", { name: "Entrar" }).click();
+  await expect(joana.getByRole("heading", { name: "Tudo certo!" })).toBeVisible();
+
+  // 4. Entra com o modo líder e vê o selo Admin na Equipe.
+  await joana.goto(equipe);
+  await expect(joana.getByRole("switch", { name: "Modo líder" })).toBeVisible();
+  await expect(joana.getByRole("button", { name: /Joana Prado/ })).toContainText("Admin");
+
+  // 5. A senha definida abre a conta em outro aparelho.
+  const senhaJoana = await aparelho(browser);
+  await senhaJoana.goto("/entrar");
+  await senhaJoana.getByLabel("E-mail").fill("joana@e2e.local");
+  await senhaJoana.getByLabel("Senha", { exact: true }).fill(SENHA);
+  await senhaJoana.getByRole("button", { name: "Entrar" }).click();
+  await expect(senhaJoana).not.toHaveURL(/\/entrar/);
+
+  // 6. Voluntário promovido na ficha: no próximo acesso define e-mail e senha.
+  const linkRui = await convidar("Rui", "Voluntário");
+  const rui = await aparelho(browser);
+  await rui.goto(linkRui);
+  await rui.getByRole("checkbox").check();
+  await rui.getByRole("button", { name: "Entrar" }).click();
+  await expect(rui.getByRole("heading", { name: "Tudo certo!" })).toBeVisible();
+
+  await admin.goto(equipe);
+  await admin.getByRole("button", { name: /Rui Prado/ }).click();
+  admin.once("dialog", (d) => d.accept());
+  await admin.getByRole("button", { name: "Tornar administrador" }).click();
+  await expect(admin.getByRole("button", { name: /Rui Prado/ })).toContainText("Admin");
+
+  await rui.goto("/inicio");
+  await expect(rui).toHaveURL(/\/convite\/trocar-senha/);
+  await expect(rui.getByRole("heading", { name: "Defina e-mail e senha de administrador" })).toBeVisible();
+  await rui.getByLabel("E-mail").fill("rui@e2e.local");
+  await rui.getByLabel("Senha", { exact: true }).fill(SENHA);
+  await rui.getByRole("button", { name: "Salvar" }).click();
+  await expect(rui).not.toHaveURL(/\/convite\/trocar-senha/);
+  await rui.goto("/inicio");
+  await expect(rui).toHaveURL(/\/inicio/);
+
+  // 7. Tirar de administrador: o selo some.
+  await admin.goto(equipe);
+  await admin.getByRole("button", { name: /Rui Prado/ }).click();
+  admin.once("dialog", (d) => d.accept());
+  await admin.getByRole("button", { name: "Tirar de administrador" }).click();
+  await expect(admin.getByRole("button", { name: /Rui Prado/ })).not.toContainText("Admin");
+});
