@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { IconeApp, type NomeIcone } from "./app/icones";
 import type { Modo } from "./app/modo-comum";
 
-const ABAS: Record<Modo, { href: string; rotulo: string; icone: NomeIcone }[]> = {
+export const ABAS: Record<Modo, { href: string; rotulo: string; icone: NomeIcone }[]> = {
   voluntario: [
     { href: "/inicio", rotulo: "Início", icone: "inicio" },
     { href: "/agenda", rotulo: "Agenda", icone: "agenda" },

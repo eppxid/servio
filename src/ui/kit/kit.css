@@ -275,3 +275,26 @@ html[data-theme='dark'] .toast { background: #f1f4f9; color: #10151e; }
   *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }
 }
 html[data-motion='off'] *, html[data-motion='off'] *::before, html[data-motion='off'] *::after { transition: none !important; animation: none !important; }
+
+/* ---------- Troca de tela com direção (Movimento.tsx → navegar.ts grava html[data-nav]) ----------
+   Topo e abas têm nome próprio para ficarem parados; a pílula da aba ativa desliza de uma aba à outra. */
+.top { view-transition-name: topo; }
+::view-transition-group(pilula) { animation-duration: 300ms; animation-timing-function: var(--ease, cubic-bezier(.2,.8,.2,1)); }
+@keyframes nav-entra { from { opacity: 0; transform: translateX(var(--nav-de, 0)) scale(var(--nav-escala, 1)); } }
+@keyframes nav-sai { to { opacity: 0; transform: translateX(var(--nav-para, 0)) scale(var(--nav-escala, 1)); } }
+@media (prefers-reduced-motion: no-preference) {
+  html[data-nav]::view-transition-old(root) { animation: nav-sai 200ms var(--ease-in, cubic-bezier(.4,0,1,1)) both; }
+  html[data-nav]::view-transition-new(root) { animation: nav-entra 300ms var(--ease, cubic-bezier(.2,.8,.2,1)) both; }
+  html[data-nav="aba-dir"] { --nav-de: 32px; --nav-para: -32px; }
+  html[data-nav="aba-esq"] { --nav-de: -32px; --nav-para: 32px; }
+  html[data-nav="frente"] { --nav-de: 40px; --nav-para: -24px; }
+  html[data-nav="tras"] { --nav-de: -24px; --nav-para: 40px; }
+  html[data-nav="troca"] { --nav-escala: .98; }
+}
+
+/* ---------- Esqueleto de carregamento (loading.tsx) ---------- */
+.skel { display: block; height: 14px; border-radius: 8px; background: var(--well); animation: skel-pulso 1.4s ease-in-out infinite; }
+.skel--titulo { height: 28px; width: 55%; }
+.skel--linha { width: 80%; margin-top: 10px; }
+.skel--curta { width: 45%; }
+@keyframes skel-pulso { 50% { opacity: .5; } }

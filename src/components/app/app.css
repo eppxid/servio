@@ -42,6 +42,7 @@
   .tabbar a:hover { color: var(--muted); }
   .tabbar a.is-active { color: var(--primary); }
   .tabbar a.is-active .pill { background: color-mix(in srgb, var(--primary) 14%, transparent); }
+  .tabbar a.is-active .pill { view-transition-name: pilula; }
   .tabbar .badge { top: 5px; right: calc(50% - 26px); }
 
   /* ---------- Linhas de lista e botões de toque ---------- */
