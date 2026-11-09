@@ -12,11 +12,16 @@ export async function criarMinisterioComConvite(admin: Page, nome: string, funca
   await admin.getByRole("button", { name: "Adicionar" }).click();
   await expect(admin.getByLabel(`Nome da função ${funcao}`)).toBeVisible();
   const id = Number(new URL(admin.url()).searchParams.get("ministerio"));
-  await admin.getByRole("link", { name: "Membros", exact: true }).click();
-  await admin.getByRole("button", { name: "Gerar convite" }).click();
+  return { id, link: await linkConviteDoMinisterio(admin, id) };
+}
+
+/** Convite antigo por ministério (`/convite/<token>`, com e-mail e senha), que o admin gera no assistente. */
+export async function linkConviteDoMinisterio(admin: Page, ministerioId: number | string) {
+  await admin.goto(`/lider/configurar?passo=3&ministerio=${ministerioId}`);
+  await admin.getByRole("button", { name: "Gerar link do convite" }).click();
   await expect(admin).toHaveURL(/convite=[0-9a-f]{64}/);
   const link = await admin.getByLabel("Link do convite").inputValue();
-  return { id, link: new URL(link).pathname };
+  return new URL(link).pathname;
 }
 
 /** Escolhe o ministério na barra da Equipe (a barra só aparece com 2 ou mais). */
