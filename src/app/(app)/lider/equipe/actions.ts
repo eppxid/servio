@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import * as t from "@/db/schema";
 import { redirect } from "next/navigation";
+import { decidirPedido, gerarConvitePessoal, marcarPedidoAtendido, revogarAparelho } from "@/lib/acesso/nucleo";
 import { SENHA_MINIMA } from "@/lib/auth-core";
 import {
   arquivarMinisterio,
@@ -17,7 +18,6 @@ import {
   definirSenhaTemporaria,
   editarMinisterio,
   excluirFuncao,
-  gerarConvite,
   renomearFuncao,
 } from "@/lib/ministerios/nucleo";
 import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
@@ -129,12 +129,56 @@ export async function excluirFuncaoAcao(formData: FormData) {
   atualizar();
 }
 
-/** Gera o convite e volta para Membros com o token na URL (a página monta o link). */
-export async function gerarConviteAcao(formData: FormData) {
+const nomePessoa = z.string().trim().min(2).max(60);
+
+/** Gera o convite pessoal e volta para Membros com o token na URL (a página monta o link). */
+export async function gerarConvitePessoalAcao(formData: FormData) {
   const ator = await exigirUsuarioSemTroca();
   const id = idSeguro(formData.get("ministerio"));
-  const token = await gerarConvite(db(), ator, id);
-  redirect(voltar(id, "membros", `&convite=${token}`));
+  const pedido = idSeguro(formData.get("pedido"));
+  const nome = nomePessoa.safeParse(formData.get("nome"));
+  const sobrenome = nomePessoa.safeParse(formData.get("sobrenome"));
+  if (!nome.success || !sobrenome.success) {
+    const dados = new URLSearchParams({ nome: String(formData.get("nome") ?? ""), sobrenome: String(formData.get("sobrenome") ?? "") });
+    if (pedido) dados.set("pedido", String(pedido));
+    redirect(voltar(id, "membros", `&erro=nome&${dados}`));
+  }
+  const { token } = await gerarConvitePessoal(db(), ator, { ministerioId: id, nome: nome.data, sobrenome: sobrenome.data });
+  if (pedido) await marcarPedidoAtendido(db(), ator, pedido);
+  redirect(voltar(id, "membros", `&acesso=${token}`));
+}
+
+/** Link de acesso para um membro que já existe (conta antiga ou quem perdeu os aparelhos). */
+export async function gerarLinkDoMembroAcao(formData: FormData) {
+  const ator = await exigirUsuarioSemTroca();
+  const id = idSeguro(formData.get("ministerio"));
+  const usuarioId = idSeguro(formData.get("usuario"));
+  const [u] = await db()
+    .select({ nome: t.usuarios.nome })
+    .from(t.usuarios)
+    .where(and(eq(t.usuarios.id, usuarioId), eq(t.usuarios.igrejaId, ator.igrejaId)))
+    .limit(1);
+  if (!u) redirect(voltar(id, "membros"));
+  const [primeiro, ...resto] = u.nome.trim().split(/\s+/);
+  const { token } = await gerarConvitePessoal(db(), ator, {
+    ministerioId: id,
+    nome: primeiro,
+    sobrenome: resto.join(" "),
+    usuarioId,
+  });
+  redirect(voltar(id, "membros", `&acesso=${token}`));
+}
+
+export async function decidirPedidoAcessoAcao(formData: FormData) {
+  const ator = await exigirUsuarioSemTroca();
+  await decidirPedido(db(), ator, idSeguro(formData.get("pedido")), formData.get("aprovar") === "1");
+  atualizar();
+}
+
+export async function revogarAparelhoAcao(formData: FormData) {
+  const ator = await exigirUsuarioSemTroca();
+  await revogarAparelho(db(), ator, idSeguro(formData.get("aparelho")));
+  atualizar();
 }
 
 export async function senhaTemporariaAcao(formData: FormData) {

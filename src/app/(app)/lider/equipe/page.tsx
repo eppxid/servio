@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { Cabecalho } from "@/components/Cabecalho";
 import { IconeApp } from "@/components/app/icones";
 import { db } from "@/db";
+import { lerConvitePessoal, listarAparelhos, listarPedidosPendentes } from "@/lib/acesso/nucleo";
 import { exigirUsuario } from "@/lib/auth";
 import { SENHA_MINIMA, type AnyDb } from "@/lib/auth-core";
 import { ministeriosDoLider } from "@/lib/escala/nucleo";
@@ -12,14 +13,15 @@ import {
   aprovarEntrada,
   aprovarFuncaoDesejada,
   aprovarPedidoInteiro,
+  decidirPedidoAcessoAcao,
   excluirFuncaoAcao,
-  gerarConviteAcao,
+  gerarConvitePessoalAcao,
   recusarEntrada,
   recusarFuncaoDesejada,
   renomearFuncaoAcao,
 } from "./actions";
 import { iniciais } from "./Avatar";
-import { CopiarLink } from "./CopiarLink";
+import { CompartilharConvite } from "./CompartilharConvite";
 import { carregarEquipe } from "./dados";
 import estilo from "./equipe.module.css";
 import { ListaMembros } from "./ListaMembros";
@@ -33,12 +35,21 @@ type Aba = "pedidos" | "membros" | "funcoes" | "ministerios";
 export default async function Equipe({
   searchParams,
 }: {
-  searchParams: Promise<{ ministerio?: string; aba?: string; convite?: string; ok?: string; erro?: string }>;
+  searchParams: Promise<{
+    ministerio?: string;
+    aba?: string;
+    acesso?: string;
+    nome?: string;
+    sobrenome?: string;
+    pedido?: string;
+    ok?: string;
+    erro?: string;
+  }>;
 }) {
   const usuario = await exigirUsuario();
   const admin = usuario.papelGlobal === "admin";
   const meus = await ministeriosDoLider(db() as unknown as AnyDb, usuario);
-  const { ministerio, aba: abaPedida, convite, ok, erro } = await searchParams;
+  const { ministerio, aba: abaPedida, acesso, nome: nomePedido, sobrenome: sobrenomePedido, pedido, ok, erro } = await searchParams;
   const escolhido = meus.find((x) => x.id === idSeguro(ministerio)) ?? meus[0];
   const equipe = escolhido ? await carregarEquipe(usuario, escolhido.id) : null;
 
@@ -49,13 +60,25 @@ export default async function Equipe({
   const rotulo: Record<Aba, string> = { pedidos: "Pedidos", membros: "Membros", funcoes: "Funções", ministerios: "Ministérios" };
   const href = (a: Aba) => `/lider/equipe?${escolhido ? `ministerio=${escolhido.id}&` : ""}aba=${a}`;
 
+  const banco = db() as unknown as AnyDb;
   let link: string | null = null;
-  if (convite && /^[0-9a-f]{64}$/.test(convite)) {
-    const h = await headers();
-    const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
-    const proto = h.get("x-forwarded-proto") ?? "https";
-    link = `${proto}://${host}/convite/${convite}`;
+  let nomeDoConvite = "";
+  if (acesso && /^[0-9a-f]{64}$/.test(acesso)) {
+    const dono = await lerConvitePessoal(banco, acesso);
+    if (dono && dono.ministerioId === escolhido?.id) {
+      const h = await headers();
+      const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+      const proto = h.get("x-forwarded-proto") ?? "https";
+      link = `${proto}://${host}/acesso/${acesso}`;
+      nomeDoConvite = dono.nome;
+    }
   }
+  const pedidosAcesso = equipe && escolhido && aba === "membros" ? await listarPedidosPendentes(banco, usuario, escolhido.id) : [];
+  const aparelhosDe = new Map<number, Awaited<ReturnType<typeof listarAparelhos>>>();
+  if (equipe && aba === "membros") {
+    for (const m of equipe.membros) aparelhosDe.set(m.usuarioId, await listarAparelhos(banco, m.usuarioId));
+  }
+  const pedidoId = /^[0-9]+$/.test(pedido ?? "") ? (pedido ?? "") : "";
 
   return (
     <div className="tela">
@@ -89,7 +112,11 @@ export default async function Equipe({
 
       {erro && (
         <p role="alert" className={`${estilo.aviso} ${estilo.erro}`}>
-          {erro === "senha" ? `A senha precisa de ${SENHA_MINIMA} caracteres ou mais.` : "Confira os campos."}
+          {erro === "senha"
+            ? `A senha precisa de ${SENHA_MINIMA} caracteres ou mais.`
+            : erro === "nome"
+              ? "Digite o nome e o sobrenome, com 2 a 60 letras cada."
+              : "Confira os campos."}
         </p>
       )}
       {ok === "senha" && (
@@ -187,28 +214,63 @@ export default async function Equipe({
 
       {equipe && escolhido && aba === "membros" && (
         <>
-          <section aria-label="Convidar pessoas" className={estilo.convite}>
-            <b>Convidar pessoas</b>
-            <p>O link vale por 14 dias.</p>
-            <form action={gerarConviteAcao}>
+          {pedidosAcesso.length > 0 && (
+            <section aria-label="Pedidos de acesso" style={{ display: "grid", gap: 8 }}>
+              <h2 className="eyebrow">Pedidos de acesso ({pedidosAcesso.length})</h2>
+              {pedidosAcesso.map((p) => {
+                const mesma = p.tipo === "mesma_pessoa";
+                const dono = `${p.conviteNome} ${p.conviteSobrenome}`.trim();
+                const pedinte = `${p.nome ?? ""} ${p.sobrenome ?? ""}`.trim();
+                const dados = new URLSearchParams({ ministerio: String(escolhido.id), aba: "membros", nome: p.nome ?? "", sobrenome: p.sobrenome ?? "", pedido: String(p.id) });
+                return (
+                  <div key={p.id} className={estilo.pedido}>
+                    <div className={estilo.quem}>
+                      <span className="avatar">{iniciais(mesma ? dono : pedinte)}</span>
+                      <div>
+                        <b>{mesma ? `Aparelho novo para ${dono}` : pedinte}</b>
+                        <span>{mesma ? p.rotulo : `Pediu um convite (abriu o link de ${dono})`}</span>
+                      </div>
+                    </div>
+                    <div className={estilo.acoes}>
+                      <form action={decidirPedidoAcessoAcao}>
+                        <input type="hidden" name="pedido" value={p.id} />
+                        <input type="hidden" name="aprovar" value="0" />
+                        <button type="submit" className="tbtn" aria-label={`Recusar pedido de ${mesma ? dono : pedinte}`}>
+                          Recusar
+                        </button>
+                      </form>
+                      {mesma ? (
+                        <form action={decidirPedidoAcessoAcao}>
+                          <input type="hidden" name="pedido" value={p.id} />
+                          <input type="hidden" name="aprovar" value="1" />
+                          <button type="submit" className="tbtn tbtn--p" aria-label={`Aprovar aparelho de ${dono}`}>
+                            Aprovar
+                          </button>
+                        </form>
+                      ) : (
+                        <Link href={`/lider/equipe?${dados}`} className="tbtn tbtn--p">
+                          Gerar convite
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
+          )}
+          <section aria-label="Convidar pessoa" className={estilo.convite}>
+            <b>Convidar pessoa</b>
+            <p>O link vale por 14 dias. Compartilhe pelo WhatsApp.</p>
+            <form action={gerarConvitePessoalAcao} className={estilo.bloco}>
               <input type="hidden" name="ministerio" value={escolhido.id} />
+              <input type="hidden" name="pedido" value={pedidoId} />
+              <input name="nome" required minLength={2} maxLength={60} className="campo" aria-label="Nome" placeholder="Nome" defaultValue={nomePedido ?? ""} autoComplete="off" />
+              <input name="sobrenome" required minLength={2} maxLength={60} className="campo" aria-label="Sobrenome" placeholder="Sobrenome" defaultValue={sobrenomePedido ?? ""} autoComplete="off" />
               <button type="submit" className="tbtn tbtn--p">
                 Gerar convite
               </button>
             </form>
-            {link && (
-              <>
-                <CopiarLink link={link} />
-                <a
-                  className="tbtn tbtn--soft"
-                  href={`https://wa.me/?text=${encodeURIComponent(`Convite para o ministério ${equipe.ministerio.nome}: ${link}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Enviar por WhatsApp
-                </a>
-              </>
-            )}
+            {link && <CompartilharConvite link={link} nome={nomeDoConvite} />}
           </section>
           <section aria-label="Membros" style={{ display: "grid", gap: 8 }}>
             <h2 className="eyebrow">Membros ({equipe.membros.length})</h2>
@@ -221,6 +283,12 @@ export default async function Equipe({
                 papel: x.papel,
                 funcaoIds: x.funcaoIds,
                 escalasNoMes: x.escalasNoMes,
+                temEmail: !!x.email,
+                aparelhos: (aparelhosDe.get(x.usuarioId) ?? []).map((ap) => ({
+                  id: ap.id,
+                  rotulo: ap.rotulo,
+                  ultimoUso: (ap.ultimoUsoEm ?? ap.criadoEm).toISOString(),
+                })),
               }))}
               funcoes={equipe.funcoes.map((f) => ({ id: f.id, nome: f.nome }))}
               admin={admin}

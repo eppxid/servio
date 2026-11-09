@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { FolhaInferior } from "@/components/app/FolhaInferior";
-import { alterarPapel, salvarFuncoesDoMembro, senhaTemporariaAcao, tirarDoMinisterio } from "./actions";
+import { alterarPapel, gerarLinkDoMembroAcao, revogarAparelhoAcao, salvarFuncoesDoMembro, senhaTemporariaAcao, tirarDoMinisterio } from "./actions";
 import { iniciais } from "./Avatar";
 import estilo from "./equipe.module.css";
 
@@ -13,7 +13,13 @@ export interface MembroLinha {
   papel: "lider" | "voluntario";
   funcaoIds: number[];
   escalasNoMes: number;
+  /** Só quem tem e-mail (conta antiga) pode ter senha temporária. */
+  temEmail: boolean;
+  aparelhos: { id: number; rotulo: string; ultimoUso: string }[];
 }
+
+const dataCurta = (iso: string) =>
+  new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
 /** Membros aprovados; tocar numa linha abre a folha com funções, senha temporária e saída do ministério. */
 export function ListaMembros({
@@ -29,14 +35,16 @@ export function ListaMembros({
   admin: boolean;
   senhaMinima: number;
 }) {
-  const [aberto, setAberto] = useState<MembroLinha | null>(null);
+  // Guarda só o id: a folha lê o membro das props, que se renovam depois de revogar um aparelho.
+  const [abertoId, setAbertoId] = useState<number | null>(null);
+  const aberto = membros.find((m) => m.id === abertoId) ?? null;
   const nomeDe = (id: number) => funcoes.find((f) => f.id === id)?.nome;
 
   return (
     <>
       <div className="list">
         {membros.map((m) => (
-          <button key={m.id} type="button" className={`row ${estilo.linha}`} onClick={() => setAberto(m)}>
+          <button key={m.id} type="button" className={`row ${estilo.linha}`} onClick={() => setAbertoId(m.id)}>
             <span className="avatar">{iniciais(m.nome)}</span>
             <span className="row__tx">
               <b>
@@ -57,13 +65,13 @@ export function ListaMembros({
 
       <FolhaInferior
         aberta={aberto !== null}
-        aoFechar={() => setAberto(null)}
+        aoFechar={() => setAbertoId(null)}
         titulo={aberto?.nome ?? ""}
         descricao={aberto ? `${aberto.escalasNoMes} no mês` : undefined}
       >
         {aberto && (
           <div className={estilo.folha}>
-            <form action={salvarFuncoesDoMembro} onSubmit={() => setAberto(null)}>
+            <form action={salvarFuncoesDoMembro} onSubmit={() => setAbertoId(null)}>
               <input type="hidden" name="membro" value={aberto.id} />
               <b>Funções aprovadas</b>
               {funcoes.map((f) => (
@@ -78,6 +86,36 @@ export function ListaMembros({
               </button>
             </form>
 
+            <div className={estilo.bloco}>
+              <details>
+                <summary>
+                  <b>Aparelhos ({aberto.aparelhos.length})</b>
+                </summary>
+                {aberto.aparelhos.map((ap) => (
+                  <form key={ap.id} action={revogarAparelhoAcao} className={estilo.inline}>
+                    <input type="hidden" name="aparelho" value={ap.id} />
+                    <span style={{ flex: 1 }}>
+                      {ap.rotulo}
+                      <span className={estilo.fim}> · último uso {dataCurta(ap.ultimoUso)}</span>
+                    </span>
+                    <button type="submit" className={`tbtn ${estilo.perigo}`} aria-label={`Revogar ${ap.rotulo} de ${aberto.nome}`}>
+                      Revogar
+                    </button>
+                  </form>
+                ))}
+                {aberto.aparelhos.length === 0 && <span className={estilo.fim}>Nenhum aparelho.</span>}
+              </details>
+            </div>
+
+            <form action={gerarLinkDoMembroAcao}>
+              <input type="hidden" name="ministerio" value={ministerioId} />
+              <input type="hidden" name="usuario" value={aberto.usuarioId} />
+              <button type="submit" className="tbtn tbtn--soft" style={{ justifySelf: "start" }}>
+                Gerar link de acesso
+              </button>
+            </form>
+
+            {aberto.temEmail && (
             <form action={senhaTemporariaAcao}>
               <input type="hidden" name="ministerio" value={ministerioId} />
               <input type="hidden" name="membro" value={aberto.id} />
@@ -99,9 +137,10 @@ export function ListaMembros({
               </div>
               <span className={estilo.fim}>A pessoa troca a senha no próximo acesso.</span>
             </form>
+            )}
 
             {admin && (
-              <form action={alterarPapel} onSubmit={() => setAberto(null)}>
+              <form action={alterarPapel} onSubmit={() => setAbertoId(null)}>
                 <input type="hidden" name="ministerio" value={ministerioId} />
                 <input type="hidden" name="usuario" value={aberto.usuarioId} />
                 <input type="hidden" name="lider" value={aberto.papel === "lider" ? "0" : "1"} />
@@ -112,7 +151,7 @@ export function ListaMembros({
             )}
 
             {aberto.papel !== "lider" && (
-              <form action={tirarDoMinisterio} onSubmit={() => setAberto(null)}>
+              <form action={tirarDoMinisterio} onSubmit={() => setAbertoId(null)}>
                 <input type="hidden" name="membro" value={aberto.id} />
                 <button type="submit" className={`tbtn ${estilo.perigo}`}>
                   Tirar do ministério
