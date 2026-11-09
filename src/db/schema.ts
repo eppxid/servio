@@ -1,6 +1,7 @@
 import {
   boolean,
   check,
+  customType,
   date,
   index,
   integer,
@@ -23,6 +24,13 @@ export const statusItem = pgEnum("status_item", ["pendente", "confirmado", "recu
 export const statusTroca = pgEnum("status_troca", ["aberta", "aceita", "aprovada", "recusada"]);
 
 const ts = (nome: string) => timestamp(nome, { withTimezone: true });
+
+/** bytea com Buffer no código (o driver devolve Uint8Array/Buffer conforme o cliente). */
+const bytea = customType<{ data: Buffer; driverData: Buffer | Uint8Array }>({
+  dataType: () => "bytea",
+  toDriver: (v) => v,
+  fromDriver: (v) => Buffer.from(v),
+});
 
 export const igrejas = pgTable("igrejas", {
   id: serial("id").primaryKey(),
@@ -228,6 +236,8 @@ export const statusPedidoAcesso = pgEnum("status_pedido_acesso", [
   "atendido",
 ]);
 
+export const papelConvite = pgEnum("papel_convite", ["voluntario", "lider", "admin"]);
+
 /** Link pessoal: o banco guarda só o hash do token (LGPD art. 46). */
 export const convitesPessoais = pgTable("convites_pessoais", {
   id: serial("id").primaryKey(),
@@ -235,6 +245,7 @@ export const convitesPessoais = pgTable("convites_pessoais", {
   ministerioId: integer("ministerio_id").notNull().references(() => ministerios.id),
   nome: text("nome").notNull(),
   sobrenome: text("sobrenome").notNull(),
+  papel: papelConvite("papel").notNull().default("voluntario"),
   tokenHash: text("token_hash").notNull().unique(),
   criadoPor: integer("criado_por").notNull().references(() => usuarios.id),
   usuarioId: integer("usuario_id").references(() => usuarios.id),
@@ -277,3 +288,11 @@ export const pedidosAcesso = pgTable(
   },
   (t) => [index("pedidos_acesso_convite").on(t.conviteId, t.status)],
 );
+
+/** Foto da própria pessoa (WebP até 150 KB); só membros logados da mesma igreja leem. */
+export const fotos = pgTable("fotos", {
+  usuarioId: integer("usuario_id").primaryKey().references(() => usuarios.id),
+  igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
+  conteudo: bytea("conteudo").notNull(),
+  atualizadoEm: ts("atualizado_em").notNull().defaultNow(),
+});

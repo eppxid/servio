@@ -161,10 +161,18 @@ export async function exportarDados(db: AnyDb, ator: Ator, agora = new Date()) {
     .where(and(eq(t.aparelhos.usuarioId, ator.id), eq(t.aparelhos.igrejaId, ator.igrejaId)))
     .orderBy(asc(t.aparelhos.criadoEm));
 
+  const [fotoLinha] = await db
+    .select({ conteudo: t.fotos.conteudo })
+    .from(t.fotos)
+    .where(and(eq(t.fotos.usuarioId, ator.id), eq(t.fotos.igrejaId, ator.igrejaId)))
+    .limit(1);
+  const foto = fotoLinha ? `data:image/webp;base64,${Buffer.from(fotoLinha.conteudo).toString("base64")}` : null;
+
   return {
     geradoEm: agora.toISOString(),
     aparelhos,
     perfil,
+    foto,
     ministerios,
     escalas,
     indisponibilidades,
@@ -184,6 +192,7 @@ async function anonimizar(db: AnyDb, alvo: { id: number; igrejaId: number }, fei
     const id = alvo.id;
     await tx.delete(t.indisponibilidades).where(eq(t.indisponibilidades.usuarioId, id));
     await tx.delete(t.pushInscricoes).where(eq(t.pushInscricoes.usuarioId, id));
+    await tx.delete(t.fotos).where(eq(t.fotos.usuarioId, id));
     await tx.delete(t.mensagens).where(eq(t.mensagens.usuarioId, id));
     await tx.delete(reconhecimentos).where(eq(reconhecimentos.deUsuario, id));
 

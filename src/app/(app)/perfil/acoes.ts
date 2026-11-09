@@ -13,6 +13,7 @@ import { validar } from "@/lib/validar";
 import type { AnyDb } from "@/lib/auth-core";
 import { apagarAparelhoCookie } from "@/lib/acesso/cookie";
 import { revogarAparelho } from "@/lib/acesso/nucleo";
+import { ErroFoto, removerFoto, salvarFoto } from "@/lib/foto/nucleo";
 import { ErroAcesso } from "@/lib/ministerios/nucleo";
 
 const vazioNulo = (s: string) => (s.trim() === "" ? null : s.trim());
@@ -158,4 +159,25 @@ export async function removerAparelho(formData: FormData) {
   }
   revalidatePath("/perfil");
   volta("ok", "Aparelho removido");
+}
+
+export async function salvarFotoAcao(formData: FormData) {
+  const usuario = await exigirUsuario();
+  const arquivo = formData.get("foto");
+  if (!(arquivo instanceof Blob) || arquivo.size === 0) volta("erro", "Escolha uma foto");
+  try {
+    await salvarFoto(db() as unknown as AnyDb, usuario, new Uint8Array(await arquivo.arrayBuffer()));
+  } catch (e) {
+    if (e instanceof ErroFoto) volta("erro", e.message);
+    throw e;
+  }
+  revalidatePath("/", "layout");
+  volta("ok", "Foto salva");
+}
+
+export async function removerFotoAcao() {
+  const usuario = await exigirUsuario();
+  await removerFoto(db() as unknown as AnyDb, usuario);
+  revalidatePath("/", "layout");
+  volta("ok", "Foto removida");
 }

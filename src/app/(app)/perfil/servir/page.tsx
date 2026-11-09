@@ -5,6 +5,7 @@ import { db } from "@/db";
 import * as t from "@/db/schema";
 import { exigirUsuario } from "@/lib/auth";
 import type { AnyDb } from "@/lib/auth-core";
+import { versoesDeFoto } from "@/lib/foto/nucleo";
 import { minhasPreferencias } from "@/lib/servir/nucleo";
 import { FormServir, type MinisterioParaServir } from "./FormServir";
 
@@ -31,6 +32,8 @@ export default async function OndeQueroServir({
       .orderBy(asc(t.funcoes.nome)),
     minhasPreferencias(banco, usuario),
   ]);
+
+  const semFoto = !(await versoesDeFoto(banco, [usuario.id])).has(usuario.id);
 
   const lista: MinisterioParaServir[] = ministerios.map((m) => {
     const meu = minhas.find((x) => x.ministerioId === m.id);
@@ -63,6 +66,13 @@ export default async function OndeQueroServir({
         </p>
       )}
       <p className="muted">Escolha os ministérios e as funções que você quer exercer. O líder aprova cada pedido.</p>
+      {semFoto && (
+        <p className="text-sm text-muted">
+          <Link href="/perfil#foto" className="underline">
+            Adicionar foto
+          </Link>
+        </p>
+      )}
       <FormServir ministerios={lista} />
     </div>
   );

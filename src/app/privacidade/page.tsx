@@ -41,6 +41,11 @@ export default function Privacidade() {
             confirma se é você.
           </li>
           <li>E-mail e senha (guardada só como hash bcrypt), só para administradores e contas antigas: entrar no portal.</li>
+          <li>
+            Foto (opcional): identificar você na escala. Só você envia e troca a sua foto, no Perfil. Quem vê: membros
+            logados da sua igreja. Para remover, toque em &quot;Remover foto&quot; no Perfil. O navegador regrava a imagem
+            antes do envio e apaga dados escondidos nela, como a localização.
+          </li>
           <li>Telefone (opcional): o líder do ministério fala com você sobre a escala.</li>
           <li>Ministérios, funções e escalas: montar a escala e enviar lembretes.</li>
           <li>Datas em que você não pode servir e o motivo (opcional): evitar escalar você nessas datas.</li>
@@ -100,7 +105,7 @@ export default function Privacidade() {
           <li>Pedidos de acesso: apagados {RETENCAO.pedidosAcessoDias} dias depois da decisão do líder (ou {RETENCAO.pedidosAcessoDias} dias sem decisão).</li>
           <li>Aparelhos removidos: apagados {RETENCAO.aparelhosRevogadosDias} dias depois da remoção.</li>
           <li>
-            Conta excluída: nome, e-mail, telefone, aparelhos, o link pessoal e o link de foto de cadastros antigos são apagados. A presença nas escalas passadas fica sem
+            Conta excluída: nome, e-mail, telefone, foto, aparelhos, o link pessoal e o link de foto de cadastros antigos são apagados. A presença nas escalas passadas fica sem
             identificação, só para os números do ministério.
           </li>
         </ul>

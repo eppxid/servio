@@ -71,6 +71,13 @@
       "when": 1794186476667,
       "tag": "0009_acesso_por_link",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794234610611,
+      "tag": "0010_fotos_e_papel_convite",
+      "breakpoints": true
     }
   ]
 }

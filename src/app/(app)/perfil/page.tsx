@@ -6,6 +6,8 @@ import { db } from "@/db";
 import type { AnyDb } from "@/lib/auth-core";
 import { exigirUsuario, sessao } from "@/lib/auth";
 import { listarAparelhos } from "@/lib/acesso/nucleo";
+import { versoesDeFoto } from "@/lib/foto/nucleo";
+import { FotoPerfil } from "./FotoPerfil";
 import { mudarSenha, removerAparelho, salvarPerfil } from "./acoes";
 
 const quando = (d: Date) =>
@@ -23,6 +25,7 @@ export default async function Perfil({
   const { ok, erro } = await searchParams;
   const s = await sessao();
   const meusAparelhos = await listarAparelhos(db() as unknown as AnyDb, usuario.id);
+  const versaoFoto = (await versoesDeFoto(db() as unknown as AnyDb, [usuario.id])).get(usuario.id) ?? null;
 
   return (
     <div className="space-y-5">
@@ -40,6 +43,8 @@ export default async function Perfil({
       )}
 
       <div className="grid items-start gap-4 lg:grid-cols-2">
+      <FotoPerfil usuarioId={usuario.id} nome={usuario.nome} versao={versaoFoto} />
+
       <form action={salvarPerfil} className="card space-y-4">
         <h2 className="card__title">Meus dados</h2>
         <label className="rotulo">
