@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/db";
 import type { AnyDb } from "@/lib/auth-core";
 import { exigirUsuario } from "@/lib/auth";
-import { dadosIgreja } from "@/lib/lgpd/termos";
+import { PALAVRA_EXCLUIR, dadosIgreja } from "@/lib/lgpd/termos";
 import { membrosParaAnonimizar } from "@/lib/lgpd/titular";
 import { anonimizarAPedido, excluirConta } from "./acoes";
 import { Cabecalho } from "@/components/Cabecalho";
@@ -63,14 +63,21 @@ export default async function Privacidade({
         <h2 className="card__title">Excluir minha conta ou revogar a autorização</h2>
         <p className="text-sm text-muted">
           As duas opções têm o mesmo efeito: sem a autorização não há base para tratar os seus dados. Apagamos nome,
-          e-mail, telefone, foto, datas de indisponibilidade, avisos, mensagens e agradecimentos que você escreveu. As
+          e-mail, telefone, foto, aparelhos, seu link de acesso, datas de indisponibilidade, avisos, mensagens e agradecimentos que você escreveu. As
           escalas passadas ficam sem o seu nome, só para os números do ministério. Não dá para desfazer.
         </p>
         <form action={excluirConta} className="alerta alerta--bad space-y-3">
-          <label className="rotulo">
-            Confirme com a sua senha
-            <input name="senha" type="password" required autoComplete="current-password" className="campo" />
-          </label>
+          {usuario.senhaHash ? (
+            <label className="rotulo">
+              Confirme com a sua senha
+              <input name="senha" type="password" required autoComplete="current-password" className="campo" />
+            </label>
+          ) : (
+            <label className="rotulo">
+              Para confirmar, digite {PALAVRA_EXCLUIR}
+              <input name="senha" type="text" required autoComplete="off" autoCapitalize="characters" className="campo" />
+            </label>
+          )}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <button type="submit" name="acao" value="exclusao" className="btn btn--danger btn--block">
               Excluir minha conta

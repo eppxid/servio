@@ -4,11 +4,9 @@ import { reconhecimentos } from "@/db/schema-gamificacao";
 import { lgpdRegistros } from "@/db/schema-lgpd";
 import { temPapel, verificarSenha, type AnyDb } from "@/lib/auth-core";
 import { ErroAcesso, type Ator } from "@/lib/ministerios/nucleo";
-import { TERMOS_VERSAO } from "./termos";
+import { PALAVRA_EXCLUIR, TERMOS_VERSAO } from "./termos";
 
 export const NOME_REMOVIDO = "Voluntário removido";
-/** bcrypt nunca gera este valor: nenhuma senha confere. */
-const SENHA_INVALIDA = "!";
 
 export class ErroLgpd extends Error {}
 
@@ -152,8 +150,20 @@ export async function exportarDados(db: AnyDb, ator: Ator, agora = new Date()) {
     .from(t.pushInscricoes)
     .where(and(eq(t.pushInscricoes.usuarioId, ator.id), eq(t.pushInscricoes.igrejaId, ator.igrejaId)));
 
+  const aparelhos = await db
+    .select({
+      rotulo: t.aparelhos.rotulo,
+      criadoEm: t.aparelhos.criadoEm,
+      ultimoUsoEm: t.aparelhos.ultimoUsoEm,
+      revogadoEm: t.aparelhos.revogadoEm,
+    })
+    .from(t.aparelhos)
+    .where(and(eq(t.aparelhos.usuarioId, ator.id), eq(t.aparelhos.igrejaId, ator.igrejaId)))
+    .orderBy(asc(t.aparelhos.criadoEm));
+
   return {
     geradoEm: agora.toISOString(),
+    aparelhos,
     perfil,
     ministerios,
     escalas,
@@ -176,6 +186,15 @@ async function anonimizar(db: AnyDb, alvo: { id: number; igrejaId: number }, fei
     await tx.delete(t.pushInscricoes).where(eq(t.pushInscricoes.usuarioId, id));
     await tx.delete(t.mensagens).where(eq(t.mensagens.usuarioId, id));
     await tx.delete(reconhecimentos).where(eq(reconhecimentos.deUsuario, id));
+
+    // Acesso por link: aparelhos, o link pessoal da pessoa e os pedidos feitos sobre ele.
+    await tx.delete(t.aparelhos).where(eq(t.aparelhos.usuarioId, id));
+    const convitesDele = tx
+      .select({ id: t.convitesPessoais.id })
+      .from(t.convitesPessoais)
+      .where(eq(t.convitesPessoais.usuarioId, id));
+    await tx.delete(t.pedidosAcesso).where(inArray(t.pedidosAcesso.conviteId, convitesDele));
+    await tx.delete(t.convitesPessoais).where(eq(t.convitesPessoais.usuarioId, id));
 
     const membros = await tx
       .select({ id: t.membrosMinisterio.id })
@@ -213,11 +232,11 @@ async function anonimizar(db: AnyDb, alvo: { id: number; igrejaId: number }, fei
       .update(t.usuarios)
       .set({
         nome: NOME_REMOVIDO,
-        // A coluna é NOT NULL e única por igreja: valor sem dado pessoal, domínio reservado .invalid.
-        email: `removido-${id}@anonimo.invalid`,
+        // Sem e-mail e sem senha ninguém entra; desde a migração 0009 as duas colunas aceitam nulo.
+        email: null,
         telefone: null,
         fotoUrl: null,
-        senhaHash: SENHA_INVALIDA,
+        senhaHash: null,
         papelGlobal: "voluntario",
         trocarSenha: false,
         aparecerNoRanking: false,
@@ -250,15 +269,23 @@ async function garantirOutroAdmin(db: AnyDb, alvo: { id: number; igrejaId: numbe
   if (!outro) throw new ErroLgpd("Você é o único administrador. Defina outro administrador antes de excluir a conta.");
 }
 
-/** Exclusão ou revogação pedida pelo próprio titular, com confirmação da senha. */
+/**
+ * Exclusão ou revogação pedida pelo próprio titular (art. 18).
+ * Conta com senha confirma com a senha; conta criada pelo link (sem senha) digita EXCLUIR —
+ * sem isso quem entrou por link não teria como exercer o direito.
+ */
 export async function excluirPropriaConta(
   db: AnyDb,
-  ator: Ator & { senhaHash: string },
-  senha: string,
+  ator: Ator & { senhaHash: string | null },
+  confirmacao: string,
   acao: "exclusao" | "revogacao",
   agora = new Date(),
 ) {
-  if (!(await verificarSenha(senha, ator.senhaHash))) throw new ErroLgpd("Senha incorreta");
+  if (ator.senhaHash) {
+    if (!(await verificarSenha(confirmacao, ator.senhaHash))) throw new ErroLgpd("Senha incorreta");
+  } else if (confirmacao.trim().toUpperCase() !== PALAVRA_EXCLUIR) {
+    throw new ErroLgpd(`Digite ${PALAVRA_EXCLUIR} para confirmar`);
+  }
   await garantirOutroAdmin(db, ator);
   await anonimizar(db, ator, ator.id, acao, agora);
 }
@@ -266,7 +293,7 @@ export async function excluirPropriaConta(
 /** Admin anonimiza um membro a pedido do titular (fica registrado quem fez e quando). */
 export async function anonimizarMembro(
   db: AnyDb,
-  ator: Ator & { senhaHash: string },
+  ator: Ator & { senhaHash: string | null },
   alvoId: number,
   senha: string,
   agora = new Date(),

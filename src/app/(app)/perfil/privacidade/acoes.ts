@@ -19,7 +19,7 @@ function voltar(chave: "ok" | "erro", msg: string): never {
 }
 
 const esquemaExclusao = z.object({
-  senha: z.string().min(1, "Informe a senha").max(200),
+  senha: z.string().min(1, "Preencha a confirmação").max(200),
   acao: z.enum(["exclusao", "revogacao"]),
 });
 
@@ -29,7 +29,7 @@ export async function excluirConta(formData: FormData) {
   const v = validar(esquemaExclusao, formData);
   if (!v.ok) voltar("erro", Object.values(v.erros)[0]);
   try {
-    await excluirPropriaConta(banco(), { ...usuario, senhaHash: usuario.senhaHash ?? "" }, v.dados.senha, v.dados.acao);
+    await excluirPropriaConta(banco(), usuario, v.dados.senha, v.dados.acao);
   } catch (e) {
     if (e instanceof ErroLgpd) voltar("erro", e.message);
     throw e;
@@ -46,7 +46,7 @@ export async function anonimizarAPedido(formData: FormData) {
   const v = validar(esquemaAdmin, formData);
   if (!v.ok) voltar("erro", Object.values(v.erros)[0]);
   try {
-    await anonimizarMembro(banco(), { ...admin, senhaHash: admin.senhaHash ?? "" }, idSeguro(formData.get("usuario")), v.dados.senha);
+    await anonimizarMembro(banco(), admin, idSeguro(formData.get("usuario")), v.dados.senha);
   } catch (e) {
     if (e instanceof ErroAcesso) redirect("/agenda");
     if (e instanceof ErroLgpd) voltar("erro", e.message);

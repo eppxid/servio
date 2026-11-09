@@ -10,6 +10,10 @@ import { SENHA_MINIMA, trocarSenha, verificarSenha } from "@/lib/auth-core";
 import { exigirUsuario, sessao } from "@/lib/auth";
 import { diasDaSemanaNoMes } from "@/lib/disponibilidade";
 import { validar } from "@/lib/validar";
+import type { AnyDb } from "@/lib/auth-core";
+import { apagarAparelhoCookie } from "@/lib/acesso/cookie";
+import { revogarAparelho } from "@/lib/acesso/nucleo";
+import { ErroAcesso } from "@/lib/ministerios/nucleo";
 
 const vazioNulo = (s: string) => (s.trim() === "" ? null : s.trim());
 const data = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida");
@@ -133,4 +137,25 @@ export async function excluirIndisponibilidade(formData: FormData) {
     );
   revalidatePath("/folgas");
   volta("ok", "Período excluído", "/folgas");
+}
+
+/** Titular remove um aparelho dele (art. 18). Remover o aparelho atual = sair. */
+export async function removerAparelho(formData: FormData) {
+  const usuario = await exigirUsuario();
+  const id = Number(formData.get("aparelho"));
+  if (!Number.isInteger(id) || id <= 0) volta("erro", "Aparelho inválido");
+  try {
+    await revogarAparelho(db() as unknown as AnyDb, usuario, id);
+  } catch (e) {
+    if (e instanceof ErroAcesso) volta("erro", "Aparelho inválido");
+    throw e;
+  }
+  const s = await sessao();
+  if (s.aparelhoId === id) {
+    await apagarAparelhoCookie();
+    s.destroy();
+    redirect("/entrar");
+  }
+  revalidatePath("/perfil");
+  volta("ok", "Aparelho removido");
 }

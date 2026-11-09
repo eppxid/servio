@@ -21,8 +21,19 @@ import {
 } from "@/lib/lgpd/titular";
 import { ErroAcesso, cadastrarPorConvite, gerarConvite, type Ator } from "@/lib/ministerios/nucleo";
 import { agendaDoUsuario } from "@/lib/trocas/nucleo";
+import {
+  decidirPedido,
+  gerarConvitePessoal,
+  hashToken,
+  pedirAcessoMesmaPessoa,
+  usarConvitePrimeiraVez,
+} from "@/lib/acesso/nucleo";
+import { PALAVRA_EXCLUIR } from "@/lib/lgpd/termos";
 
-vi.mock("@/lib/notificar", () => ({ notificar: vi.fn(async () => undefined) }));
+vi.mock("@/lib/notificar", () => ({
+  notificar: vi.fn(async () => undefined),
+  notificarUsuarios: vi.fn(async () => undefined),
+}));
 
 const AGORA = new Date("2026-11-05T12:00:00Z");
 const DIA = 24 * 60 * 60 * 1000;
@@ -194,7 +205,7 @@ describe("exclusão da conta", () => {
 
     const [b] = await db.select().from(schema.usuarios).where(eq(schema.usuarios.id, bia.id));
     expect(b.nome).toBe(NOME_REMOVIDO);
-    expect(b.email).not.toContain("bia");
+    expect(b.email).toBeNull();
     expect(b.telefone).toBeNull();
     expect(b.fotoUrl).toBeNull();
     expect(b.anonimizadoEm).toEqual(AGORA);
@@ -269,5 +280,82 @@ describe("retenção", () => {
     const tokens = (await db.select().from(schema.convites)).map((c) => c.token);
     expect(tokens).not.toContain("a".repeat(64));
     expect(tokens).toContain("b".repeat(64));
+  });
+});
+
+describe("acesso por link (LGPD)", () => {
+  async function convite(nome: string, criadoEm: Date, usado: boolean, usuarioId?: number) {
+    const [c] = await db
+      .insert(schema.convitesPessoais)
+      .values({
+        igrejaId,
+        ministerioId,
+        nome,
+        sobrenome: "Teste",
+        tokenHash: hashToken(`tk-${nome}`),
+        criadoPor: lider.id,
+        usuarioId: usuarioId ?? null,
+        expiraEm: new Date(criadoEm.getTime() + 14 * DIA),
+        usadoEm: usado ? criadoEm : null,
+        criadoEm,
+      })
+      .returning();
+    return c;
+  }
+
+  it("limpeza apaga pré-cadastro vencido, pedido velho e aparelho revogado há 30+ dias", async () => {
+    const vencido = await convite("Vencido", new Date(AGORA.getTime() - 20 * DIA), false);
+    const valido = await convite("Valido", new Date(AGORA.getTime() - 2 * DIA), false);
+    const usado = await convite("Usado", new Date(AGORA.getTime() - 60 * DIA), true, ana.id);
+    await db.insert(schema.pedidosAcesso).values([
+      { igrejaId, conviteId: vencido.id, tipo: "outra_pessoa", nome: "Pedido-do-vencido", rotulo: "x", criadoEm: new Date(AGORA.getTime() - DIA) },
+      { igrejaId, conviteId: usado.id, tipo: "outra_pessoa", nome: "Pedido-velho", rotulo: "x", status: "recusado",
+        criadoEm: new Date(AGORA.getTime() - 40 * DIA), decididoEm: new Date(AGORA.getTime() - 31 * DIA) },
+      { igrejaId, conviteId: usado.id, tipo: "outra_pessoa", nome: "Pedido-parado", rotulo: "x", criadoEm: new Date(AGORA.getTime() - 31 * DIA) },
+      { igrejaId, conviteId: usado.id, tipo: "outra_pessoa", nome: "Pedido-novo", rotulo: "x", criadoEm: new Date(AGORA.getTime() - DIA) },
+    ]);
+    await db.insert(schema.aparelhos).values([
+      { igrejaId, usuarioId: ana.id, tokenHash: hashToken("ap-velho"), rotulo: "velho", revogadoEm: new Date(AGORA.getTime() - 31 * DIA) },
+      { igrejaId, usuarioId: ana.id, tokenHash: hashToken("ap-recente"), rotulo: "recente", revogadoEm: new Date(AGORA.getTime() - DIA) },
+      { igrejaId, usuarioId: ana.id, tokenHash: hashToken("ap-ativo"), rotulo: "ativo" },
+    ]);
+
+    const r = await limparDadosAntigos(db, AGORA);
+
+    const convites = (await db.select().from(schema.convitesPessoais)).map((c) => c.id);
+    expect(convites).not.toContain(vencido.id);
+    expect(convites).toEqual(expect.arrayContaining([valido.id, usado.id]));
+    const pedidos = (await db.select().from(schema.pedidosAcesso)).map((p) => p.nome);
+    expect(pedidos).toEqual(["Pedido-novo"]);
+    const aparelhos = (await db.select().from(schema.aparelhos)).map((a) => a.rotulo).sort();
+    expect(aparelhos).toEqual(["ativo", "recente"]);
+    expect(r.convitesPessoais).toBe(1);
+    expect(r.aparelhos).toBe(1);
+  });
+
+  it("conta criada por link exclui a si mesma com EXCLUIR e leva aparelhos, link e pedidos", async () => {
+    const { token } = await gerarConvitePessoal(db, lider, { ministerioId, nome: "Caio", sobrenome: "Link" }, AGORA);
+    const r = await usarConvitePrimeiraVez(db, token, { consentimento: true, rotulo: "Android · Chrome" }, AGORA);
+    if (!r.ok) throw new Error(r.motivo);
+    const pedido = await pedirAcessoMesmaPessoa(db, token, "Windows · Edge", AGORA);
+    if (!pedido.ok) throw new Error(pedido.motivo);
+    await decidirPedido(db, lider, pedido.pedidoId, true, AGORA);
+    const caio = { id: r.usuario.id, igrejaId, papelGlobal: "voluntario" as const, senhaHash: null };
+
+    const exportado = await exportarDados(db, caio, AGORA);
+    expect(exportado.aparelhos.map((a) => a.rotulo).sort()).toEqual(["Android · Chrome", "Windows · Edge"]);
+
+    await expect(excluirPropriaConta(db, caio, "qualquer", "exclusao", AGORA)).rejects.toBeInstanceOf(ErroLgpd);
+    await excluirPropriaConta(db, caio, PALAVRA_EXCLUIR.toLowerCase(), "exclusao", AGORA);
+
+    const [u] = await db.select().from(schema.usuarios).where(eq(schema.usuarios.id, caio.id));
+    expect(u.nome).toBe(NOME_REMOVIDO);
+    expect(u.email).toBeNull();
+    expect(u.senhaHash).toBeNull();
+    expect(await db.select().from(schema.aparelhos).where(eq(schema.aparelhos.usuarioId, caio.id))).toHaveLength(0);
+    const links = await db.select().from(schema.convitesPessoais).where(eq(schema.convitesPessoais.usuarioId, caio.id));
+    expect(links).toHaveLength(0);
+    const nomes = (await db.select().from(schema.convitesPessoais)).map((c) => c.nome);
+    expect(nomes).not.toContain("Caio");
   });
 });

@@ -65,3 +65,24 @@ Dados pessoais (tabela.coluna → finalidade → exclusão):
 
 ## Rascunhos (revisão jurídica obrigatória)
 - `src/app/privacidade/page.tsx` e `src/app/termos/page.tsx`, com o marcador "RASCUNHO — revisão jurídica obrigatória antes de publicar" no topo.
+
+## Acesso por link (08/11/2026)
+Spec: `ESPECS/2026-11-08-acesso-por-link.md`. Leitura técnica, não parecer jurídico.
+
+| Regra | Status | Onde |
+|---|---|---|
+| 1. Pré-cadastro mínimo (só nome, sobrenome, ministério); conta só nasce após o aceite | Feito | `usarConvitePrimeiraVez`; limpeza apaga convite não usado na expiração (14 dias) |
+| 2. Consentimento destacado (art. 11 I) no 1º uso | Feito | `/acesso/<token>` com `CampoConsentimento` |
+| 3. Cookie `servio_aparelho` estritamente necessário (Guia de Cookies ANPD), declarado na política | Feito | `/privacidade` seção 2 |
+| 4. Sem MAC, sem fingerprint, sem IP | Feito | Só token aleatório em hash + rótulo do user agent |
+| 5. Pedidos de acesso apagados em 30 dias | Feito | `limparDadosAntigos` |
+| 6. Titular vê e remove aparelhos (art. 18); exclusão de conta apaga aparelhos, link e pedidos; exportação inclui aparelhos | Feito | Perfil → Meus aparelhos; `titular.ts`. Conta sem senha confirma a exclusão digitando EXCLUIR |
+| 7. Mensagem do WhatsApp sem igreja nem ministério | Feito | `CompartilharConvite.tsx` |
+| 8. Tokens em hash; limites de pedidos; aparelho novo só com o líder | Feito | `src/lib/acesso/nucleo.ts` |
+| 9. Textos legais atualizados; `TERMOS_VERSAO` = 2026-11-08 (novo aceite) | Feito (RASCUNHO) | `/privacidade`, `/termos` |
+| 10. Marco Civil art. 15 (guarda de registro de acesso por 6 meses) | Para o advogado | Leitura: vale para provedor com fim econômico; o Servio é gratuito e não guarda IP |
+
+Para o advogado:
+- Base legal do pré-cadastro: o líder digita o nome (dado que, junto do ministério, revela convicção religiosa) antes do aceite da pessoa.
+- Voluntários menores de idade (art. 14): o link permite cadastro sem verificar idade nem autorização do responsável.
+- Envio do link pelo WhatsApp (Meta, fora do Brasil — art. 33): ato do líder; a mensagem não cita a igreja.

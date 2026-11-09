@@ -26,9 +26,14 @@ export default function Termos() {
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">2. Sua conta</h2>
         <ul className="list-disc space-y-1 pl-5">
-          <li>Use dados verdadeiros e uma senha só sua, com 8 caracteres ou mais.</li>
+          <li>Você entra pelo link de acesso pessoal que o líder envia. O link é só seu: não repasse.</li>
+          <li>
+            Se o link for aberto num aparelho novo, o portal pergunta se é você e o líder confirma. Quem não é a pessoa do
+            link pode pedir um convite próprio ao líder.
+          </li>
+          <li>Administradores e contas antigas entram com e-mail e uma senha só sua, com 8 caracteres ou mais.</li>
           <li>Não compartilhe a senha nem o link do calendário (.ics).</li>
-          <li>Avise o líder se perceber acesso que não foi você.</li>
+          <li>Avise o líder se perceber acesso que não foi você. Você pode remover aparelhos em Perfil → Meus aparelhos.</li>
         </ul>
       </section>
 
