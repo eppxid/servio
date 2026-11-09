@@ -57,6 +57,8 @@ export default async function Entrar({
           Conta excluída. Seus dados pessoais foram apagados.
         </p>
       )}
+      <p className="text-sm text-muted">Recebeu um link do líder? Abra o link para entrar.</p>
+      <h2 className="text-base font-medium">Entrar com e-mail e senha (administradores e contas antigas)</h2>
       <form action={entrar} className="space-y-4">
         <label className="rotulo">
           E-mail

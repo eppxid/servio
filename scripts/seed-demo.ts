@@ -8,6 +8,7 @@
 import { fromZonedTime } from "date-fns-tz";
 import { db } from "../src/db";
 import {
+  convitesPessoais,
   escalaItens,
   escalas,
   eventos,
@@ -21,7 +22,9 @@ import {
   vagasModelo,
 } from "../src/db/schema";
 import { repertorioItens } from "../src/db/schema-repertorio";
+import { hashToken } from "../src/lib/acesso/nucleo";
 import { hashSenha } from "../src/lib/auth-core";
+import { novoToken } from "../src/lib/ministerios/nucleo";
 import { TERMOS_VERSAO } from "../src/lib/lgpd/termos";
 import { FUSO } from "../src/lib/recorrencia";
 
@@ -91,6 +94,18 @@ async function main() {
   }
   const L = await ministerio("Louvor", liderLouvor, ["Vocal", "Violão", "Teclado", "Bateria"], louvor);
   const M = await ministerio("Mídia", liderMidia, ["Câmera", "Projeção"], midia);
+
+  // Convite pessoal pendente (ainda não usado), para demonstrar o acesso por link.
+  const tokenConvite = novoToken();
+  await banco.insert(convitesPessoais).values({
+    igrejaId: igreja.id,
+    ministerioId: L.m.id,
+    nome: "Davi",
+    sobrenome: "Convidado",
+    tokenHash: hashToken(tokenConvite),
+    criadoPor: liderLouvor.id,
+    expiraEm: new Date(Date.now() + 14 * DIA),
+  });
 
   // Tipos de culto (domingo 10h, quarta 20h) com 1 vaga por função de cada ministério.
   const tipos = [
@@ -183,6 +198,7 @@ async function main() {
 
   console.log(`Demonstração criada: ${dados.length} eventos, 11 pessoas. Senha de todos: ${SENHA}`);
   console.log("Admin: admin@demo.local · Líder: marta@demo.local · Voluntário: ana@demo.local");
+  console.log(`Convite pessoal pendente (Davi Convidado): /acesso/${tokenConvite}`);
   process.exit(0);
 }
 
