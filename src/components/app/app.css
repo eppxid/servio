@@ -9,7 +9,8 @@
   :root { --tab-h: 64px; --cta-h: 56px; }
 
   /* ---------- Topo ---------- */
-  .top__avatar { width: 36px; height: 36px; font-size: var(--fs-2xs); text-decoration: none; }
+  .top__link { display: inline-flex; border-radius: 50%; text-decoration: none; }
+  .top__avatar { width: 36px; height: 36px; font-size: var(--fs-2xs); }
   .top__end form { display: contents; }
 
   /* Chave de modo (voluntário / líder) */

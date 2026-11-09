@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { headers } from "next/headers";
+import { Avatar } from "@/components/Avatar";
 import { Cabecalho } from "@/components/Cabecalho";
 import { IconeApp } from "@/components/app/icones";
 import { db } from "@/db";
 import { lerConvitePessoal, listarAparelhos, listarPedidosPendentes, type PapelConvite } from "@/lib/acesso/nucleo";
 import { SENHA_MINIMA, type AnyDb } from "@/lib/auth-core";
+import { versoesDeFoto } from "@/lib/foto/nucleo";
 import { ministeriosDoLider } from "@/lib/escala/nucleo";
 import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
 import {
@@ -19,7 +21,6 @@ import {
   recusarFuncaoDesejada,
   renomearFuncaoAcao,
 } from "./actions";
-import { iniciais } from "./Avatar";
 import { CompartilharConvite } from "./CompartilharConvite";
 import { carregarEquipe } from "./dados";
 import estilo from "./equipe.module.css";
@@ -76,6 +77,7 @@ export default async function Equipe({
     }
   }
   const pedidosAcesso = equipe && escolhido && aba === "membros" ? await listarPedidosPendentes(banco, usuario, admin ? undefined : escolhido.id) : [];
+  const fotosDono = await versoesDeFoto(banco, pedidosAcesso.flatMap((p) => (p.donoId ? [p.donoId] : [])));
   const aparelhosDe = new Map<number, Awaited<ReturnType<typeof listarAparelhos>>>();
   if (equipe && aba === "membros") {
     for (const m of equipe.membros) aparelhosDe.set(m.usuarioId, await listarAparelhos(banco, m.usuarioId));
@@ -147,7 +149,7 @@ export default async function Equipe({
             {equipe.pedidos.map((p) => (
               <div key={p.membroId} className={estilo.pedido}>
                 <div className={estilo.quem}>
-                  <span className="avatar">{iniciais(p.nome)}</span>
+                  <Avatar nome={p.nome} usuarioId={p.usuarioId} fotoVersao={p.fotoVersao} />
                   <div>
                     <b>{p.nome}</b>
                     <span>{p.status === "pendente" ? "Quer entrar no ministério" : "Pediu novas funções"}</span>
@@ -232,7 +234,7 @@ export default async function Equipe({
                 return (
                   <div key={p.id} className={estilo.pedido}>
                     <div className={estilo.quem}>
-                      <span className="avatar">{iniciais(mesma ? dono : pedinte)}</span>
+                      <Avatar nome={mesma ? dono : pedinte} usuarioId={mesma ? p.donoId : null} fotoVersao={mesma && p.donoId ? fotosDono.get(p.donoId) : undefined} />
                       <div>
                         <b>
                           {mesma ? `Aparelho novo para ${dono}` : pedinte}
@@ -312,6 +314,7 @@ export default async function Equipe({
               membros={equipe.membros.map((x) => ({
                 id: x.id,
                 usuarioId: x.usuarioId,
+                fotoVersao: x.fotoVersao,
                 nome: x.nome,
                 papel: x.papel,
                 papelGlobal: x.papelGlobal,

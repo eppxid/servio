@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Avatar } from "@/components/Avatar";
 import { FolhaInferior } from "@/components/app/FolhaInferior";
 import { alterarPapel, definirAdminAcao, gerarLinkDoMembroAcao, revogarAparelhoAcao, salvarFuncoesDoMembro, senhaTemporariaAcao, tirarDoMinisterio } from "./actions";
-import { iniciais } from "./Avatar";
 import estilo from "./equipe.module.css";
 import { FormConfirmar } from "./FormConfirmar";
 import { SeloPapel } from "./SeloPapel";
@@ -11,6 +11,7 @@ import { SeloPapel } from "./SeloPapel";
 export interface MembroLinha {
   id: number;
   usuarioId: number;
+  fotoVersao?: number;
   nome: string;
   papel: "lider" | "voluntario";
   papelGlobal: "admin" | "lider" | "voluntario";
@@ -49,7 +50,7 @@ export function ListaMembros({
       <div className="list">
         {membros.map((m) => (
           <button key={m.id} type="button" className={`row ${estilo.linha}`} onClick={() => setAbertoId(m.id)}>
-            <span className="avatar">{iniciais(m.nome)}</span>
+            <Avatar nome={m.nome} usuarioId={m.usuarioId} fotoVersao={m.fotoVersao} />
             <span className="row__tx">
               <b>
                 {m.nome}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
+import { Avatar } from "@/components/Avatar";
 import { FolhaInferior } from "@/components/app/FolhaInferior";
 import { IconeApp } from "@/components/app/icones";
 import type { Resultado } from "../acoes";
@@ -17,19 +18,10 @@ const STATUS = {
 const CORES = ["var(--primary)", "#b4549a", "var(--good)", "var(--warn)"];
 const SEGUNDOS_DO_AVISO = 8;
 
-function iniciais(nome: string) {
-  const p = nome.trim().split(/\s+/);
-  return ((p[0]?.[0] ?? "") + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
-}
-
 const corDe = (usuarioId: number) => CORES[usuarioId % CORES.length];
 
-function Avatar({ usuarioId, nome, classe }: { usuarioId: number; nome: string; classe?: string }) {
-  return (
-    <span className={`avatar ${classe ?? ""}`} style={{ "--c": corDe(usuarioId) } as React.CSSProperties} aria-hidden="true">
-      {iniciais(nome)}
-    </span>
-  );
+function Pessoa({ usuarioId, nome, fotos, classe }: { usuarioId: number; nome: string; fotos: Record<number, number>; classe?: string }) {
+  return <Avatar nome={nome} usuarioId={usuarioId} fotoVersao={fotos[usuarioId]} cor={corDe(usuarioId)} className={classe} />;
 }
 
 const MOTIVO_FORA = { indisponivel: "De folga neste dia", conflito: "Em outro culto no mesmo horário" } as const;
@@ -53,6 +45,7 @@ export function VagasMinisterio({
   eventoId,
   quando,
   ministerio,
+  fotos,
   fixo,
   escolher,
   desfazer,
@@ -62,6 +55,8 @@ export function VagasMinisterio({
   eventoId: number;
   quando: string;
   ministerio: MinisterioCulto;
+  /** usuarioId → versão da foto (uma consulta para a tela toda). */
+  fotos: Record<number, number>;
   /** Único ministério na tela: o Publicar fica fixo no rodapé; senão, dentro do cartão. */
   fixo: boolean;
   escolher: (eventoId: number, itemId: number, usuarioId: number | null) => Promise<Resultado>;
@@ -227,7 +222,7 @@ export function VagasMinisterio({
                   aria-label={`${nome}, ${f.nome}: ${st.texto}. Abrir ações`}
                   onClick={() => setAcoes({ funcao: f, vaga: v })}
                 >
-                  <Avatar usuarioId={v.usuarioId} nome={nome} classe={s.slot__avatar} />
+                  <Pessoa usuarioId={v.usuarioId} nome={nome} fotos={fotos} classe={s.slot__avatar} />
                   <span className={s.slot__tx}>
                     <b>{nome}</b>
                     <span>{st.texto}</span>
@@ -312,7 +307,7 @@ export function VagasMinisterio({
               aria-label={`Escolher ${c.nome}`}
               onClick={() => escolhendo && gravar(escolhendo.vaga.itemId, c.usuarioId)}
             >
-              <Avatar usuarioId={c.usuarioId} nome={c.nome} />
+              <Pessoa usuarioId={c.usuarioId} nome={c.nome} fotos={fotos} />
               <span className="row__tx">
                 <b>{c.nome}</b>
                 <span>
@@ -329,7 +324,7 @@ export function VagasMinisterio({
             <p className={s.fora}>Fora da lista</p>
             {livres.fora.map((c: CandidatoCulto) => (
               <div key={c.usuarioId} className={`row ${s.opcao__fora}`}>
-                <Avatar usuarioId={c.usuarioId} nome={c.nome} />
+                <Pessoa usuarioId={c.usuarioId} nome={c.nome} fotos={fotos} />
                 <span className="row__tx">
                   <b>{c.nome}</b>
                   <span>{MOTIVO_FORA[c.bloqueio as keyof typeof MOTIVO_FORA]}</span>

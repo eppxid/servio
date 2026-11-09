@@ -3,6 +3,7 @@ import { db } from "@/db";
 import * as t from "@/db/schema";
 import type { AnyDb } from "@/lib/auth-core";
 import { limitesDoMes } from "@/lib/escala/nucleo";
+import { versoesDeFoto } from "@/lib/foto/nucleo";
 import { detalheMinisterio, type Ator } from "@/lib/ministerios/nucleo";
 import { pedidosPendentes, recomendacoes } from "@/lib/servir/nucleo";
 
@@ -23,7 +24,7 @@ export async function carregarEquipe(ator: Ator, ministerioId: number) {
     recomendacoes(banco, ator, ministerioId),
   ]);
   const { de, ate } = limitesDoMes(mesAtual());
-  const ids = detalhe.membros.map((m) => m.id);
+  const ids = [...new Set([...detalhe.membros.map((m) => m.id), ...pedidos.map((p) => p.membroId)])];
   const usuarios = await banco
     .select({ membroId: t.membrosMinisterio.id, usuarioId: t.membrosMinisterio.usuarioId })
     .from(t.membrosMinisterio)
@@ -43,6 +44,7 @@ export async function carregarEquipe(ator: Ator, ministerioId: number) {
       ),
     )
     .groupBy(t.escalaItens.usuarioId);
+  const fotos = await versoesDeFoto(banco, [...new Set(usuarios.map((u) => u.usuarioId))]);
   const membros = detalhe.membros
     .filter((m) => m.status === "aprovado")
     .map((m) => {
@@ -50,6 +52,7 @@ export async function carregarEquipe(ator: Ator, ministerioId: number) {
       return {
         ...m,
         usuarioId,
+        fotoVersao: fotos.get(usuarioId),
         escalasNoMes: contagens.find((c) => c.usuarioId === usuarioId)?.total ?? 0,
       };
     });
@@ -57,7 +60,10 @@ export async function carregarEquipe(ator: Ator, ministerioId: number) {
     ministerio: detalhe.ministerio,
     funcoes: detalhe.funcoes,
     membros,
-    pedidos,
+    pedidos: pedidos.map((p) => {
+      const usuarioId = usuarios.find((u) => u.membroId === p.membroId)?.usuarioId;
+      return { ...p, usuarioId, fotoVersao: usuarioId === undefined ? undefined : fotos.get(usuarioId) };
+    }),
     recomendacoes: recs.filter((r) => r.desejam > 0),
   };
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Avatar } from "../Avatar";
 import { Abas } from "../abas";
 import { Marca } from "../Marca";
 import { definirModo } from "./modo";
@@ -11,11 +12,15 @@ import { INICIO_DO_MODO, modoDoCaminho, type Modo } from "./modo-comum";
 export function Casca({
   ehLider,
   modoSalvo,
-  iniciais,
+  nome,
+  usuarioId,
+  fotoVersao,
 }: {
   ehLider: boolean;
   modoSalvo: Modo;
-  iniciais: string;
+  nome: string;
+  usuarioId: number;
+  fotoVersao?: number;
 }) {
   const caminho = usePathname();
   const modo = modoDoCaminho(caminho, modoSalvo, ehLider);
@@ -36,8 +41,8 @@ export function Casca({
               </button>
             </form>
           )}
-          <Link href="/perfil" className="avatar top__avatar" aria-label="Perfil">
-            {iniciais}
+          <Link href="/perfil" className="top__link" aria-label="Perfil">
+            <Avatar nome={nome} usuarioId={usuarioId} fotoVersao={fotoVersao} className="top__avatar" />
           </Link>
         </div>
       </header>

@@ -6,25 +6,25 @@ import { db } from "@/db";
 import { exigirUsuario } from "@/lib/auth";
 import type { AnyDb } from "@/lib/auth-core";
 import { ministeriosDoLider } from "@/lib/escala/nucleo";
+import { versoesDeFoto } from "@/lib/foto/nucleo";
 
 export const dynamic = "force-dynamic";
-
-function iniciais(nome: string) {
-  const p = nome.trim().split(/\s+/);
-  return ((p[0]?.[0] ?? "") + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
-}
 
 export default async function LayoutApp({ children }: { children: React.ReactNode }) {
   const usuario = await exigirUsuario();
   // Modo líder: administradores e líderes de algum ministério (mesma regra do painel).
-  const ehLider = (await ministeriosDoLider(db() as unknown as AnyDb, usuario)).length > 0;
+  const banco = db() as unknown as AnyDb;
+  const [meus, fotos] = await Promise.all([ministeriosDoLider(banco, usuario), versoesDeFoto(banco, [usuario.id])]);
+  const ehLider = meus.length > 0;
   const modoSalvo = lerModo((await cookies()).get(COOKIE_MODO)?.value);
   return (
     <div className="app">
       <Casca
         ehLider={ehLider}
         modoSalvo={modoSalvo}
-        iniciais={iniciais(usuario.nome)}
+        nome={usuario.nome}
+        usuarioId={usuario.id}
+        fotoVersao={fotos.get(usuario.id)}
       />
       <main className="main">{children}</main>
     </div>

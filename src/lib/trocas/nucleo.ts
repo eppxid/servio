@@ -81,7 +81,7 @@ export async function agendaDoUsuario(db: AnyDb, ator: Ator, agora = new Date())
   if (vivas.length === 0) return [];
 
   const colegas = await db
-    .select({ escalaId: t.escalaItens.escalaId, nome: t.usuarios.nome, funcao: t.funcoes.nome })
+    .select({ escalaId: t.escalaItens.escalaId, usuarioId: t.usuarios.id, nome: t.usuarios.nome, funcao: t.funcoes.nome })
     .from(t.escalaItens)
     .innerJoin(t.usuarios, eq(t.usuarios.id, t.escalaItens.usuarioId))
     .innerJoin(t.funcoes, eq(t.funcoes.id, t.escalaItens.funcaoId))

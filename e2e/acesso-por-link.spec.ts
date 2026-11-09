@@ -103,7 +103,7 @@ test("acesso por link de ponta a ponta: convite, aparelho novo, outra pessoa, re
   await c.getByLabel("Nome", { exact: true }).fill("Davi");
   await c.getByLabel("Sobrenome").fill("Gama");
   await c.getByRole("button", { name: /Pedir/ }).click();
-  await expect(c.getByText("Pedido enviado ao líder")).toBeVisible();
+  await expect(c.getByRole("heading", { name: "Pedido enviado ao líder" })).toBeVisible();
 
   // 6. Navegador interno do WhatsApp: aviso para abrir no Chrome, sem formulário.
   const zap = await aparelho(browser, UA_WHATSAPP);

@@ -176,7 +176,7 @@ test("líder gere a equipe inteira na aba Equipe; admin cria e arquiva ministér
   await outra.getByLabel("Nome", { exact: true }).fill("Davi");
   await outra.getByLabel("Sobrenome").fill("Gama");
   await outra.getByRole("button", { name: /Pedir/ }).click();
-  await expect(outra.getByText("Pedido enviado ao líder")).toBeVisible();
+  await expect(outra.getByRole("heading", { name: "Pedido enviado ao líder" })).toBeVisible();
 
   await admin.goto(`/lider/equipe?ministerio=${idMinisterio}&aba=membros`);
   await expect(admin.getByText("Aparelho novo para Carla Beta")).toBeVisible();

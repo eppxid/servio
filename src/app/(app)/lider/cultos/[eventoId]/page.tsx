@@ -4,6 +4,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { IconeApp, type NomeIcone } from "@/components/app/icones";
 import { db } from "@/db";
 import type { AnyDb } from "@/lib/auth-core";
+import { versoesDeFoto } from "@/lib/foto/nucleo";
 import { ErroAcesso } from "@/lib/ministerios/nucleo";
 import { exigirUsuarioSemTroca, idSeguro } from "@/lib/ministerios/sessao";
 import { FUSO } from "@/lib/recorrencia";
@@ -59,6 +60,10 @@ export default async function Culto({
     if (erro instanceof ErroAcesso) notFound();
     throw erro;
   }
+  const idsDePessoas = d.ministerios.flatMap((m) =>
+    m.funcoes.flatMap((f) => [...f.vagas.flatMap((v) => (v.usuarioId === null ? [] : [v.usuarioId])), ...f.candidatos.map((c) => c.usuarioId)]),
+  );
+  const fotos = Object.fromEntries(await versoesDeFoto(banco, [...new Set(idsDePessoas)]));
   const semVagas = d.ministerios.filter((m) => m.funcoes.length === 0);
   const tipos = semVagas.length > 0 ? await tiposDeCulto(banco, ator) : [];
   const soma = await somaVagasPorTipo(banco, ator, semVagas.map((m) => m.id));
@@ -110,6 +115,7 @@ export default async function Culto({
               eventoId={d.evento.id}
               quando={quando}
               ministerio={m}
+              fotos={fotos}
               fixo={fixo}
               escolher={escolherPessoaAcao}
               desfazer={desfazerRemocaoAcao}

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { formatInTimeZone } from "date-fns-tz";
 import { ptBR } from "date-fns/locale";
+import { Avatar } from "@/components/Avatar";
 import { Cabecalho } from "@/components/Cabecalho";
 import { IconeApp } from "@/components/app/icones";
 import { db } from "@/db";
 import type { AnyDb } from "@/lib/auth-core";
 import { exigirUsuarioSemTroca } from "@/lib/ministerios/sessao";
+import { versoesDeFoto } from "@/lib/foto/nucleo";
 import { FUSO } from "@/lib/recorrencia";
 import { contagemPorEscala, linksDeRepertorio } from "@/lib/repertorio/nucleo";
 import { agendaDoUsuario, trocasParaMim } from "@/lib/trocas/nucleo";
@@ -47,16 +49,10 @@ export default async function Inicio({
   const diasAte = (d: Date) =>
     Math.round((Date.parse(`${diaIso(d)}T12:00:00Z`) - Date.parse(`${diaIso(new Date())}T12:00:00Z`)) / 86_400_000);
   const quandoFaltam = (n: number) => (n <= 0 ? "Hoje" : n === 1 ? "Amanhã" : `Daqui a ${n} dias`);
-  const iniciais = (nome: string) =>
-    nome
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((p) => p.charAt(0).toUpperCase())
-      .join("");
   const listaDeNomes = (nomes: string[]) =>
     nomes.length <= 1 ? nomes.join("") : `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}`;
 
+  const fotos = await versoesDeFoto(banco, proxima ? proxima.colegas.slice(0, 3).map((c) => c.usuarioId) : []);
   const link = proxima ? links.get(proxima.escalaId) : undefined;
   const musicas = proxima ? (contagens.get(proxima.escalaId) ?? 0) : 0;
 
@@ -129,7 +125,7 @@ export default async function Inicio({
             <div className={css.equipe}>
               <span className={css.rostos} aria-hidden="true">
                 {proxima.colegas.slice(0, 3).map((c, n) => (
-                  <span key={n}>{iniciais(c.nome)}</span>
+                  <Avatar key={n} nome={c.nome} usuarioId={c.usuarioId} fotoVersao={fotos.get(c.usuarioId)} />
                 ))}
               </span>
               <span>Com {listaDeNomes(proxima.colegas.map((c) => c.nome.split(" ")[0]))}</span>
