@@ -17,7 +17,9 @@ export function hashSenha(senha: string): Promise<string> {
   return bcrypt.hash(senha, CUSTO_BCRYPT);
 }
 
-export function verificarSenha(senha: string, hash: string): Promise<boolean> {
+/** Conta criada por link pessoal não tem senha: nunca confere. */
+export function verificarSenha(senha: string, hash: string | null): Promise<boolean> {
+  if (!hash) return Promise.resolve(false);
   return bcrypt.compare(senha, hash);
 }
 

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import * as t from "@/db/schema";
 import type { AnyDb } from "@/lib/auth-core";
-import { enviarParaUsuarios } from "@/lib/push/enviar";
+import { enviarParaUsuarios, type PayloadPush } from "@/lib/push/enviar";
 import { montarPayload, type TipoAviso } from "@/lib/push/mensagens";
 import { enviadorWebPush } from "@/lib/push/web";
 
@@ -29,5 +29,20 @@ export async function notificar(n: Notificacao): Promise<void> {
     await enviarParaUsuarios(banco, evento.igrejaId, n.usuarioIds, montarPayload(n.tipo, evento), enviar);
   } catch (e) {
     console.error("notificar: falha", (e as Error)?.message);
+  }
+}
+
+/** Aviso sem evento (ex.: pedido de acesso por aparelho). Nunca lança, como `notificar`. */
+export async function notificarUsuarios(
+  igrejaId: number,
+  usuarioIds: number[],
+  payload: PayloadPush,
+): Promise<void> {
+  try {
+    const enviar = enviadorWebPush();
+    if (!enviar || usuarioIds.length === 0) return;
+    await enviarParaUsuarios(db() as unknown as AnyDb, igrejaId, usuarioIds, payload, enviar);
+  } catch (e) {
+    console.error("notificarUsuarios: falha", (e as Error)?.message);
   }
 }

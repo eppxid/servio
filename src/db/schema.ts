@@ -36,10 +36,10 @@ export const usuarios = pgTable(
     id: serial("id").primaryKey(),
     igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
     nome: text("nome").notNull(),
-    email: text("email").notNull(),
+    email: text("email"),
     telefone: text("telefone"),
     fotoUrl: text("foto_url"),
-    senhaHash: text("senha_hash").notNull(),
+    senhaHash: text("senha_hash"),
     papelGlobal: papelGlobal("papel_global").notNull().default("voluntario"),
     sessaoVersao: integer("sessao_versao").notNull().default(1),
     consentimentoEm: ts("consentimento_em"),
@@ -218,4 +218,62 @@ export const tentativasLogin = pgTable(
     criadoEm: ts("criado_em").notNull().defaultNow(),
   },
   (t) => [index("tentativas_login_email").on(t.emailHash, t.criadoEm)],
+);
+
+export const tipoPedidoAcesso = pgEnum("tipo_pedido_acesso", ["mesma_pessoa", "outra_pessoa"]);
+export const statusPedidoAcesso = pgEnum("status_pedido_acesso", [
+  "pendente",
+  "aprovado",
+  "recusado",
+  "atendido",
+]);
+
+/** Link pessoal: o banco guarda só o hash do token (LGPD art. 46). */
+export const convitesPessoais = pgTable("convites_pessoais", {
+  id: serial("id").primaryKey(),
+  igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
+  ministerioId: integer("ministerio_id").notNull().references(() => ministerios.id),
+  nome: text("nome").notNull(),
+  sobrenome: text("sobrenome").notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  criadoPor: integer("criado_por").notNull().references(() => usuarios.id),
+  usuarioId: integer("usuario_id").references(() => usuarios.id),
+  expiraEm: ts("expira_em").notNull(),
+  usadoEm: ts("usado_em"),
+  revogadoEm: ts("revogado_em"),
+  criadoEm: ts("criado_em").notNull().defaultNow(),
+});
+
+export const aparelhos = pgTable(
+  "aparelhos",
+  {
+    id: serial("id").primaryKey(),
+    igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
+    usuarioId: integer("usuario_id").notNull().references(() => usuarios.id),
+    tokenHash: text("token_hash").notNull().unique(),
+    rotulo: text("rotulo").notNull(),
+    criadoEm: ts("criado_em").notNull().defaultNow(),
+    ultimoUsoEm: ts("ultimo_uso_em"),
+    revogadoEm: ts("revogado_em"),
+  },
+  (t) => [index("aparelhos_usuario").on(t.usuarioId)],
+);
+
+export const pedidosAcesso = pgTable(
+  "pedidos_acesso",
+  {
+    id: serial("id").primaryKey(),
+    igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
+    conviteId: integer("convite_id").notNull().references(() => convitesPessoais.id),
+    tipo: tipoPedidoAcesso("tipo").notNull(),
+    nome: text("nome"),
+    sobrenome: text("sobrenome"),
+    aparelhoTokenHash: text("aparelho_token_hash"),
+    rotulo: text("rotulo").notNull(),
+    status: statusPedidoAcesso("status").notNull().default("pendente"),
+    decididoPor: integer("decidido_por").references(() => usuarios.id),
+    criadoEm: ts("criado_em").notNull().defaultNow(),
+    decididoEm: ts("decidido_em"),
+  },
+  (t) => [index("pedidos_acesso_convite").on(t.conviteId, t.status)],
 );
