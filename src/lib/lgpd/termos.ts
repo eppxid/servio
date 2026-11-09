@@ -1,5 +1,5 @@
 /** Versão da política e dos termos. Mudar este valor pede novo aceite no próximo login. */
-export const TERMOS_VERSAO = "2026-11-05";
+export const TERMOS_VERSAO = "2026-11-08";
 
 export const TEXTO_CONSENTIMENTO =
   "Autorizo a igreja a tratar meus dados, inclusive o vínculo religioso, para organizar as escalas.";
@@ -7,7 +7,18 @@ export const TEXTO_CONSENTIMENTO =
 export const AVISO_RASCUNHO = "RASCUNHO — revisão jurídica obrigatória antes de publicar";
 
 /** Prazos de retenção (dias). */
-export const RETENCAO = { mensagensDias: 180, indisponibilidadesDias: 90, tentativasLoginDias: 1 } as const;
+export const RETENCAO = {
+  mensagensDias: 180,
+  indisponibilidadesDias: 90,
+  tentativasLoginDias: 1,
+  /** Pedido de acesso (nome digitado + rótulo do aparelho): 30 dias após a decisão, ou 30 dias pendente. */
+  pedidosAcessoDias: 30,
+  /** Aparelho revogado some 30 dias depois. */
+  aparelhosRevogadosDias: 30,
+} as const;
+
+/** Palavra que confirma a exclusão de conta sem senha (conta criada pelo link pessoal). */
+export const PALAVRA_EXCLUIR = "EXCLUIR";
 
 /** Dados da controladora vindos do ambiente; vazio = "a informar" (nunca inventar valor). */
 export function dadosIgreja() {

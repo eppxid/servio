@@ -27,7 +27,20 @@ export default function Privacidade() {
         <h2 className="text-lg font-semibold">2. Dados que coletamos e para quê</h2>
         <ul className="list-disc space-y-1 pl-5">
           <li>Nome: identificar você na escala, no chat e no reconhecimento.</li>
-          <li>E-mail e senha (guardada só como hash bcrypt): entrar no portal.</li>
+          <li>
+            Nome e sobrenome digitados pelo líder no convite: gerar o seu link de acesso pessoal. Antes de você abrir o
+            link e autorizar, só isso fica guardado; se o link não for usado em 14 dias, o convite é apagado.
+          </li>
+          <li>
+            Aparelhos em que você entrou (só um nome como &quot;Android · Chrome&quot;, a data do último uso e um código
+            aleatório guardado em hash): reconhecer você sem senha. Não coletamos MAC, IP nem &quot;impressão digital&quot; do
+            navegador.
+          </li>
+          <li>
+            Pedidos de acesso (nome digitado e o nome do aparelho): quando o link é aberto num aparelho novo, o líder
+            confirma se é você.
+          </li>
+          <li>E-mail e senha (guardada só como hash bcrypt), só para administradores e contas antigas: entrar no portal.</li>
           <li>Telefone (opcional): o líder do ministério fala com você sobre a escala.</li>
           <li>Ministérios, funções e escalas: montar a escala e enviar lembretes.</li>
           <li>Datas em que você não pode servir e o motivo (opcional): evitar escalar você nessas datas.</li>
@@ -36,7 +49,15 @@ export default function Privacidade() {
           <li>Inscrição de aviso no aparelho (Web Push): enviar lembretes da escala.</li>
           <li>Registro de tentativas de login (e-mail em hash): proteger a conta contra ataque de senha.</li>
         </ul>
-        <p>Não usamos Google Analytics, pixel nem rastreamento. O único cookie é o de sessão, necessário para o login.</p>
+        <p>
+          Não usamos Google Analytics, pixel nem rastreamento. Usamos só dois cookies, os dois necessários para o login
+          e por isso sem banner de cookies: o de sessão (30 dias) e o do aparelho (<code>servio_aparelho</code>, 400
+          dias), que guarda o código aleatório do aparelho. Ao tocar em Sair, o aparelho é removido e o cookie apagado.
+        </p>
+        <p>
+          O convite chega a você por uma mensagem que o líder envia, por exemplo pelo WhatsApp. A mensagem traz só o seu
+          nome e o link, sem o nome da igreja nem do ministério.
+        </p>
       </section>
 
       <section className="space-y-2">
@@ -53,6 +74,7 @@ export default function Privacidade() {
         <ul className="list-disc space-y-1 pl-5">
           <li>Colegas de escala veem só o seu nome.</li>
           <li>O líder do ministério e o administrador veem também o seu e-mail e o seu telefone.</li>
+          <li>O líder do ministério e o administrador veem os nomes dos seus aparelhos e a data do último uso, para aprovar ou remover acessos.</li>
           <li>O motivo da indisponibilidade só você vê; o líder vê apenas &quot;indisponível&quot;.</li>
           <li>No ranking do ministério você aparece só se deixar a opção ligada no perfil.</li>
         </ul>
@@ -74,9 +96,11 @@ export default function Privacidade() {
           <li>Mensagens do chat: apagadas {RETENCAO.mensagensDias} dias depois do evento.</li>
           <li>Datas em que você não pode servir: apagadas {RETENCAO.indisponibilidadesDias} dias depois de passarem.</li>
           <li>Tentativas de login: apagadas depois de {RETENCAO.tentativasLoginDias} dia.</li>
-          <li>Convites: apagados quando expiram.</li>
+          <li>Convites: apagados quando expiram (o link pessoal não usado, em 14 dias).</li>
+          <li>Pedidos de acesso: apagados {RETENCAO.pedidosAcessoDias} dias depois da decisão do líder (ou {RETENCAO.pedidosAcessoDias} dias sem decisão).</li>
+          <li>Aparelhos removidos: apagados {RETENCAO.aparelhosRevogadosDias} dias depois da remoção.</li>
           <li>
-            Conta excluída: nome, e-mail, telefone e o link de foto de cadastros antigos são apagados. A presença nas escalas passadas fica sem
+            Conta excluída: nome, e-mail, telefone, aparelhos, o link pessoal e o link de foto de cadastros antigos são apagados. A presença nas escalas passadas fica sem
             identificação, só para os números do ministério.
           </li>
         </ul>
@@ -95,7 +119,8 @@ export default function Privacidade() {
         </ul>
         <p>
           No portal, abra <strong>Perfil → Privacidade e meus dados</strong> para baixar seus dados, excluir a conta ou
-          revogar o consentimento. Para qualquer outro pedido, escreva para o encarregado.
+          revogar o consentimento. Em <strong>Perfil → Meus aparelhos</strong> você vê e remove os aparelhos ligados à
+          sua conta. Para qualquer outro pedido, escreva para o encarregado.
         </p>
       </section>
 
