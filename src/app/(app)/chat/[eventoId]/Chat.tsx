@@ -33,8 +33,18 @@ export function Chat({ eventoId, usuarioId, lider }: { eventoId: number; usuario
 
   useEffect(() => {
     void buscar();
-    const timer = setInterval(() => void buscar(), 5000);
-    return () => clearInterval(timer);
+    // Aba escondida não consulta; ao voltar, busca na hora.
+    const timer = setInterval(() => {
+      if (!document.hidden) void buscar();
+    }, 5000);
+    const aoVoltar = () => {
+      if (!document.hidden) void buscar();
+    };
+    document.addEventListener("visibilitychange", aoVoltar);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", aoVoltar);
+    };
   }, [buscar]);
 
   async function enviar(e: React.FormEvent) {

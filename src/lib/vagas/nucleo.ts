@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, gte, inArray, isNull, lt } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import * as t from "@/db/schema";
 import { temPapel, type AnyDb } from "@/lib/auth-core";
 import { ErroEscala } from "@/lib/escala/nucleo";
@@ -62,31 +62,36 @@ export async function salvarModeloVagas(
     if (validas.length !== funcaoIds.length) throw new ErroAcesso();
   }
 
-  for (const v of vagas) {
-    if (v.quantidade === 0) {
-      await db
-        .delete(t.vagasModelo)
-        .where(
-          and(
-            eq(t.vagasModelo.recorrenciaId, recorrenciaId),
-            eq(t.vagasModelo.ministerioId, ministerioId),
-            eq(t.vagasModelo.funcaoId, v.funcaoId),
-          ),
-        );
-      continue;
-    }
+  // A última quantidade de cada função vale, como no laço de antes; o insert em lote não aceita chave repetida.
+  const ultima = new Map(vagas.map((v) => [v.funcaoId, v.quantidade]));
+  const remover = [...ultima].filter(([, q]) => q === 0).map(([f]) => f);
+  const gravar = [...ultima].filter(([, q]) => q > 0);
+  if (remover.length > 0) {
+    await db
+      .delete(t.vagasModelo)
+      .where(
+        and(
+          eq(t.vagasModelo.recorrenciaId, recorrenciaId),
+          eq(t.vagasModelo.ministerioId, ministerioId),
+          inArray(t.vagasModelo.funcaoId, remover),
+        ),
+      );
+  }
+  if (gravar.length > 0) {
     await db
       .insert(t.vagasModelo)
-      .values({
-        igrejaId: ator.igrejaId,
-        recorrenciaId,
-        ministerioId,
-        funcaoId: v.funcaoId,
-        quantidade: v.quantidade,
-      })
+      .values(
+        gravar.map(([funcaoId, quantidade]) => ({
+          igrejaId: ator.igrejaId,
+          recorrenciaId,
+          ministerioId,
+          funcaoId,
+          quantidade,
+        })),
+      )
       .onConflictDoUpdate({
         target: [t.vagasModelo.recorrenciaId, t.vagasModelo.ministerioId, t.vagasModelo.funcaoId],
-        set: { quantidade: v.quantidade },
+        set: { quantidade: sql`excluded.quantidade` },
       });
   }
 }
@@ -104,7 +109,12 @@ async function aplicarModelo(
   if (eventos.length === 0) return;
   const recIds = [...new Set(eventos.map((e) => e.recorrenciaId))];
   const modelo = await db
-    .select()
+    .select({
+      recorrenciaId: t.vagasModelo.recorrenciaId,
+      ministerioId: t.vagasModelo.ministerioId,
+      funcaoId: t.vagasModelo.funcaoId,
+      quantidade: t.vagasModelo.quantidade,
+    })
     .from(t.vagasModelo)
     .where(and(eq(t.vagasModelo.igrejaId, igrejaId), inArray(t.vagasModelo.recorrenciaId, recIds)));
 
@@ -119,32 +129,48 @@ async function aplicarModelo(
     porRec.set(m.recorrenciaId, mins);
   }
 
-  for (const ev of eventos) {
-    for (const [ministerioId, vagas] of porRec.get(ev.recorrenciaId) ?? []) {
-      await db.insert(t.escalas).values({ igrejaId, eventoId: ev.id, ministerioId }).onConflictDoNothing();
-      const [escala] = await db
-        .select()
-        .from(t.escalas)
-        .where(and(eq(t.escalas.eventoId, ev.id), eq(t.escalas.ministerioId, ministerioId)));
-      if (escala.status !== "rascunho") continue;
+  const pares = eventos.flatMap((ev) =>
+    [...(porRec.get(ev.recorrenciaId) ?? [])].map(([ministerioId, vagas]) => ({ eventoId: ev.id, ministerioId, vagas })),
+  );
+  if (pares.length === 0) return;
+  await db
+    .insert(t.escalas)
+    .values(pares.map((p) => ({ igrejaId, eventoId: p.eventoId, ministerioId: p.ministerioId })))
+    .onConflictDoNothing();
+  // Só escala em rascunho recebe vaga: a publicada fica como está.
+  const rascunhos = await db
+    .select({ id: t.escalas.id, eventoId: t.escalas.eventoId, ministerioId: t.escalas.ministerioId })
+    .from(t.escalas)
+    .where(
+      and(
+        inArray(t.escalas.eventoId, [...new Set(pares.map((p) => p.eventoId))]),
+        inArray(t.escalas.ministerioId, [...new Set(pares.map((p) => p.ministerioId))]),
+        eq(t.escalas.status, "rascunho"),
+      ),
+    );
+  if (rascunhos.length === 0) return;
+  const escalaDe = new Map(rascunhos.map((e) => [`${e.eventoId}:${e.ministerioId}`, e.id]));
 
-      const itens = await db
-        .select({ funcaoId: t.escalaItens.funcaoId })
-        .from(t.escalaItens)
-        .where(eq(t.escalaItens.escalaId, escala.id));
-      const existentes = new Map<number, number>();
-      for (const i of itens) existentes.set(i.funcaoId, (existentes.get(i.funcaoId) ?? 0) + 1);
+  const itens = await db
+    .select({ escalaId: t.escalaItens.escalaId, funcaoId: t.escalaItens.funcaoId })
+    .from(t.escalaItens)
+    .where(inArray(t.escalaItens.escalaId, rascunhos.map((e) => e.id)));
+  const existentes = new Map<string, number>();
+  for (const i of itens) {
+    const k = `${i.escalaId}:${i.funcaoId}`;
+    existentes.set(k, (existentes.get(k) ?? 0) + 1);
+  }
 
-      const novos: (typeof t.escalaItens.$inferInsert)[] = [];
-      for (const v of vagas) {
-        const falta = v.quantidade - (existentes.get(v.funcaoId) ?? 0);
-        for (let n = 0; n < falta; n++) {
-          novos.push({ igrejaId, escalaId: escala.id, funcaoId: v.funcaoId });
-        }
-      }
-      if (novos.length > 0) await db.insert(t.escalaItens).values(novos);
+  const novos: (typeof t.escalaItens.$inferInsert)[] = [];
+  for (const p of pares) {
+    const escalaId = escalaDe.get(`${p.eventoId}:${p.ministerioId}`);
+    if (escalaId === undefined) continue;
+    for (const v of p.vagas) {
+      const falta = v.quantidade - (existentes.get(`${escalaId}:${v.funcaoId}`) ?? 0);
+      for (let n = 0; n < falta; n++) novos.push({ igrejaId, escalaId, funcaoId: v.funcaoId });
     }
   }
+  if (novos.length > 0) await db.insert(t.escalaItens).values(novos);
 }
 
 /** Cria as escalas em rascunho e as vagas vazias dos eventos da série (pelo modelo do tipo de culto). */
@@ -275,7 +301,7 @@ export async function definirVagasDoCulto(
   }
 
   const [existente] = await db
-    .select()
+    .select({ id: t.escalas.id, status: t.escalas.status })
     .from(t.escalas)
     .where(and(eq(t.escalas.eventoId, eventoId), eq(t.escalas.ministerioId, ministerioId)))
     .limit(1);
@@ -361,7 +387,7 @@ export async function preenchimentoDoMes(
   if (ministerios.length === 0) return [];
 
   const evs = await db
-    .select()
+    .select({ id: t.eventos.id, titulo: t.eventos.titulo, inicio: t.eventos.inicio })
     .from(t.eventos)
     .where(and(eq(t.eventos.igrejaId, ator.igrejaId), gte(t.eventos.inicio, de), lt(t.eventos.inicio, ate)))
     .orderBy(asc(t.eventos.inicio));

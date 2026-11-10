@@ -336,10 +336,9 @@ export async function trocasParaAprovar(db: AnyDb, ator: Ator) {
     .innerJoin(t.funcoes, eq(t.funcoes.id, t.escalaItens.funcaoId))
     .where(and(eq(t.trocas.igrejaId, ator.igrejaId), eq(t.trocas.status, "aceita")))
     .orderBy(asc(t.eventos.inicio));
-  const permitidas: typeof linhas = [];
-  for (const l of linhas) {
-    if (await temPapel(db, ator, "lider", l.ministerioId)) permitidas.push(l);
-  }
+  const lidera = new Map<number, boolean>();
+  for (const m of new Set(linhas.map((l) => l.ministerioId))) lidera.set(m, await temPapel(db, ator, "lider", m));
+  const permitidas = linhas.filter((l) => lidera.get(l.ministerioId));
   if (permitidas.length === 0) return [];
   const ids = [...new Set(permitidas.flatMap((l) => [l.solicitanteId, l.substitutoId ?? 0]))];
   const nomes = new Map(

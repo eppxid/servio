@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { eventos, funcoes, ministerios, recorrencias } from "@/db/schema";
 import { exigirPapel } from "@/lib/auth";
 import type { AnyDb } from "@/lib/auth-core";
-import { criarFuncao, criarMinisterio, gerarConvite } from "@/lib/ministerios/nucleo";
+import { criarMinisterio, gerarConvite } from "@/lib/ministerios/nucleo";
 import { DIAS_A_GERAR, gerarOcorrencias } from "@/lib/recorrencia";
 import { validar } from "@/lib/validar";
 import { criarVagasDosEventos, salvarModeloVagas } from "@/lib/vagas/nucleo";
@@ -31,7 +31,12 @@ export async function salvarMinisterio(formData: FormData) {
   ];
   const banco = db() as unknown as AnyDb;
   const ministerio = await criarMinisterio(banco, admin, v.dados.ministerio);
-  for (const nome of nomes) await criarFuncao(banco, admin, ministerio.id, nome);
+  // O ator é admin (exigirPapel acima): a checagem de líder de criarFuncao não muda nada aqui.
+  if (nomes.length > 0) {
+    await banco
+      .insert(funcoes)
+      .values(nomes.map((nome) => ({ igrejaId: admin.igrejaId, ministerioId: ministerio.id, nome })));
+  }
   redirect(`${BASE}?passo=2&ministerio=${ministerio.id}`);
 }
 
