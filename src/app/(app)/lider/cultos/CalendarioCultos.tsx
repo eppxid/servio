@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { Calendario, type DiaDoCalendario } from "@/components/app/Calendario";
 import { hojeIso, nomeDoDia } from "@/components/app/calendario-grade";
 import { IconeApp } from "@/components/app/icones";
+import { useCascata } from "@/components/app/navegar";
 import estilo from "./cultos.module.css";
 
 export interface CultoDoMes {
@@ -83,6 +84,7 @@ export function CalendarioCultos({
     };
   }
   const futuros = cultos.filter((c) => c.data >= hoje);
+  const listaRef = useCascata<HTMLElement>(`${mes}|${dia}`);
   const lista = dia ? (porDia.get(dia) ?? []) : (futuros.length > 0 ? futuros : cultos).slice(0, PROXIMOS);
 
   return (
@@ -125,7 +127,7 @@ export function CalendarioCultos({
           <p>Nenhum culto neste mês.</p>
         </section>
       ) : (
-        <section id="cultos-do-dia" className="list" aria-label={dia ? nomeDoDia(dia) : "Próximos cultos"} style={{ scrollMarginBottom: 150 }}>
+        <section ref={listaRef} id="cultos-do-dia" className="list" aria-label={dia ? nomeDoDia(dia) : "Próximos cultos"} style={{ scrollMarginBottom: 150 }}>
           {lista.length === 0 ? (
             <p className="vazio" style={{ padding: 16 }}>
               Sem culto neste dia. Toque num dia com marcação.

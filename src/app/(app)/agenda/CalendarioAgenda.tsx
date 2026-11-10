@@ -6,6 +6,7 @@ import { Calendario, type DiaDoCalendario } from "@/components/app/Calendario";
 import { AcaoPrincipal } from "@/components/app/AcaoPrincipal";
 import { hojeIso, nomeDoDia, semanaCurta } from "@/components/app/calendario-grade";
 import { FolhaInferior } from "@/components/app/FolhaInferior";
+import { useCascata } from "@/components/app/navegar";
 import { checkinAcao, confirmarEscala, pedirTrocaAcao, recusarEscala } from "./acoes";
 
 export interface EscalaDoDia {
@@ -87,6 +88,7 @@ export function CalendarioAgenda({
     }
     return itens.sort((a, b) => a.dia.localeCompare(b.dia));
   }, [escalas, folgas, mes]);
+  const listaRef = useCascata<HTMLElement>(mes);
   const doDia = dia ? escalas.filter((e) => e.dia === dia) : [];
   const folga = dia ? folgas.includes(dia) : false;
 
@@ -115,7 +117,7 @@ export function CalendarioAgenda({
           : "Nenhuma escala com você ainda. Quando o líder publicar, o dia aparece marcado aqui."}
       </p>
       <h2 className="sec">Em {MES_POR_EXTENSO[Number(mes.slice(5)) - 1]}</h2>
-      <section className="list" aria-label={`Escalas e folgas em ${MES_POR_EXTENSO[Number(mes.slice(5)) - 1]}`}>
+      <section ref={listaRef} className="list" aria-label={`Escalas e folgas em ${MES_POR_EXTENSO[Number(mes.slice(5)) - 1]}`}>
         {lista.length === 0 ? (
           <p className="vazio" style={{ padding: 16 }}>
             Nada neste mês.
