@@ -93,6 +93,16 @@ export default function Privacidade() {
           do exterior para manter o serviço. Essa transferência segue a LGPD, art. 33, com as garantias contratuais dessas
           empresas.
         </p>
+        <p>
+          Avisos no aparelho: o lembrete passa pelo serviço de avisos do seu navegador (por exemplo Google, Apple ou
+          Mozilla). O conteúdo vai cifrado e só o seu aparelho lê; esse serviço vê apenas o endereço técnico da
+          inscrição e a hora do envio.
+        </p>
+        <p>
+          Players de música: o Spotify ou o Deezer só abre quando você toca em &quot;Ouvir&quot;. A partir daí, o seu
+          navegador fala direto com essa empresa, que recebe o seu IP e segue a política de privacidade dela. O portal
+          não envia a ela nenhum dado seu.
+        </p>
       </section>
 
       <section className="space-y-2">
@@ -105,7 +115,7 @@ export default function Privacidade() {
           <li>Pedidos de acesso: apagados {RETENCAO.pedidosAcessoDias} dias depois da decisão do líder (ou {RETENCAO.pedidosAcessoDias} dias sem decisão).</li>
           <li>Aparelhos removidos: apagados {RETENCAO.aparelhosRevogadosDias} dias depois da remoção.</li>
           <li>
-            Conta excluída: nome, e-mail, telefone, foto, aparelhos, o link pessoal e o link de foto de cadastros antigos são apagados. A presença nas escalas passadas fica sem
+            Conta excluída: nome, e-mail, telefone, foto, aparelhos, o link pessoal, o link de foto de cadastros antigos e os agradecimentos enviados e recebidos são apagados. A presença nas escalas passadas fica sem
             identificação, só para os números do ministério.
           </li>
         </ul>

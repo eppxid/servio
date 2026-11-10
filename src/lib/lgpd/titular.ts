@@ -3,6 +3,7 @@ import * as t from "@/db/schema";
 import { reconhecimentos } from "@/db/schema-gamificacao";
 import { lgpdRegistros } from "@/db/schema-lgpd";
 import { temPapel, verificarSenha, type AnyDb } from "@/lib/auth-core";
+import { tipoDaFoto } from "@/lib/foto/nucleo";
 import { ErroAcesso, type Ator } from "@/lib/ministerios/nucleo";
 import { PALAVRA_EXCLUIR, TERMOS_VERSAO } from "./termos";
 
@@ -166,7 +167,9 @@ export async function exportarDados(db: AnyDb, ator: Ator, agora = new Date()) {
     .from(t.fotos)
     .where(and(eq(t.fotos.usuarioId, ator.id), eq(t.fotos.igrejaId, ator.igrejaId)))
     .limit(1);
-  const foto = fotoLinha ? `data:image/webp;base64,${Buffer.from(fotoLinha.conteudo).toString("base64")}` : null;
+  // A foto pode ser WebP ou JPEG: o tipo vem dos bytes, para o arquivo exportado abrir certo (art. 18 V).
+  const fotoBytes = fotoLinha ? Buffer.from(fotoLinha.conteudo) : null;
+  const foto = fotoBytes ? `data:${tipoDaFoto(fotoBytes) ?? "application/octet-stream"};base64,${fotoBytes.toString("base64")}` : null;
 
   return {
     geradoEm: agora.toISOString(),
@@ -194,7 +197,8 @@ async function anonimizar(db: AnyDb, alvo: { id: number; igrejaId: number }, fei
     await tx.delete(t.pushInscricoes).where(eq(t.pushInscricoes.usuarioId, id));
     await tx.delete(t.fotos).where(eq(t.fotos.usuarioId, id));
     await tx.delete(t.mensagens).where(eq(t.mensagens.usuarioId, id));
-    await tx.delete(reconhecimentos).where(eq(reconhecimentos.deUsuario, id));
+    // O agradecimento recebido também sai: o texto do colega fala da pessoa e pode trazer o nome dela.
+    await tx.delete(reconhecimentos).where(or(eq(reconhecimentos.deUsuario, id), eq(reconhecimentos.paraUsuario, id)));
 
     // Acesso por link: aparelhos, o link pessoal da pessoa e os pedidos feitos sobre ele.
     await tx.delete(t.aparelhos).where(eq(t.aparelhos.usuarioId, id));
