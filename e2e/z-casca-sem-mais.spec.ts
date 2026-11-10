@@ -234,6 +234,13 @@ const centroInd = (p: Page) =>
     const r = el.getBoundingClientRect();
     return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width, h: r.height };
   });
+// Na barra lateral (sticky) a tela nova pode mudar a altura do topo no meio da troca: mede em relação à barra.
+const centroRelativo = (p: Page) =>
+  p.locator(".tabbar__ind").evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const n = el.parentElement!.getBoundingClientRect();
+    return { x: r.x - n.x + r.width / 2, y: r.y - n.y + r.height / 2 };
+  });
 
 test("a pílula da aba sai na hora do toque, antes da tela nova chegar", async ({ browser }) => {
   const p = await entrarComEspiao(browser, "no-preference");
@@ -304,10 +311,10 @@ test("desktop: a pílula desce pela barra lateral e fica parada na aba ativa", a
   await p.getByRole("button", { name: "Entrar" }).click();
   await expect(p).toHaveURL(/\/inicio$/);
   await p.waitForTimeout(500);
-  const antes = await centroInd(p);
+  const antes = await centroRelativo(p);
   await aba(p, "Perfil").click();
   await p.waitForTimeout(120);
-  const meio = await centroInd(p);
+  const meio = await centroRelativo(p);
   expect(meio.y).toBeGreaterThan(antes.y + 5);
   expect(Math.abs(meio.x - antes.x)).toBeLessThan(1);
   if (process.env.PRINT_PILULA) await p.screenshot({ path: `${process.env.PRINT_PILULA}-desktop-meio.png`, clip: { x: 0, y: 0, width: 200, height: 460 } });
@@ -378,5 +385,41 @@ test("vídeo 057: três trocas de aba e uma troca de filtro", async ({ browser }
   }
   await p.getByRole("button", { name: "Próximo mês" }).click();
   await p.waitForTimeout(1100);
+  await p.context().close();
+});
+
+test("a pílula anima só com transform: left/right/top/bottom do style não mudam", async ({ browser }) => {
+  const p = await entrarComEspiao(browser, "no-preference");
+  await p.addInitScript("document.startViewTransition = undefined");
+  await p.reload();
+  await expect(p.locator(".tabbar__ind")).toHaveCSS("opacity", "1");
+  await p.waitForTimeout(600);
+  const estilo = () =>
+    p.locator(".tabbar__ind").evaluate((el) => {
+      const s = (el as HTMLElement).style;
+      return { borda: [s.left, s.right, s.top, s.bottom].join("|"), transform: s.transform, animando: el.getAnimations().length };
+    });
+  const antes = await estilo();
+  await aba(p, "Agenda").click();
+  const instantes = [];
+  for (const espera of [30, 90, 150]) {
+    await p.waitForTimeout(espera);
+    instantes.push(await estilo());
+  }
+  expect(instantes.some((i) => i.animando > 0)).toBe(true);
+  for (const i of instantes) expect(i.borda).toBe(antes.borda);
+  expect(instantes[0].transform).not.toBe(antes.transform);
+  await p.context().close();
+});
+
+test("movimento reduzido: a pílula pula para a aba nova sem animação", async ({ browser }) => {
+  const p = await entrarComEspiao(browser, "reduce");
+  await expect(p.locator(".tabbar__ind")).toHaveCSS("opacity", "1");
+  await aba(p, "Agenda").click();
+  await expect(aba(p, "Agenda")).toHaveClass(/is-active/);
+  expect(await p.locator(".tabbar__ind").evaluate((el) => el.getAnimations().length)).toBe(0);
+  const alvo = await aba(p, "Agenda").locator(".pill").boundingBox();
+  const c = await centroInd(p);
+  expect(Math.abs(c.x - (alvo!.x + alvo!.width / 2))).toBeLessThan(2);
   await p.context().close();
 });
