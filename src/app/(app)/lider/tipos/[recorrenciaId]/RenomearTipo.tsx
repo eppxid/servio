@@ -29,6 +29,7 @@ export function RenomearTipo({
       </label>
       <input
         id="nome-tipo"
+        autoComplete="off"
         className="campo"
         value={valor}
         maxLength={60}

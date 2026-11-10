@@ -24,15 +24,15 @@ export const dynamic = "force-dynamic";
 function Campos({ v }: { v?: { titulo: string; artista: string | null; tom: string | null; linkSpotify: string | null; linkDeezer: string | null; linkCifra: string | null; observacao: string | null } }) {
   return (
     <div className="space-y-2">
-      <input name="titulo" defaultValue={v?.titulo} placeholder="Título" required maxLength={200} className="campo" />
+      <input name="titulo" defaultValue={v?.titulo} placeholder="Título" required maxLength={200} autoComplete="off" className="campo" />
       <div className="grid grid-cols-3 gap-2">
-        <input name="artista" defaultValue={v?.artista ?? ""} placeholder="Artista" maxLength={200} className="campo col-span-2" />
-        <input name="tom" defaultValue={v?.tom ?? ""} placeholder="Tom" maxLength={10} className="campo" />
+        <input name="artista" defaultValue={v?.artista ?? ""} placeholder="Artista" maxLength={200} autoComplete="off" className="campo col-span-2" />
+        <input name="tom" defaultValue={v?.tom ?? ""} placeholder="Tom" maxLength={10} autoComplete="off" className="campo" />
       </div>
-      <input name="linkSpotify" defaultValue={v?.linkSpotify ?? ""} placeholder="Link do Spotify" className="campo" />
-      <input name="linkDeezer" defaultValue={v?.linkDeezer ?? ""} placeholder="Link do Deezer" className="campo" />
-      <input name="linkCifra" defaultValue={v?.linkCifra ?? ""} placeholder="Link do Cifra Club" className="campo" />
-      <input name="observacao" defaultValue={v?.observacao ?? ""} placeholder="Observação" maxLength={500} className="campo" />
+      <input name="linkSpotify" defaultValue={v?.linkSpotify ?? ""} placeholder="Link do Spotify" inputMode="url" autoCapitalize="none" autoComplete="off" className="campo" />
+      <input name="linkDeezer" defaultValue={v?.linkDeezer ?? ""} placeholder="Link do Deezer" inputMode="url" autoCapitalize="none" autoComplete="off" className="campo" />
+      <input name="linkCifra" defaultValue={v?.linkCifra ?? ""} placeholder="Link do Cifra Club" inputMode="url" autoCapitalize="none" autoComplete="off" className="campo" />
+      <input name="observacao" defaultValue={v?.observacao ?? ""} placeholder="Observação" maxLength={500} autoComplete="off" className="campo" />
     </div>
   );
 }

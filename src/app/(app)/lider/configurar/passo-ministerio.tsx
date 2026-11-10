@@ -25,6 +25,7 @@ export function PassoMinisterio() {
         Nome do ministério
         <input
           name="ministerio"
+          autoComplete="off"
           className="campo"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
@@ -59,6 +60,7 @@ export function PassoMinisterio() {
           <input
             className="campo"
             aria-label="Outra função"
+            autoComplete="off"
             value={livre}
             maxLength={80}
             placeholder="Outra função"

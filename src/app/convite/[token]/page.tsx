@@ -148,7 +148,7 @@ export default async function Convite({
             </label>
             <label className="rotulo">
               E-mail
-              <input name="email" type="email" required autoComplete="email" className="campo" />
+              <input name="email" type="email" required autoComplete="email" autoCapitalize="none" className="campo" />
             </label>
             <label className="rotulo">
               Telefone (opcional)

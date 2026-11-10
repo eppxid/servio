@@ -100,7 +100,7 @@ export default async function Configurar({
           <input type="hidden" name="ministerio" value={ministerio?.id ?? ""} />
           <label className="rotulo">
             Nome do culto
-            <input name="nome" className="campo" required maxLength={120} defaultValue="Culto de domingo" />
+            <input name="nome" className="campo" required maxLength={120} defaultValue="Culto de domingo" autoComplete="off" />
           </label>
           <label className="rotulo">
             Dia da semana
@@ -135,6 +135,8 @@ export default async function Configurar({
                     max={50}
                     defaultValue={1}
                     aria-label={`Quantidade de ${f.nome}`}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     className="campo w-24"
                   />
                 </label>

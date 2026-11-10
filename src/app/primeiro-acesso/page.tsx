@@ -83,7 +83,7 @@ export default async function PrimeiroAcesso({
         </label>
         <label className="rotulo">
           E-mail
-          <input name="email" type="email" required autoComplete="email" className="campo" />
+          <input name="email" type="email" required autoComplete="email" autoCapitalize="none" className="campo" />
         </label>
         <label className="rotulo">
           Senha

@@ -49,7 +49,7 @@ export default async function Perfil({
         <h2 className="card__title">Meus dados</h2>
         <label className="rotulo">
           Nome
-          <input name="nome" required maxLength={120} defaultValue={usuario.nome} className="campo" />
+          <input name="nome" required maxLength={120} defaultValue={usuario.nome} autoComplete="name" className="campo" />
         </label>
         <label className="rotulo">
           Telefone (opcional)

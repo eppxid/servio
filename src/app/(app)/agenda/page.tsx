@@ -97,7 +97,7 @@ export default async function Agenda({
                 <a href={linkIcs.replace(/^https?:/, "webcal:")} className="btn btn--primary btn--block">
                   Assinar no calendário
                 </a>
-                <input readOnly aria-label="Link do calendário" value={linkIcs} className="campo text-xs" />
+                <input readOnly aria-label="Link do calendário" value={linkIcs} className="campo" />
                 <p className="text-xs text-muted">
                   Se o botão não abrir o app, copie o endereço e assine no app de calendário. Quem tiver o link vê sua agenda.
                 </p>

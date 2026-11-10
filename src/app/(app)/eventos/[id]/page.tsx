@@ -48,6 +48,7 @@ export default async function DetalheEvento({
           Título
           <input
             name="titulo"
+            autoComplete="off"
             required
             maxLength={120}
             defaultValue={evento.titulo}
