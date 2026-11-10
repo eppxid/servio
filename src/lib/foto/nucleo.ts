@@ -23,8 +23,20 @@ export function ehWebp(bytes: Uint8Array) {
   return txt(0) === "RIFF" && txt(8) === "WEBP";
 }
 
+/** JPEG começa com FF D8 FF. */
+export function ehJpeg(bytes: Uint8Array) {
+  return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+}
+
+/** Tipo pelos primeiros bytes; null se não for WebP nem JPEG. */
+export function tipoDaFoto(bytes: Uint8Array) {
+  if (ehWebp(bytes)) return "image/webp";
+  if (ehJpeg(bytes)) return "image/jpeg";
+  return null;
+}
+
 export async function salvarFoto(db: AnyDb, usuario: Dono, bytes: Uint8Array, agora = new Date()) {
-  if (!ehWebp(bytes)) throw new ErroFoto("formato", "Envie a foto em WebP");
+  if (!tipoDaFoto(bytes)) throw new ErroFoto("formato", "Envie a foto em WebP ou JPEG");
   if (bytes.length > FOTO_MAX_BYTES) throw new ErroFoto("tamanho", "A foto passa de 150 KB");
   const conteudo = Buffer.from(bytes);
   await db

@@ -51,12 +51,13 @@ describe("foto da pessoa", () => {
     expect(lida?.[20]).toBe(7);
   });
 
-  it("PNG e JPEG são recusados", async () => {
+  it("JPEG salva e PNG é recusado", async () => {
     const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0, 0, 0]);
     const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46, 0, 0, 0, 0]);
-    for (const b of [png, jpeg]) {
-      await expect(salvarFoto(db, bia, b)).rejects.toMatchObject({ motivo: "formato" });
-    }
+    await expect(salvarFoto(db, bia, png)).rejects.toMatchObject({ motivo: "formato" });
+    await salvarFoto(db, bia, jpeg);
+    expect((await lerFoto(db, leitorA, bia.id))?.[0]).toBe(0xff);
+    await removerFoto(db, bia);
   });
 
   it("mais de 150 KB é recusado; 150 KB exatos passam", async () => {

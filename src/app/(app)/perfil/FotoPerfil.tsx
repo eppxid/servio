@@ -23,11 +23,11 @@ function carregar(arquivo: File): Promise<HTMLImageElement> {
   });
 }
 
-function paraBlob(canvas: HTMLCanvasElement, qualidade: number): Promise<Blob | null> {
-  return new Promise((ok) => canvas.toBlob(ok, "image/webp", qualidade));
+function paraBlob(canvas: HTMLCanvasElement, tipo: string, qualidade: number): Promise<Blob | null> {
+  return new Promise((ok) => canvas.toBlob(ok, tipo, qualidade));
 }
 
-/** Recorte quadrado central, 512×512, WebP: regravar no canvas apaga o EXIF (inclusive GPS). */
+/** Recorte quadrado central, 512×512, WebP (JPEG no Safari, que não codifica WebP): regravar no canvas apaga o EXIF (inclusive GPS). */
 async function prepararFoto(arquivo: File): Promise<Blob> {
   const img = await carregar(arquivo);
   const lado = Math.min(img.naturalWidth, img.naturalHeight);
@@ -37,10 +37,15 @@ async function prepararFoto(arquivo: File): Promise<Blob> {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error(MSG_NAVEGADOR);
   ctx.drawImage(img, (img.naturalWidth - lado) / 2, (img.naturalHeight - lado) / 2, lado, lado, 0, 0, LADO, LADO);
+  let tipo = "image/webp";
   for (let q = 0.82; q >= 0.3; q -= 0.1) {
-    const blob = await paraBlob(canvas, q);
-    // Safari antigo devolve PNG quando não sabe WebP.
-    if (!blob || blob.type !== "image/webp") throw new Error(MSG_NAVEGADOR);
+    let blob = await paraBlob(canvas, tipo, q);
+    // Safari (iOS e macOS) devolve PNG quando não sabe WebP: cai para JPEG.
+    if (blob && blob.type !== tipo && tipo === "image/webp") {
+      tipo = "image/jpeg";
+      blob = await paraBlob(canvas, tipo, q);
+    }
+    if (!blob || blob.type !== tipo) throw new Error(MSG_NAVEGADOR);
     if (blob.size <= MAX_BYTES) return blob;
   }
   throw new Error("A foto ficou grande demais. Escolha outra.");
@@ -76,7 +81,7 @@ export function FotoPerfil({ usuarioId, nome, versao }: { usuarioId: number; nom
   function salvar() {
     if (!blob) return;
     const dados = new FormData();
-    dados.set("foto", blob, "foto.webp");
+    dados.set("foto", blob, blob.type === "image/jpeg" ? "foto.jpg" : "foto.webp");
     iniciar(() => salvarFotoAcao(dados));
   }
 

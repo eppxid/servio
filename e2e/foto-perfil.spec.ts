@@ -78,3 +78,38 @@ test("perfil: envia foto, vê a prévia, salva e remove (390×844)", async ({ br
   await expect(p.getByRole("button", { name: "Remover foto" })).toHaveCount(0);
   await ctx.close();
 });
+
+test("perfil: navegador sem WebP no canvas (Safari) cai para JPEG e salva", async ({ browser }) => {
+  const pasta = process.env.PRINTS_DIR_JPEG ?? "E:/Devs/Servio-teste-movimento";
+  mkdirSync(pasta, { recursive: true });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+  // Simula o Safari: pedido de WebP volta como PNG.
+  await ctx.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = function (cb, tipo, q) {
+      return original.call(this, cb, tipo === "image/webp" ? "image/png" : tipo, q);
+    };
+  });
+  const p = await ctx.newPage();
+  await p.goto("/entrar");
+  await p.getByLabel("E-mail").fill("voluntario@e2e.local");
+  await p.getByLabel("Senha", { exact: true }).fill(SENHA);
+  await p.getByRole("button", { name: "Entrar" }).click();
+  await p.waitForURL(/\/(inicio|agenda)/);
+  await p.goto("/perfil#foto");
+
+  await p.getByTestId("foto-arquivo").setInputFiles({ name: "teste.png", mimeType: "image/png", buffer: PNG });
+  await expect(p.getByAltText("Prévia da nova foto")).toBeVisible();
+  await expect(p.getByRole("button", { name: "Salvar foto" })).toBeVisible();
+  await p.screenshot({ path: `${pasta}/054-foto-iphone.png` });
+
+  await p.getByRole("button", { name: "Salvar foto" }).click();
+  await expect(p.getByText("Foto salva")).toBeVisible();
+  const url = (await p.getByTestId("foto-previa").getAttribute("src"))!;
+  const resp = await p.request.get(url);
+  expect(resp.headers()["content-type"]).toBe("image/jpeg");
+
+  await p.getByRole("button", { name: "Remover foto" }).click();
+  await expect(p.getByText("Foto removida")).toBeVisible();
+  await ctx.close();
+});

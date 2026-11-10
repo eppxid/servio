@@ -289,7 +289,7 @@ export const pedidosAcesso = pgTable(
   (t) => [index("pedidos_acesso_convite").on(t.conviteId, t.status)],
 );
 
-/** Foto da própria pessoa (WebP até 150 KB); só membros logados da mesma igreja leem. */
+/** Foto da própria pessoa (WebP ou JPEG até 150 KB); só membros logados da mesma igreja leem. */
 export const fotos = pgTable("fotos", {
   usuarioId: integer("usuario_id").primaryKey().references(() => usuarios.id),
   igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
