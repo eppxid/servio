@@ -294,6 +294,19 @@ html[data-motion='off'] *, html[data-motion='off'] *::before, html[data-motion='
   html[data-nav="troca"] { --nav-escala: .98; }
 }
 
+/* ---------- Troca de tela a caminho (Movimento.tsx grava html[data-carregando] e a[data-indo]) ---------- */
+html[data-carregando]::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 9999; pointer-events: none; view-transition-name: carregando; background: linear-gradient(90deg, transparent, var(--primary), transparent) 0 0 / 40% 100% no-repeat; animation: carregando-barra 1.1s ease-in-out infinite; }
+@keyframes carregando-barra { from { background-position: -50% 0; } to { background-position: 150% 0; } }
+.tabbar a[data-indo] { color: var(--primary); animation: carregando-pulso 1s ease-in-out infinite; }
+.tabbar a[data-indo] .pill { background: color-mix(in srgb, var(--primary) 14%, transparent); }
+@keyframes carregando-pulso { 50% { opacity: .6; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-carregando]::before { animation: none !important; background-size: 100% 100%; background-position: 0 0; background-color: var(--primary); background-image: none; }
+  .tabbar a[data-indo] { animation: none !important; }
+}
+html[data-motion='off'][data-carregando]::before { animation: none !important; background-image: none; background-color: var(--primary); }
+html[data-motion='off'] .tabbar a[data-indo] { animation: none !important; }
+
 /* ---------- Esqueleto de carregamento (loading.tsx) ---------- */
 .skel { display: block; height: 14px; border-radius: 8px; background: var(--well); animation: skel-pulso 1.4s ease-in-out infinite; }
 .skel--titulo { height: 28px; width: 55%; }

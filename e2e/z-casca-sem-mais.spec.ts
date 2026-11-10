@@ -100,6 +100,30 @@ test("trocar de aba roda a transição com a direção; movimento reduzido não 
   await reduzido.context().close();
 });
 
+test("clique na aba marca a troca a caminho na rede lenta e limpa quando a tela chega", async ({ browser }) => {
+  const p = await entrarComEspiao(browser, "no-preference");
+  await p.route(
+    (url) => url.searchParams.has("_rsc"),
+    async (rota) => {
+      await new Promise((r) => setTimeout(r, process.env.PRINT_CARREGANDO ? 3000 : 800));
+      await rota.continue();
+    },
+  );
+  const html = p.locator("html");
+  await aba(p, "Agenda").click();
+  await expect(html).toHaveAttribute("data-carregando", "", { timeout: 100 });
+  await expect(aba(p, "Agenda")).toHaveAttribute("data-indo", "");
+  if (process.env.PRINT_CARREGANDO) {
+    // Durante a View Transition (até 1 s) a captura sai em branco; o print espera ela acabar, com a resposta ainda atrasada.
+    await p.waitForTimeout(1300);
+    await p.screenshot({ path: process.env.PRINT_CARREGANDO });
+  }
+  await expect(p).toHaveURL(/\/agenda$/);
+  await expect(html).not.toHaveAttribute("data-carregando", /.*/);
+  await expect(aba(p, "Agenda")).not.toHaveAttribute("data-indo", /.*/);
+  await p.context().close();
+});
+
 // Gravação para conferência humana: VIDEO_DIR=<pasta> pnpm e2e (pula quando a variável não existe).
 test("vídeo: três abas e um detalhe com ida e volta", async ({ browser }) => {
   test.skip(!process.env.VIDEO_DIR, "defina VIDEO_DIR para gravar");
