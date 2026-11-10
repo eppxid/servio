@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, isNull, lt, ne } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import * as t from "@/db/schema";
 import { temPapel, type AnyDb } from "@/lib/auth-core";
 import { estaIndisponivel, indisponiveisNoPeriodo } from "@/lib/disponibilidade";
@@ -314,7 +314,7 @@ export async function sugerirMes(
   if (evs.length === 0) return vazio;
 
   const escalasExistentes = await db
-    .select()
+    .select({ eventoId: t.escalas.eventoId })
     .from(t.escalas)
     .where(and(eq(t.escalas.ministerioId, ministerioId), inArray(t.escalas.eventoId, evs.map((e) => e.id))));
   const comEscala = new Set(escalasExistentes.map((e) => e.eventoId));
@@ -352,14 +352,20 @@ export async function sugerirMes(
 
   const preenchidos: number[] = [];
   const usuarios: number[] = [];
-  for (const a of atribuicoes) {
+  if (atribuicoes.length > 0) {
+    const pessoa = sql.join(
+      atribuicoes.map((a) => sql`when ${a.itemId} then ${a.usuarioId}::integer`),
+      sql` `,
+    );
     // `usuario_id is null` no WHERE: se o líder escolheu alguém nesse meio-tempo, a escolha dele fica.
     const feitos = await db
       .update(t.escalaItens)
-      .set({ usuarioId: a.usuarioId, status: "pendente", checkinEm: null })
-      .where(and(eq(t.escalaItens.id, a.itemId), isNull(t.escalaItens.usuarioId)))
+      .set({ usuarioId: sql`case ${t.escalaItens.id} ${pessoa} end`, status: "pendente", checkinEm: null })
+      .where(and(inArray(t.escalaItens.id, atribuicoes.map((a) => a.itemId)), isNull(t.escalaItens.usuarioId)))
       .returning({ id: t.escalaItens.id });
-    if (feitos.length) {
+    const feitosIds = new Set(feitos.map((f) => f.id));
+    for (const a of atribuicoes) {
+      if (!feitosIds.delete(a.itemId)) continue;
       preenchidos.push(a.itemId);
       usuarios.push(a.usuarioId);
     }
