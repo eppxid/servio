@@ -3,6 +3,7 @@ import * as t from "@/db/schema";
 import { reconhecimentos } from "@/db/schema-gamificacao";
 import { lgpdRegistros } from "@/db/schema-lgpd";
 import { temPapel, verificarSenha, type AnyDb } from "@/lib/auth-core";
+import { tipoDaFoto } from "@/lib/foto/nucleo";
 import { ErroAcesso, type Ator } from "@/lib/ministerios/nucleo";
 import { PALAVRA_EXCLUIR, TERMOS_VERSAO } from "./termos";
 
@@ -166,7 +167,9 @@ export async function exportarDados(db: AnyDb, ator: Ator, agora = new Date()) {
     .from(t.fotos)
     .where(and(eq(t.fotos.usuarioId, ator.id), eq(t.fotos.igrejaId, ator.igrejaId)))
     .limit(1);
-  const foto = fotoLinha ? `data:image/webp;base64,${Buffer.from(fotoLinha.conteudo).toString("base64")}` : null;
+  // A foto pode ser WebP ou JPEG: o tipo vem dos bytes, para o arquivo exportado abrir certo (art. 18 V).
+  const fotoBytes = fotoLinha ? Buffer.from(fotoLinha.conteudo) : null;
+  const foto = fotoBytes ? `data:${tipoDaFoto(fotoBytes) ?? "application/octet-stream"};base64,${fotoBytes.toString("base64")}` : null;
 
   return {
     geradoEm: agora.toISOString(),

@@ -10,6 +10,7 @@ import { autenticar, hashSenha, usuarioDaSessao, type AnyDb } from "@/lib/auth-c
 import { listarMensagens } from "@/lib/chat/nucleo";
 import { rankingDoMinisterio } from "@/lib/gamificacao/consulta";
 import { carregarPainel } from "@/lib/indicadores/consulta";
+import { salvarFoto } from "@/lib/foto/nucleo";
 import { limparDadosAntigos } from "@/lib/lgpd/limpeza";
 import { TERMOS_VERSAO, aceiteEmDia } from "@/lib/lgpd/termos";
 import {
@@ -166,6 +167,14 @@ describe("exportação", () => {
       expect(json).not.toContain(deBia);
     }
     expect(json).not.toContain(ana.senhaHash);
+  });
+
+  it("foto JPEG sai com o tipo certo no arquivo exportado (art. 18 V)", async () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
+    await salvarFoto(db, ana, jpeg, AGORA);
+    const { foto } = await exportarDados(db, ana, AGORA);
+    expect(foto?.startsWith("data:image/jpeg;base64,")).toBe(true);
+    await db.delete(schema.fotos).where(eq(schema.fotos.usuarioId, ana.id));
   });
 });
 
