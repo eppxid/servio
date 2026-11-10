@@ -172,6 +172,7 @@
   @media (pointer: coarse) {
     .top__link { min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
     .folha__fechar { width: 44px; height: 44px; }
+    .modo { height: 44px; }
     .cal__nav button { width: 44px; height: 44px; }
   }
   .folha__corpo { overflow-y: auto; overscroll-behavior: contain; padding: 0 8px 16px; }
