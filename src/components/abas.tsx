@@ -24,38 +24,55 @@ export const ABAS: Record<Modo, { href: string; rotulo: string; icone: NomeIcone
 
 /** Se a tela nova não chega nesse tempo, o destaque volta para a aba do pathname (mesmo limite da barra de carregamento). */
 const LIMITE_OTIMISTA_MS = 8000;
-const FRENTE_MS = 280;
-const TRAS_MS = 440;
+const DURACAO_MS = 420;
 /** Mola: passa um pouco do ponto e volta. */
 const MOLA = "linear(0, 0.2 6%, 0.52 13%, 0.8 21%, 0.97 29%, 1.06 40%, 1.07 48%, 1.03 60%, 0.995 76%, 1)";
+/** Trecho em que a pílula estica: a frente sai rápida, sem passar do alvo. */
+const ESTICA = "cubic-bezier(0.2, 0.7, 0.3, 1)";
 
-type Caixa = { l: number; r: number; t: number; b: number };
+type Caixa = { x: number; y: number; w: number; h: number };
 
-/** Posição do ícone-pílula da aba dentro do padding box da barra (offsets de cada borda). */
+/** Posição e tamanho do ícone-pílula da aba dentro do padding box da barra. */
 function medir(nav: HTMLElement, link: HTMLElement): Caixa | null {
   const pill = link.querySelector<HTMLElement>(".pill");
   if (!pill) return null;
   const n = nav.getBoundingClientRect();
   const p = pill.getBoundingClientRect();
-  const l = p.left - n.left - nav.clientLeft;
-  const t = p.top - n.top - nav.clientTop;
-  return { l, t, r: nav.clientWidth - (l + p.width), b: nav.clientHeight - (t + p.height) };
+  return { x: p.left - n.left - nav.clientLeft, y: p.top - n.top - nav.clientTop, w: p.width, h: p.height };
+}
+
+/** Caixa que o indicador mostra agora (meio da animação inclusive), lida do transform calculado. */
+function atual(el: HTMLElement): Caixa {
+  const m = new DOMMatrix(getComputedStyle(el).transform);
+  return { x: m.e, y: m.f, w: el.offsetWidth * m.a, h: el.offsetHeight * m.d };
 }
 
 const igual = (a: Caixa, b: Caixa) =>
-  Math.abs(a.l - b.l) < 0.5 && Math.abs(a.r - b.r) < 0.5 && Math.abs(a.t - b.t) < 0.5 && Math.abs(a.b - b.b) < 0.5;
+  Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.w - b.w) < 0.5 && Math.abs(a.h - b.h) < 0.5;
 
-/** Borda da frente anda rápido e a de trás segue com atraso: a pílula estica no caminho e volta ao tamanho com a mola. */
-function transicao(de: Caixa, para: Caixa) {
-  const aoLado = Math.abs(para.l - de.l) >= Math.abs(para.t - de.t);
-  const f = `${FRENTE_MS}ms ${MOLA}`;
-  const t = `${TRAS_MS}ms ${MOLA}`;
-  const crescendo = aoLado ? para.l > de.l : para.t > de.t;
-  const eixo = aoLado ? ["left", "right"] : ["top", "bottom"];
-  const [frente, tras] = crescendo ? [eixo[1], eixo[0]] : [eixo[0], eixo[1]];
-  const parado = aoLado ? ["top", "bottom"] : ["left", "right"];
-  return [`${frente} ${f}`, `${tras} ${t}`, ...parado.map((p) => `${p} ${t}`)].join(", ");
+const quadro = (c: Caixa, d: Caixa, extra = "") =>
+  `translate(${c.x}px, ${c.y}px) scale(${c.w / d.w}, ${c.h / d.h})${extra}`;
+
+/** Quadros da esticada: no meio a pílula cobre da origem até a borda da frente; no fim volta ao tamanho do destino. */
+function quadros(de: Caixa, para: Caixa): Keyframe[] {
+  const aoLado = Math.abs(para.x - de.x) >= Math.abs(para.y - de.y);
+  const meio = { ...para };
+  if (aoLado) {
+    meio.x = Math.min(de.x, para.x);
+    meio.w = Math.max(de.x + de.w, para.x + para.w) - meio.x;
+  } else {
+    meio.y = Math.min(de.y, para.y);
+    meio.h = Math.max(de.y + de.h, para.y + para.h) - meio.y;
+  }
+  return [
+    { transform: quadro(de, para), easing: ESTICA },
+    { transform: quadro(meio, para), offset: 0.4, easing: MOLA },
+    { transform: quadro(para, para) },
+  ];
 }
+
+const movimentoReduzido = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.dataset.motion === "off";
 
 /** Abas do modo: rodapé com ícone e rótulo no celular, barra de ícones à esquerda no desktop. */
 export function Abas({ modo }: { modo: Modo }) {
@@ -65,7 +82,7 @@ export function Abas({ modo }: { modo: Modo }) {
   const nav = useRef<HTMLElement>(null);
   const ind = useRef<HTMLSpanElement>(null);
   const limite = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const anterior = useRef<Caixa | null>(null);
+  const visivel = useRef(false);
 
   const doCaminho = ABAS[modo].find((a) => caminho === a.href || caminho.startsWith(a.href + "/"))?.href;
   // Um alvo guardado de outro pathname já foi confirmado (ou falhou): vale o pathname.
@@ -85,19 +102,26 @@ export function Abas({ modo }: { modo: Modo }) {
     const link = barra.querySelector<HTMLElement>("a.is-active");
     const caixa = link ? medir(barra, link) : null;
     if (!caixa) {
+      el.getAnimations().forEach((a) => a.cancel());
       el.style.opacity = "0";
-      anterior.current = null;
+      visivel.current = false;
       return;
     }
-    const antes = anterior.current;
-    if (antes && animar && !igual(antes, caixa)) el.style.transition = transicao(antes, caixa);
-    else el.style.transition = "none";
+    // A origem é onde a pílula está agora: um toque no meio do deslize parte dali, sem salto.
+    const de = visivel.current ? atual(el) : null;
+    el.getAnimations().forEach((a) => a.cancel());
+    el.style.width = `${caixa.w}px`;
+    el.style.height = `${caixa.h}px`;
+    el.style.transform = `translate(${caixa.x}px, ${caixa.y}px)`;
     el.style.opacity = "1";
-    el.style.left = `${caixa.l}px`;
-    el.style.right = `${caixa.r}px`;
-    el.style.top = `${caixa.t}px`;
-    el.style.bottom = `${caixa.b}px`;
-    anterior.current = caixa;
+    visivel.current = true;
+    if (de && animar && !movimentoReduzido() && !igual(de, caixa)) {
+      el.style.willChange = "transform";
+      el.animate(quadros(de, caixa), { duration: DURACAO_MS }).finished.then(
+        () => (el.style.willChange = ""),
+        () => {},
+      );
+    }
   }, []);
 
   useLayoutEffect(() => posicionar(true), [ativo, modo, posicionar]);
