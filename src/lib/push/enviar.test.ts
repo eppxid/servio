@@ -63,6 +63,37 @@ describe("enviarParaUsuarios", () => {
   });
 });
 
+describe("enviarParaUsuarios: timeout e limite", () => {
+  it("envio que nunca responde estoura o timeout e as outras inscrições recebem", async () => {
+    await db.delete(schema.pushInscricoes);
+    await inscrever(u1, "https://push/trava");
+    await inscrever(u1, "https://push/rapido");
+    const enviar = vi.fn((i: { endpoint: string }) =>
+      i.endpoint.endsWith("trava") ? new Promise<void>(() => {}) : Promise.resolve(),
+    );
+    const ini = Date.now();
+    const r = await enviarParaUsuarios(db, igrejaId, [u1], payload, enviar, { timeoutMs: 100 });
+    expect(Date.now() - ini).toBeLessThan(1000);
+    expect(r).toEqual({ enviados: 1, apagados: 0 });
+    expect(await endpoints()).toEqual(["https://push/rapido", "https://push/trava"]);
+  });
+
+  it("25 inscrições → no máximo 10 envios simultâneos", async () => {
+    await db.delete(schema.pushInscricoes);
+    for (let n = 0; n < 25; n++) await inscrever(u1, `https://push/${n}`);
+    let ativos = 0;
+    let pico = 0;
+    const enviar = async () => {
+      pico = Math.max(pico, ++ativos);
+      await new Promise((r) => setTimeout(r, 10));
+      ativos--;
+    };
+    const r = await enviarParaUsuarios(db, igrejaId, [u1], payload, enviar);
+    expect(r.enviados).toBe(25);
+    expect(pico).toBe(10);
+  });
+});
+
 describe("enviarLembretes", () => {
   it("avisa só os escalados em escala publicada de eventos do dia seguinte", async () => {
     const [min] = await db.insert(schema.ministerios).values({ igrejaId, nome: "Som" }).returning();

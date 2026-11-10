@@ -1,5 +1,5 @@
 import webpush from "web-push";
-import type { EnviadorPush } from "./enviar";
+import { TIMEOUT_PUSH_MS, type EnviadorPush } from "./enviar";
 
 /** Enviador real (VAPID). Null quando as chaves não estão configuradas. */
 export function enviadorWebPush(): EnviadorPush | null {
@@ -12,7 +12,7 @@ export function enviadorWebPush(): EnviadorPush | null {
     await webpush.sendNotification(
       { endpoint: i.endpoint, keys: { p256dh: i.chaveP256dh, auth: i.chaveAuth } },
       JSON.stringify(payload),
-      { TTL: 60 * 60 * 24 },
+      { TTL: 60 * 60 * 24, timeout: TIMEOUT_PUSH_MS },
     );
   };
 }
