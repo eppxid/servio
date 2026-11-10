@@ -1,4 +1,6 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
 
 // Roda por último (ordem alfabética): usa o admin criado por fluxo-principal.spec.ts.
 const SENHA = "senha-e2e-12345";
@@ -244,8 +246,7 @@ const centroRelativo = (p: Page) =>
 
 test("a pílula da aba sai na hora do toque, antes da tela nova chegar", async ({ browser }) => {
   const p = await entrarComEspiao(browser, "no-preference");
-  // Com View Transition o navegador congela a renderização até a tela nova chegar (navegar.ts, tarefa 057).
-  // Sem ela (Firefox, Safari antigo) a pílula anda durante a espera: é o que este teste mede.
+  // Sem View Transition (Firefox, Safari antigo) a pílula anda durante a espera; com ela, ver o teste seguinte.
   await p.addInitScript("document.startViewTransition = undefined");
   await p.route(
     (url) => url.searchParams.has("_rsc"),
@@ -280,6 +281,58 @@ test("a pílula da aba sai na hora do toque, antes da tela nova chegar", async (
   expect(Math.abs(fim.w - alvo!.width)).toBeLessThan(2);
   if (process.env.PRINT_PILULA) await p.screenshot({ path: `${process.env.PRINT_PILULA}-fim.png`, clip: { x: 0, y: 844 - 110, width: 390, height: 110 } });
   await p.context().close();
+});
+
+test("com View Transition a pílula anda durante a espera e a troca de tela ainda anima", async ({ browser }) => {
+  // VIDEO_PILULA_VT=<arquivo .webm>: grava a evidência (rede lenta, View Transition ligada).
+  const video = process.env.VIDEO_PILULA_VT;
+  const p = await entrarComEspiao(browser, "no-preference", video ? path.dirname(video) : undefined);
+  // A transição começa só com a tela nova pronta (navegar.ts, tarefa 071): o toque não congela a página.
+  // Toda resposta RSC (prefetch inclusive) só sai 800 ms depois do clique: a Agenda não vem do cache.
+  let clicou!: (t: number) => void;
+  const clique = new Promise<number>((r) => (clicou = r));
+  await p.route(
+    (url) => url.searchParams.has("_rsc"),
+    async (rota) => {
+      const t = await clique;
+      await new Promise((r) => setTimeout(r, Math.max(0, t + 800 - Date.now())));
+      await rota.continue();
+    },
+  );
+  await p.reload();
+  await expect(p.locator(".tabbar__ind")).toHaveCSS("opacity", "1");
+  await p.waitForTimeout(600);
+  await p.evaluate(() => ((window as unknown as { __vt: unknown[] }).__vt = []));
+  const antes = await centroInd(p);
+  const alvo = await aba(p, "Agenda").locator(".pill").boundingBox();
+  const centroAlvo = alvo!.x + alvo!.width / 2;
+  clicou(Date.now());
+  await aba(p, "Agenda").click();
+  await p.waitForTimeout(100);
+  const depois = await centroInd(p);
+  expect(new URL(p.url()).pathname).toBe("/inicio");
+  expect(depois.x).toBeGreaterThan(antes.x + 5);
+  expect(depois.x).toBeLessThan(centroAlvo + 20);
+  // Ainda esperando a resposta: nenhuma transição começou e a pílula já chegou perto da aba.
+  await p.waitForTimeout(400);
+  expect(new URL(p.url()).pathname).toBe("/inicio");
+  expect(await transicoes(p)).toEqual([]);
+  expect(Math.abs((await centroInd(p)).x - centroAlvo)).toBeLessThan(6);
+  await expect(p).toHaveURL(/\/agenda$/);
+  await parado(p);
+  expect(await transicoes(p)).toEqual(["aba-dir"]);
+  await p.waitForTimeout(300);
+  const fim = await centroInd(p);
+  expect(Math.abs(fim.x - centroAlvo)).toBeLessThan(2);
+  expect(Math.abs(fim.w - alvo!.width)).toBeLessThan(2);
+  await expect(aba(p, "Agenda")).toHaveClass(/is-active/);
+  const gravacao = p.video();
+  await p.context().close();
+  if (video && gravacao) {
+    fs.mkdirSync(path.dirname(video), { recursive: true });
+    await gravacao.saveAs(video);
+    await gravacao.delete();
+  }
 });
 
 test("a pílula acompanha o pathname no voltar e fica esticada só no caminho", async ({ browser }) => {
