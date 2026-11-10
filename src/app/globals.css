@@ -76,7 +76,7 @@
   .btn--block { width: 100%; }
   .btn--danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
   .btn--danger:hover { background: color-mix(in srgb, var(--bad) 10%, var(--raised)); }
-  @media (pointer: coarse) { .btn { min-height: 44px; } .btn--sm { min-height: 36px; } }
+  @media (pointer: coarse) { .btn { min-height: 44px; } .btn--sm { min-height: 44px; } }
 
   .alerta {
     --c: var(--info);

@@ -65,6 +65,7 @@
   .tbtn--p { background: var(--primary); color: var(--on-primary); }
   .tbtn--soft { background: color-mix(in srgb, var(--primary) 13%, transparent); color: var(--primary); }
   .tbtn svg { width: 18px; height: 18px; }
+  @media (pointer: coarse) { .tbtn { min-height: 44px; } }
   .tbtn:disabled, .cta:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
 
   /* Estado vazio útil das telas que ainda nascem */
