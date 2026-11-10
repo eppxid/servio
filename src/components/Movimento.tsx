@@ -3,7 +3,7 @@
 import Script from "next/script";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { cascata, chegou, itensDaTela, navegar, podeAnimar, telaDo, tipoDaNavegacao, transicao } from "./app/navegar";
+import { cascata, chegou, esperarTela, itensDaTela, navegar, podeAnimar, telaDo, tipoDaNavegacao, transicao } from "./app/navegar";
 
 declare global {
   interface Window {
@@ -69,6 +69,8 @@ export function Movimento() {
   const atual = useRef(caminho);
   const aviso = useRef<HTMLDivElement>(null);
   const limite = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Tela nova pronta no React: a View Transition começa aqui e o commit espera a captura da tela antiga.
+  esperarTela(caminho, atual.current);
 
   useEffect(() => {
     atual.current = caminho;
@@ -90,7 +92,7 @@ export function Movimento() {
         if (url.search !== location.search) cascataAoFiltrar(url.search, a);
         return;
       }
-      // As marcas entram antes da View Transition para já estarem no quadro "antigo".
+      // As marcas entram já no toque; a View Transition começa depois, com a tela nova pronta.
       limparCarregando();
       document.documentElement.setAttribute("data-carregando", "");
       a.setAttribute("data-indo", "");
@@ -100,11 +102,11 @@ export function Movimento() {
       limite.current = setTimeout(limparCarregando, LIMITE_CARREGANDO_MS);
       if (!podeAnimar()) return;
       e.preventDefault();
-      navegar(router, url.pathname + url.search + url.hash, tipoDaNavegacao(atual.current, url.pathname));
+      navegar(router, url.pathname + url.search + url.hash, tipoDaNavegacao(atual.current, url.pathname), atual.current);
     };
-    // Botão voltar do navegador: o Next troca a tela sozinho, a transição só espera o pathname mudar.
+    // Botão voltar do navegador: o Next troca a tela sozinho; a transição começa quando a tela nova renderiza.
     const aoVoltar = () => {
-      if (location.pathname !== atual.current) transicao("tras", () => {});
+      if (location.pathname !== atual.current) transicao("tras", () => {}, atual.current);
     };
     document.addEventListener("click", aoClicar, true);
     addEventListener("popstate", aoVoltar);
