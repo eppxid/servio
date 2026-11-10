@@ -279,9 +279,10 @@ html[data-theme='dark'] .toast { background: #f1f4f9; color: #10151e; }
 html[data-motion='off'] *, html[data-motion='off'] *::before, html[data-motion='off'] *::after { transition: none !important; animation: none !important; }
 
 /* ---------- Troca de tela com direção (Movimento.tsx → navegar.ts grava html[data-nav]) ----------
-   Topo e abas têm nome próprio para ficarem parados; a pílula da aba ativa desliza de uma aba à outra. */
+   Topo e abas têm nome próprio para ficarem parados; a pílula (.tabbar__ind) desliza fora da transição. */
 .top { view-transition-name: topo; }
-::view-transition-group(pilula) { animation-duration: 300ms; animation-timing-function: var(--ease, cubic-bezier(.2,.8,.2,1)); }
+::view-transition-old(rail) { display: none; }
+::view-transition-new(rail) { animation: none; }
 @keyframes nav-entra { from { opacity: 0; transform: translateX(var(--nav-de, 0)) scale(var(--nav-escala, 1)); } }
 @keyframes nav-sai { to { opacity: 0; transform: translateX(var(--nav-para, 0)) scale(var(--nav-escala, 1)); } }
 @media (prefers-reduced-motion: no-preference) {
@@ -298,7 +299,6 @@ html[data-motion='off'] *, html[data-motion='off'] *::before, html[data-motion='
 html[data-carregando]::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 9999; pointer-events: none; view-transition-name: carregando; background: linear-gradient(90deg, transparent, var(--primary), transparent) 0 0 / 40% 100% no-repeat; animation: carregando-barra 1.1s ease-in-out infinite; }
 @keyframes carregando-barra { from { background-position: -50% 0; } to { background-position: 150% 0; } }
 .tabbar a[data-indo] { color: var(--primary); animation: carregando-pulso 1s ease-in-out infinite; }
-.tabbar a[data-indo] .pill { background: color-mix(in srgb, var(--primary) 14%, transparent); }
 @keyframes carregando-pulso { 50% { opacity: .6; } }
 @media (prefers-reduced-motion: reduce) {
   html[data-carregando]::before { animation: none !important; background-size: 100% 100%; background-position: 0 0; background-color: var(--primary); background-image: none; }
