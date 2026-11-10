@@ -31,6 +31,9 @@ export function Abas({ modo }: { modo: Modo }) {
           <Link
             key={aba.href}
             href={aba.href}
+            // Página dinâmica: o prefetch automático só baixa o layout. O completo deixa a 1ª visita sair do cache.
+            // Só no voluntário: as telas do líder mostram pedidos de outras pessoas e não podem abrir velhas.
+            prefetch={modo === "voluntario" ? true : null}
             aria-current={ativa ? "page" : undefined}
             className={ativa ? "is-active" : undefined}
           >

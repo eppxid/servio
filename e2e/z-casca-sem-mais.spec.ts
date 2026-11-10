@@ -109,6 +109,8 @@ test("clique na aba marca a troca a caminho na rede lenta e limpa quando a tela 
       await rota.continue();
     },
   );
+  // As abas têm prefetch completo: recarregar deixa o da Agenda ainda a caminho (atrasado), fora do cache.
+  await p.reload();
   const html = p.locator("html");
   await aba(p, "Agenda").click();
   await expect(html).toHaveAttribute("data-carregando", "", { timeout: 100 });
@@ -140,5 +142,89 @@ test("vídeo: três abas e um detalhe com ida e volta", async ({ browser }) => {
   await p.goBack();
   await expect(p).toHaveURL(/\/perfil$/);
   await p.waitForTimeout(700);
+  await p.context().close();
+});
+
+// Marca o instante em que html[data-carregando] entra e sai (performance.now), para medir sem o atraso do Playwright.
+const espiarCarregando = `(() => {
+  window.__carga = [];
+  new MutationObserver(() => {
+    const ligado = document.documentElement.hasAttribute("data-carregando");
+    const ultimo = window.__carga[window.__carga.length - 1];
+    if (!ultimo || ultimo.ligado !== ligado) window.__carga.push({ ligado, t: performance.now() });
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-carregando"] });
+})()`;
+
+/** Duração (ms) da última barra de carregamento: do clique (marca ligada) até a tela nova (marca desligada). */
+async function ultimaCarga(p: Page) {
+  return p.evaluate(() => {
+    const c = (window as unknown as { __carga: { ligado: boolean; t: number }[] }).__carga;
+    const fim = c.length - 1;
+    if (fim < 1 || c[fim].ligado || !c[fim - 1].ligado) return null;
+    return c[fim].t - c[fim - 1].t;
+  });
+}
+
+test("aba já visitada abre do cache: sem requisição RSC e sem barra de carregamento", async ({ browser }) => {
+  const p = await entrarComEspiao(browser, "no-preference");
+  await p.evaluate(espiarCarregando);
+  // Só a navegação conta; o prefetch (cabeçalho next-router-prefetch) pode ir ao servidor.
+  const navegacoes: string[] = [];
+  await p.route(
+    (url) => url.searchParams.has("_rsc"),
+    async (rota) => {
+      if (!rota.request().headers()["next-router-prefetch"]) navegacoes.push(new URL(rota.request().url()).pathname);
+      await new Promise((r) => setTimeout(r, 800));
+      await rota.continue();
+    },
+  );
+  const html = p.locator("html");
+  const ir = async (nome: string, caminho: RegExp) => {
+    navegacoes.length = 0;
+    await aba(p, nome).click();
+    await expect(p).toHaveURL(caminho);
+    await expect(html).not.toHaveAttribute("data-carregando", /.*/);
+    await parado(p);
+    return { ms: await ultimaCarga(p), rsc: [...navegacoes] };
+  };
+  const primeira = await ir("Agenda", /\/agenda$/);
+  await ir("Folgas", /\/folgas$/);
+  const segunda = await ir("Agenda", /\/agenda$/);
+  console.log(`[055] Agenda com RSC +800 ms: 1ª visita ${primeira.ms?.toFixed(0)} ms, 2ª visita ${segunda.ms?.toFixed(0)} ms`);
+  expect(segunda.rsc).toEqual([]);
+  expect(segunda.ms).not.toBeNull();
+  expect(segunda.ms!).toBeLessThanOrEqual(150);
+  await p.context().close();
+});
+
+test("salvar o perfil e voltar ao Perfil mostra o dado novo", async ({ browser }) => {
+  const p = await entrarComEspiao(browser, "no-preference");
+  const meusDados = p.locator("form").filter({ has: p.getByRole("heading", { name: "Meus dados" }) });
+  const telefone = meusDados.getByLabel(/Telefone/);
+  await aba(p, "Perfil").click();
+  await expect(p).toHaveURL(/\/perfil$/);
+  const antes = await telefone.inputValue();
+  await parado(p);
+  // O Perfil já está no cache do cliente; salvar precisa invalidar.
+  await aba(p, "Início").click();
+  await expect(p).toHaveURL(/\/inicio$/);
+  await parado(p);
+  await aba(p, "Perfil").click();
+  await expect(p).toHaveURL(/\/perfil$/);
+  const novo = `(11) 9${String(Date.now()).slice(-8)}`;
+  await telefone.fill(novo);
+  await meusDados.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(p).toHaveURL(/\/perfil\?ok=/);
+  await parado(p);
+  await aba(p, "Início").click();
+  await expect(p).toHaveURL(/\/inicio$/);
+  await parado(p);
+  await aba(p, "Perfil").click();
+  await expect(p).toHaveURL(/\/perfil$/);
+  await expect(telefone).toHaveValue(novo);
+  // Devolve o telefone de antes para os testes seguintes.
+  await telefone.fill(antes);
+  await meusDados.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(p).toHaveURL(/\/perfil\?ok=/);
   await p.context().close();
 });

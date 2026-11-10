@@ -16,6 +16,11 @@ const csp = [
 
 const config: NextConfig = {
   poweredByHeader: false,
+  experimental: {
+    // Tela já visitada (dynamic) e aba pré-carregada (static, prefetch completo) voltam do cache do router por 30 s.
+    // As server actions com revalidatePath limpam esse cache, então o dado salvo aparece na hora.
+    staleTimes: { dynamic: 30, static: 30 },
+  },
   async headers() {
     return [
       {
