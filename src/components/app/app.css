@@ -37,13 +37,13 @@
     border-top: 1px solid var(--line);
     view-transition-name: rail;
   }
-  .tabbar a { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: var(--faint); font-size: 11px; font-weight: 600; }
+  .tabbar a { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: var(--faint); font-size: 11px; font-weight: 600; transition: color var(--t-2); }
   .tabbar a svg { width: 23px; height: 23px; }
-  .tabbar .pill { width: 56px; height: 30px; border-radius: 99px; display: grid; place-items: center; transition: background var(--t-2), color var(--t-2); }
+  .tabbar .pill { width: 56px; height: 30px; border-radius: 99px; display: grid; place-items: center; }
+  /* Indicador único da aba ativa: abas.tsx grava left/right/top/bottom e a transição (mola + esticada). */
+  .tabbar__ind { position: absolute; z-index: 0; border-radius: 99px; pointer-events: none; opacity: 0; background: color-mix(in srgb, var(--primary) 14%, transparent); }
   .tabbar a:hover { color: var(--muted); }
   .tabbar a.is-active { color: var(--primary); }
-  .tabbar a.is-active .pill { background: color-mix(in srgb, var(--primary) 14%, transparent); }
-  .tabbar a.is-active .pill { view-transition-name: pilula; }
   .tabbar .badge { top: 5px; right: calc(50% - 26px); }
 
   /* ---------- Linhas de lista e botões de toque ---------- */
@@ -187,7 +187,8 @@
     }
     .tabbar a { padding: 6px 0; font-size: 10.5px; }
     .tabbar .pill { width: 50px; height: 34px; border-radius: 14px; }
-    .tabbar a.is-active .pill { background: var(--primary); color: var(--on-primary); }
+    .tabbar__ind { border-radius: 14px; background: var(--primary); }
+    .tabbar a.is-active .pill { color: var(--on-primary); }
     .tabbar .badge { right: 10px; top: 4px; }
     .cta { position: static; width: 100%; }
     .cta-espaco { display: none; }

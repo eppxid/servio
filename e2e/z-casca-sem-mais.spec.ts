@@ -228,3 +228,95 @@ test("salvar o perfil e voltar ao Perfil mostra o dado novo", async ({ browser }
   await expect(p).toHaveURL(/\/perfil\?ok=/);
   await p.context().close();
 });
+
+const centroInd = (p: Page) =>
+  p.locator(".tabbar__ind").evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width, h: r.height };
+  });
+
+test("a pílula da aba sai na hora do toque, antes da tela nova chegar", async ({ browser }) => {
+  const p = await entrarComEspiao(browser, "no-preference");
+  // Com View Transition o navegador congela a renderização até a tela nova chegar (navegar.ts, tarefa 057).
+  // Sem ela (Firefox, Safari antigo) a pílula anda durante a espera: é o que este teste mede.
+  await p.addInitScript("document.startViewTransition = undefined");
+  await p.route(
+    (url) => url.searchParams.has("_rsc"),
+    async (rota) => {
+      await new Promise((r) => setTimeout(r, 800));
+      await rota.continue();
+    },
+  );
+  await p.reload();
+  await expect(p.locator(".tabbar__ind")).toHaveCSS("opacity", "1");
+  await p.waitForTimeout(600);
+  const antes = await centroInd(p);
+  const alvo = await aba(p, "Agenda").locator(".pill").boundingBox();
+  const centroAlvo = alvo!.x + alvo!.width / 2;
+  await aba(p, "Agenda").click();
+  await p.waitForTimeout(100);
+  const depois = await centroInd(p);
+  // Ainda no Início: a tela nova não chegou e a pílula já anda em direção à Agenda.
+  expect(new URL(p.url()).pathname).toBe("/inicio");
+  expect(depois.x).toBeGreaterThan(antes.x + 5);
+  expect(depois.x).toBeLessThan(centroAlvo + 20);
+  await expect(aba(p, "Agenda")).toHaveClass(/is-active/);
+  if (process.env.PRINT_PILULA) {
+    // Meio do deslize: dá para ver a pílula esticada (borda da frente já longe, a de trás atrasada).
+    await p.waitForTimeout(0);
+    await p.screenshot({ path: `${process.env.PRINT_PILULA}-meio.png`, clip: { x: 0, y: 844 - 110, width: 390, height: 110 } });
+  }
+  await expect(p).toHaveURL(/\/agenda$/);
+  await p.waitForTimeout(700);
+  const fim = await centroInd(p);
+  expect(Math.abs(fim.x - centroAlvo)).toBeLessThan(2);
+  expect(Math.abs(fim.w - alvo!.width)).toBeLessThan(2);
+  if (process.env.PRINT_PILULA) await p.screenshot({ path: `${process.env.PRINT_PILULA}-fim.png`, clip: { x: 0, y: 844 - 110, width: 390, height: 110 } });
+  await p.context().close();
+});
+
+test("a pílula acompanha o pathname no voltar e fica esticada só no caminho", async ({ browser }) => {
+  const p = await entrarComEspiao(browser, "no-preference");
+  const larguraParada = (await centroInd(p)).w;
+  await aba(p, "Perfil").click();
+  await p.waitForTimeout(150);
+  // Esticada no meio do caminho: mais larga que parada.
+  expect((await centroInd(p)).w).toBeGreaterThan(larguraParada + 4);
+  await expect(p).toHaveURL(/\/perfil$/);
+  await p.waitForTimeout(700);
+  await p.goBack();
+  await expect(p).toHaveURL(/\/inicio$/);
+  await p.waitForTimeout(700);
+  const alvo = await aba(p, "Início").locator(".pill").boundingBox();
+  const fim = await centroInd(p);
+  expect(Math.abs(fim.x - (alvo!.x + alvo!.width / 2))).toBeLessThan(2);
+  expect(Math.abs(fim.w - larguraParada)).toBeLessThan(2);
+  await p.context().close();
+});
+
+test("desktop: a pílula desce pela barra lateral e fica parada na aba ativa", async ({ browser }) => {
+  const contexto = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const p = await contexto.newPage();
+  await p.addInitScript("document.startViewTransition = undefined");
+  await p.goto("/entrar");
+  await p.getByLabel("E-mail").fill("admin@e2e.local");
+  await p.getByLabel("Senha", { exact: true }).fill(SENHA);
+  await p.getByRole("button", { name: "Entrar" }).click();
+  await expect(p).toHaveURL(/\/inicio$/);
+  await p.waitForTimeout(500);
+  const antes = await centroInd(p);
+  await aba(p, "Perfil").click();
+  await p.waitForTimeout(120);
+  const meio = await centroInd(p);
+  expect(meio.y).toBeGreaterThan(antes.y + 5);
+  expect(Math.abs(meio.x - antes.x)).toBeLessThan(1);
+  if (process.env.PRINT_PILULA) await p.screenshot({ path: `${process.env.PRINT_PILULA}-desktop-meio.png`, clip: { x: 0, y: 0, width: 200, height: 460 } });
+  await expect(p).toHaveURL(/\/perfil$/);
+  await p.waitForTimeout(700);
+  const alvo = await aba(p, "Perfil").locator(".pill").boundingBox();
+  const fim = await centroInd(p);
+  expect(Math.abs(fim.y - (alvo!.y + alvo!.height / 2))).toBeLessThan(2);
+  expect(Math.abs(fim.h - alvo!.height)).toBeLessThan(2);
+  if (process.env.PRINT_PILULA) await p.screenshot({ path: `${process.env.PRINT_PILULA}-desktop-fim.png`, clip: { x: 0, y: 0, width: 200, height: 460 } });
+  await contexto.close();
+});
