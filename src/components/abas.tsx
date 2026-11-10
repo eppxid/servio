@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
 import { IconeApp, type NomeIcone } from "./app/icones";
 import type { Modo } from "./app/modo-comum";
+import { podeUsarVidro } from "./app/vidro";
 
 export const ABAS: Record<Modo, { href: string; rotulo: string; icone: NomeIcone }[]> = {
   voluntario: [
@@ -101,6 +102,24 @@ export function Abas({ modo }: { modo: Modo }) {
 
   useLayoutEffect(() => posicionar(true), [ativo, modo, posicionar]);
 
+  // Vidro líquido é opt-in: sem a marca, a barra fica com o blur de sempre.
+  useEffect(() => {
+    const barra = nav.current;
+    if (!barra) return;
+    const q = (c: string) => window.matchMedia(c).matches;
+    const marcas = (navigator as Navigator & { userAgentData?: { brands: { brand: string }[] } }).userAgentData?.brands ?? [];
+    const liga = podeUsarVidro({
+      userAgent: navigator.userAgent,
+      marcas: marcas.map((m) => m.brand),
+      hardwareConcurrency: navigator.hardwareConcurrency,
+      reducaoTransparencia: q("(prefers-reduced-transparency: reduce)"),
+      reducaoMovimento: q("(prefers-reduced-motion: reduce)"),
+      contrasteAlto: q("(prefers-contrast: more)"),
+    });
+    if (liga) barra.dataset.vidro = "on";
+    return () => barra.removeAttribute("data-vidro");
+  }, []);
+
   // Mudança de tamanho (girar o celular, passar do rodapé para a barra lateral) reposiciona sem deslizar.
   useEffect(() => {
     const barra = nav.current;
@@ -119,6 +138,13 @@ export function Abas({ modo }: { modo: Modo }) {
 
   return (
     <nav aria-label="Principal" className="tabbar" ref={nav}>
+      <svg aria-hidden="true" width="0" height="0" style={{ position: "absolute" }} focusable="false">
+        <filter id="vidro-liquido" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.04" numOctaves="2" seed="7" result="ruido" />
+          <feDisplacementMap in="SourceGraphic" in2="ruido" scale="28" xChannelSelector="R" yChannelSelector="G" result="refrato" />
+          <feGaussianBlur in="refrato" stdDeviation="0.6" />
+        </filter>
+      </svg>
       <span className="tabbar__ind" aria-hidden="true" ref={ind} />
       {ABAS[modo].map((aba) => {
         const atual = caminho === aba.href || caminho.startsWith(aba.href + "/");
