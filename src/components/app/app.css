@@ -37,6 +37,14 @@
     border-top: 1px solid var(--line);
     view-transition-name: rail;
   }
+  /* Vidro líquido (abas.tsx grava data-vidro só em Chromium capaz): refração por filtro SVG.
+     Fundo mantém >= 72% de opacidade para o rótulo de 11 px passar no contraste AA. */
+  @media (max-width: 899.98px) {
+    .tabbar[data-vidro="on"] {
+      background: color-mix(in srgb, var(--raised) 78%, transparent);
+      backdrop-filter: url(#vidro-liquido) blur(6px) saturate(1.4);
+    }
+  }
   .tabbar a { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: var(--faint); font-size: 11px; font-weight: 600; transition: color var(--t-2); }
   .tabbar a svg { width: 23px; height: 23px; }
   .tabbar .pill { width: 56px; height: 30px; border-radius: 99px; display: grid; place-items: center; }
