@@ -78,6 +78,13 @@
       "when": 1794234610611,
       "tag": "0010_fotos_e_papel_convite",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794333050270,
+      "tag": "0011_indices_chaves_quentes",
+      "breakpoints": true
     }
   ]
 }
