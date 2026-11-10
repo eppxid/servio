@@ -86,3 +86,6 @@ Para o advogado:
 - Base legal do pré-cadastro: o líder digita o nome (dado que, junto do ministério, revela convicção religiosa) antes do aceite da pessoa.
 - Voluntários menores de idade (art. 14): o link permite cadastro sem verificar idade nem autorização do responsável.
 - Envio do link pelo WhatsApp (Meta, fora do Brasil — art. 33): ato do líder; a mensagem não cita a igreja.
+
+## Performance
+Medida em 3G lento e CPU 4x nas telas principais: tempos, KB de JS e pendências em [docs/performance.md](performance.md). Spec: `e2e/rede-lenta.spec.ts`.
