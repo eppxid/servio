@@ -226,6 +226,7 @@ describe("exclusão da conta", () => {
     expect(await doUsuario(schema.mensagens)).toHaveLength(0);
     expect(await doUsuario(schema.indisponibilidades)).toHaveLength(0);
     expect(await db.select().from(reconhecimentos).where(eq(reconhecimentos.deUsuario, bia.id))).toHaveLength(0);
+    expect(await db.select().from(reconhecimentos).where(eq(reconhecimentos.paraUsuario, bia.id))).toHaveLength(0);
 
     const depois = await carregarPainel(db, admin, filtro, AGORA);
     expect(depois.indicadores.escalasPublicadas).toBe(antes.indicadores.escalasPublicadas);

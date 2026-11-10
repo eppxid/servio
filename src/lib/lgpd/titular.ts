@@ -197,7 +197,8 @@ async function anonimizar(db: AnyDb, alvo: { id: number; igrejaId: number }, fei
     await tx.delete(t.pushInscricoes).where(eq(t.pushInscricoes.usuarioId, id));
     await tx.delete(t.fotos).where(eq(t.fotos.usuarioId, id));
     await tx.delete(t.mensagens).where(eq(t.mensagens.usuarioId, id));
-    await tx.delete(reconhecimentos).where(eq(reconhecimentos.deUsuario, id));
+    // O agradecimento recebido também sai: o texto do colega fala da pessoa e pode trazer o nome dela.
+    await tx.delete(reconhecimentos).where(or(eq(reconhecimentos.deUsuario, id), eq(reconhecimentos.paraUsuario, id)));
 
     // Acesso por link: aparelhos, o link pessoal da pessoa e os pedidos feitos sobre ele.
     await tx.delete(t.aparelhos).where(eq(t.aparelhos.usuarioId, id));
