@@ -90,6 +90,7 @@ export function Chat({ eventoId, usuarioId, lider }: { eventoId: number; usuario
           required
           rows={3}
           aria-label="Mensagem"
+          enterKeyHint="send"
           className="campo"
         />
         {lider && (

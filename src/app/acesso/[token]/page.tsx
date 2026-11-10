@@ -183,7 +183,7 @@ export default async function Acesso({
               </p>
               <label className="rotulo">
                 E-mail
-                <input name="email" type="email" required maxLength={254} autoComplete="email" className="campo" />
+                <input name="email" type="email" required maxLength={254} autoComplete="email" autoCapitalize="none" className="campo" />
               </label>
               <label className="rotulo">
                 Senha

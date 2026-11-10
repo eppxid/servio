@@ -342,7 +342,7 @@ export default async function Equipe({
               <div key={f.id} className="row">
                 <form action={renomearFuncaoAcao} className={estilo.inline} style={{ flex: 1 }}>
                   <input type="hidden" name="funcao" value={f.id} />
-                  <input name="nome" defaultValue={f.nome} required minLength={2} maxLength={80} className="campo" aria-label={`Nome da função ${f.nome}`} />
+                  <input name="nome" defaultValue={f.nome} required minLength={2} maxLength={80} autoComplete="off" className="campo" aria-label={`Nome da função ${f.nome}`} />
                   <button type="submit" className="tbtn tbtn--soft" aria-label={`Salvar ${f.nome}`}>
                     Salvar
                   </button>
@@ -357,7 +357,7 @@ export default async function Equipe({
             ))}
             <form action={adicionarFuncao} className="row">
               <input type="hidden" name="ministerio" value={escolhido.id} />
-              <input name="nome" required minLength={2} maxLength={80} className="campo" aria-label="Nova função" placeholder="Nova função" />
+              <input name="nome" required minLength={2} maxLength={80} autoComplete="off" className="campo" aria-label="Nova função" placeholder="Nova função" />
               <button type="submit" className="tbtn tbtn--p">
                 Adicionar
               </button>

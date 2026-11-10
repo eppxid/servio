@@ -177,7 +177,7 @@ html[data-theme='dark'] .tabs button.is-active { color: #0e1118; }
   transition: border-color var(--t-2), background var(--t-2);
 }
 .field:focus-within { border-color: var(--primary); background: var(--raised); }
-.field input { border: 0; outline: 0; background: none; flex: 1; min-width: 0; }
+.field input { font-size: 16px; border: 0; outline: 0; background: none; flex: 1; min-width: 0; }
 kbd { font: 600 10px/1 var(--font); padding: 3px 6px; border-radius: 6px; background: var(--raised); border: 1px solid var(--line-2); color: var(--muted); }
 
 .avatar {

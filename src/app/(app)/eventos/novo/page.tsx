@@ -27,7 +27,7 @@ export default async function NovoEvento({
       <form action={criarEvento} className="space-y-4">
         <label className="rotulo">
           Título
-          <input name="titulo" required maxLength={120} className="campo" />
+          <input name="titulo" required maxLength={120} autoComplete="off" className="campo" />
         </label>
         <label className="rotulo">
           Data (do primeiro culto)

@@ -66,7 +66,7 @@ export default async function TrocarSenha({
         <form action={trocar} className="space-y-4">
           <label className="rotulo">
             E-mail
-            <input name="email" type="email" required maxLength={254} autoComplete="email" defaultValue={usuario.email ?? ""} className="campo" />
+            <input name="email" type="email" required maxLength={254} autoComplete="email" autoCapitalize="none" defaultValue={usuario.email ?? ""} className="campo" />
           </label>
           <label className="rotulo">
             Senha

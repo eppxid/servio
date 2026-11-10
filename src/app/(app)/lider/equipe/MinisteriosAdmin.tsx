@@ -30,8 +30,8 @@ export async function MinisteriosAdmin({ ator }: { ator: Ator }) {
             <div className={estilo.folha} style={{ padding: "8px 0" }}>
               <form action={editarMinisterioAcao}>
                 <input type="hidden" name="ministerio" value={m.id} />
-                <input name="nome" defaultValue={m.nome} required minLength={2} maxLength={120} className="campo" aria-label={`Nome do ministério ${m.nome}`} />
-                <input name="descricao" defaultValue={m.descricao ?? ""} maxLength={500} className="campo" aria-label="Descrição" placeholder="Descrição" />
+                <input name="nome" defaultValue={m.nome} required minLength={2} maxLength={120} autoComplete="off" className="campo" aria-label={`Nome do ministério ${m.nome}`} />
+                <input name="descricao" defaultValue={m.descricao ?? ""} maxLength={500} autoComplete="off" className="campo" aria-label="Descrição" placeholder="Descrição" />
                 <button type="submit" className="tbtn tbtn--soft" style={{ justifySelf: "start" }}>
                   Salvar ministério
                 </button>
@@ -71,8 +71,8 @@ export async function MinisteriosAdmin({ ator }: { ator: Ator }) {
 
       <form action={criarMinisterioAcao} className={estilo.convite}>
         <b>Novo ministério</b>
-        <input name="nome" required minLength={2} maxLength={120} className="campo" aria-label="Nome do novo ministério" placeholder="Nome" />
-        <input name="descricao" maxLength={500} className="campo" aria-label="Descrição do novo ministério" placeholder="Descrição (opcional)" />
+        <input name="nome" required minLength={2} maxLength={120} autoComplete="off" className="campo" aria-label="Nome do novo ministério" placeholder="Nome" />
+        <input name="descricao" maxLength={500} autoComplete="off" className="campo" aria-label="Descrição do novo ministério" placeholder="Descrição (opcional)" />
         <button type="submit" className="tbtn tbtn--p" style={{ justifySelf: "start" }}>
           Criar ministério
         </button>
