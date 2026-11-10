@@ -102,7 +102,7 @@ export const membroFuncoes = pgTable(
     funcaoId: integer("funcao_id").notNull().references(() => funcoes.id),
     status: statusFuncao("status").notNull().default("aprovada"),
   },
-  (t) => [primaryKey({ columns: [t.membroId, t.funcaoId] })],
+  (t) => [primaryKey({ columns: [t.membroId, t.funcaoId] }), index("membro_funcoes_funcao").on(t.funcaoId)],
 );
 
 export const recorrencias = pgTable("recorrencias", {
@@ -144,14 +144,18 @@ export const eventos = pgTable(
   (t) => [index("eventos_inicio").on(t.igrejaId, t.inicio)],
 );
 
-export const indisponibilidades = pgTable("indisponibilidades", {
-  id: serial("id").primaryKey(),
-  igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
-  usuarioId: integer("usuario_id").notNull().references(() => usuarios.id),
-  dataInicio: date("data_inicio").notNull(),
-  dataFim: date("data_fim").notNull(),
-  motivo: text("motivo"),
-});
+export const indisponibilidades = pgTable(
+  "indisponibilidades",
+  {
+    id: serial("id").primaryKey(),
+    igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
+    usuarioId: integer("usuario_id").notNull().references(() => usuarios.id),
+    dataInicio: date("data_inicio").notNull(),
+    dataFim: date("data_fim").notNull(),
+    motivo: text("motivo"),
+  },
+  (t) => [index("indisponibilidades_usuario").on(t.usuarioId, t.dataFim)],
+);
 
 export const escalas = pgTable(
   "escalas",
@@ -165,26 +169,34 @@ export const escalas = pgTable(
   (t) => [uniqueIndex("escalas_evento_ministerio").on(t.eventoId, t.ministerioId)],
 );
 
-export const escalaItens = pgTable("escala_itens", {
-  id: serial("id").primaryKey(),
-  igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
-  escalaId: integer("escala_id").notNull().references(() => escalas.id),
-  funcaoId: integer("funcao_id").notNull().references(() => funcoes.id),
-  usuarioId: integer("usuario_id").references(() => usuarios.id),
-  status: statusItem("status").notNull().default("pendente"),
-  checkinEm: ts("checkin_em"),
-  recusadoEm: ts("recusado_em"),
-});
+export const escalaItens = pgTable(
+  "escala_itens",
+  {
+    id: serial("id").primaryKey(),
+    igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
+    escalaId: integer("escala_id").notNull().references(() => escalas.id),
+    funcaoId: integer("funcao_id").notNull().references(() => funcoes.id),
+    usuarioId: integer("usuario_id").references(() => usuarios.id),
+    status: statusItem("status").notNull().default("pendente"),
+    checkinEm: ts("checkin_em"),
+    recusadoEm: ts("recusado_em"),
+  },
+  (t) => [index("escala_itens_escala").on(t.escalaId), index("escala_itens_usuario").on(t.usuarioId)],
+);
 
-export const trocas = pgTable("trocas", {
-  id: serial("id").primaryKey(),
-  igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
-  escalaItemId: integer("escala_item_id").notNull().references(() => escalaItens.id),
-  solicitanteId: integer("solicitante_id").notNull().references(() => usuarios.id),
-  substitutoId: integer("substituto_id").references(() => usuarios.id),
-  status: statusTroca("status").notNull().default("aberta"),
-  criadoEm: ts("criado_em").notNull().defaultNow(),
-});
+export const trocas = pgTable(
+  "trocas",
+  {
+    id: serial("id").primaryKey(),
+    igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
+    escalaItemId: integer("escala_item_id").notNull().references(() => escalaItens.id),
+    solicitanteId: integer("solicitante_id").notNull().references(() => usuarios.id),
+    substitutoId: integer("substituto_id").references(() => usuarios.id),
+    status: statusTroca("status").notNull().default("aberta"),
+    criadoEm: ts("criado_em").notNull().defaultNow(),
+  },
+  (t) => [index("trocas_item").on(t.escalaItemId), index("trocas_solicitante").on(t.solicitanteId), index("trocas_substituto").on(t.substitutoId)],
+);
 
 export const mensagens = pgTable(
   "mensagens",
@@ -200,15 +212,19 @@ export const mensagens = pgTable(
   (t) => [index("mensagens_evento").on(t.eventoId, t.criadoEm)],
 );
 
-export const pushInscricoes = pgTable("push_inscricoes", {
-  id: serial("id").primaryKey(),
-  igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
-  usuarioId: integer("usuario_id").notNull().references(() => usuarios.id),
-  endpoint: text("endpoint").notNull().unique(),
-  chaveP256dh: text("chave_p256dh").notNull(),
-  chaveAuth: text("chave_auth").notNull(),
-  criadoEm: ts("criado_em").notNull().defaultNow(),
-});
+export const pushInscricoes = pgTable(
+  "push_inscricoes",
+  {
+    id: serial("id").primaryKey(),
+    igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
+    usuarioId: integer("usuario_id").notNull().references(() => usuarios.id),
+    endpoint: text("endpoint").notNull().unique(),
+    chaveP256dh: text("chave_p256dh").notNull(),
+    chaveAuth: text("chave_auth").notNull(),
+    criadoEm: ts("criado_em").notNull().defaultNow(),
+  },
+  (t) => [index("push_inscricoes_usuario").on(t.usuarioId)],
+);
 
 export const convites = pgTable("convites", {
   id: serial("id").primaryKey(),
@@ -239,21 +255,25 @@ export const statusPedidoAcesso = pgEnum("status_pedido_acesso", [
 export const papelConvite = pgEnum("papel_convite", ["voluntario", "lider", "admin"]);
 
 /** Link pessoal: o banco guarda só o hash do token (LGPD art. 46). */
-export const convitesPessoais = pgTable("convites_pessoais", {
-  id: serial("id").primaryKey(),
-  igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
-  ministerioId: integer("ministerio_id").notNull().references(() => ministerios.id),
-  nome: text("nome").notNull(),
-  sobrenome: text("sobrenome").notNull(),
-  papel: papelConvite("papel").notNull().default("voluntario"),
-  tokenHash: text("token_hash").notNull().unique(),
-  criadoPor: integer("criado_por").notNull().references(() => usuarios.id),
-  usuarioId: integer("usuario_id").references(() => usuarios.id),
-  expiraEm: ts("expira_em").notNull(),
-  usadoEm: ts("usado_em"),
-  revogadoEm: ts("revogado_em"),
-  criadoEm: ts("criado_em").notNull().defaultNow(),
-});
+export const convitesPessoais = pgTable(
+  "convites_pessoais",
+  {
+    id: serial("id").primaryKey(),
+    igrejaId: integer("igreja_id").notNull().references(() => igrejas.id),
+    ministerioId: integer("ministerio_id").notNull().references(() => ministerios.id),
+    nome: text("nome").notNull(),
+    sobrenome: text("sobrenome").notNull(),
+    papel: papelConvite("papel").notNull().default("voluntario"),
+    tokenHash: text("token_hash").notNull().unique(),
+    criadoPor: integer("criado_por").notNull().references(() => usuarios.id),
+    usuarioId: integer("usuario_id").references(() => usuarios.id),
+    expiraEm: ts("expira_em").notNull(),
+    usadoEm: ts("usado_em"),
+    revogadoEm: ts("revogado_em"),
+    criadoEm: ts("criado_em").notNull().defaultNow(),
+  },
+  (t) => [index("convites_pessoais_usuario").on(t.usuarioId), index("convites_pessoais_ministerio").on(t.ministerioId)],
+);
 
 export const aparelhos = pgTable(
   "aparelhos",
