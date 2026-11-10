@@ -3,12 +3,12 @@
 import Script from "next/script";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { chegou, navegar, podeAnimar, tipoDaNavegacao, transicao } from "./app/navegar";
+import { cascata, chegou, itensDaTela, navegar, podeAnimar, telaDo, tipoDaNavegacao, transicao } from "./app/navegar";
 
 declare global {
   interface Window {
     motion?: {
-      enter(root?: ParentNode): void;
+      enter(root?: ParentNode | Element[], opcoes?: { sel?: string; stagger?: number; y?: number; ms?: number; max?: number }): void;
       countAll(root?: ParentNode): void;
       stuck(top: Element): void;
       theme(tema: string, origem?: Element | null): void;
@@ -17,17 +17,42 @@ declare global {
   }
 }
 
-/** Depois de uma View Transition o deslize já é a entrada: sem cascata, e os números contam ao fim dela. */
+/**
+ * Entrada da tela nova. Detalhe ↔ lista (View Transition `frente`/`tras`): o deslize já é a entrada, sem cascata,
+ * e os números contam ao fim dela. Troca de aba ou de modo: a tela antiga esmaece (kit.css) e os blocos da nova
+ * entram em cascata já durante a transição, que mostra a tela nova ao vivo.
+ */
 function animar(fimDaTransicao: Promise<void> | null = null) {
   const m = window.motion;
   const main = document.querySelector("main");
   if (!m || !main) return;
-  if (fimDaTransicao) {
+  const nav = document.documentElement.dataset.nav;
+  if (fimDaTransicao && (nav === "frente" || nav === "tras")) {
     void fimDaTransicao.then(() => m.countAll(main));
     return;
   }
-  m.enter(main);
+  cascata(itensDaTela(telaDo(main)));
   m.countAll(main);
+}
+
+const LIMITE_FILTRO_MS = 3000;
+
+/** Filtro por link (mesmo caminho, outra query): quando a URL nova chega, os blocos abaixo do filtro entram em cascata. */
+function cascataAoFiltrar(destino: string, link: Element) {
+  const main = document.querySelector("main");
+  const tela = main && telaDo(main);
+  if (!tela) return;
+  let bloco: Element | null = link;
+  while (bloco && bloco.parentElement !== tela) bloco = bloco.parentElement;
+  const desde = bloco ? [...tela.children].indexOf(bloco) + 1 : 0;
+  const t0 = performance.now();
+  const olhar = () => {
+    if (location.search === destino) {
+      const agora = telaDo(document.querySelector("main") ?? tela);
+      cascata(itensDaTela(agora, agora === tela ? desde : 0));
+    } else if (performance.now() - t0 < LIMITE_FILTRO_MS) requestAnimationFrame(olhar);
+  };
+  requestAnimationFrame(olhar);
 }
 
 const LIMITE_CARREGANDO_MS = 8000;
@@ -60,7 +85,11 @@ export function Movimento() {
       const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
       if (!a || (a.target && a.target !== "_self") || a.hasAttribute("download")) return;
       const url = new URL(a.href, location.href);
-      if (url.origin !== location.origin || url.pathname === atual.current || url.pathname.startsWith("/api/")) return;
+      if (url.origin !== location.origin || url.pathname.startsWith("/api/")) return;
+      if (url.pathname === atual.current) {
+        if (url.search !== location.search) cascataAoFiltrar(url.search, a);
+        return;
+      }
       // As marcas entram antes da View Transition para já estarem no quadro "antigo".
       limparCarregando();
       document.documentElement.setAttribute("data-carregando", "");

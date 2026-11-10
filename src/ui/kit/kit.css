@@ -283,16 +283,18 @@ html[data-motion='off'] *, html[data-motion='off'] *::before, html[data-motion='
 .top { view-transition-name: topo; }
 ::view-transition-old(rail) { display: none; }
 ::view-transition-new(rail) { animation: none; }
-@keyframes nav-entra { from { opacity: 0; transform: translateX(var(--nav-de, 0)) scale(var(--nav-escala, 1)); } }
-@keyframes nav-sai { to { opacity: 0; transform: translateX(var(--nav-para, 0)) scale(var(--nav-escala, 1)); } }
+@keyframes nav-entra { from { opacity: 0; transform: translateX(var(--nav-de, 0)); } }
+@keyframes nav-sai { to { opacity: 0; transform: translateX(var(--nav-para, 0)); } }
+@keyframes nav-esmaece { to { opacity: 0; } }
 @media (prefers-reduced-motion: no-preference) {
+  /* Detalhe ↔ lista (frente/trás): a página desliza, é a entrada. */
   html[data-nav]::view-transition-old(root) { animation: nav-sai 200ms var(--ease-in, cubic-bezier(.4,0,1,1)) both; }
   html[data-nav]::view-transition-new(root) { animation: nav-entra 300ms var(--ease, cubic-bezier(.2,.8,.2,1)) both; }
-  html[data-nav="aba-dir"] { --nav-de: 32px; --nav-para: -32px; }
-  html[data-nav="aba-esq"] { --nav-de: -32px; --nav-para: 32px; }
   html[data-nav="frente"] { --nav-de: 40px; --nav-para: -24px; }
   html[data-nav="tras"] { --nav-de: -24px; --nav-para: 40px; }
-  html[data-nav="troca"] { --nav-escala: .98; }
+  /* Troca de aba ou de modo: a tela antiga esmaece por cima da nova, que fica parada; os blocos dela entram em cascata (Movimento.tsx). */
+  html[data-nav^="aba"]::view-transition-old(root), html[data-nav="troca"]::view-transition-old(root) { z-index: 1; animation: nav-esmaece 140ms var(--ease-in, cubic-bezier(.4,0,1,1)) both; }
+  html[data-nav^="aba"]::view-transition-new(root), html[data-nav="troca"]::view-transition-new(root) { animation: none; }
 }
 
 /* ---------- Troca de tela a caminho (Movimento.tsx grava html[data-carregando] e a[data-indo]) ---------- */

@@ -320,3 +320,63 @@ test("desktop: a pílula desce pela barra lateral e fica parada na aba ativa", a
   if (process.env.PRINT_PILULA) await p.screenshot({ path: `${process.env.PRINT_PILULA}-desktop-fim.png`, clip: { x: 0, y: 0, width: 200, height: 460 } });
   await contexto.close();
 });
+
+// Guarda o atraso de cada animação de entrada da cascata (motion.enter: translateY 8 px) no instante em que nasce.
+const espiarCascata = `(() => {
+  window.__cascata = [];
+  const animar = Element.prototype.animate;
+  Element.prototype.animate = function (quadros, opcoes) {
+    if (Array.isArray(quadros) && String(quadros[0]?.transform).includes("translateY(8px)") && this.closest("main"))
+      window.__cascata.push(Number(opcoes?.delay ?? 0));
+    return animar.call(this, quadros, opcoes);
+  };
+})()`;
+const cascataVista = (p: Page) => p.evaluate(() => (window as unknown as { __cascata: number[] }).__cascata.splice(0));
+
+test("troca de aba: os blocos da tela nova entram em cascata; movimento desligado não anima", async ({ browser }) => {
+  const p = await entrarComEspiao(browser, "no-preference");
+  await p.evaluate(espiarCascata);
+  await aba(p, "Agenda").click();
+  await expect(p).toHaveURL(/\/agenda$/);
+  await expect.poll(async () => (await p.evaluate(() => (window as unknown as { __cascata: number[] }).__cascata.length))).toBeGreaterThan(2);
+  const atrasos = await cascataVista(p);
+  expect(atrasos[0]).toBe(0);
+  for (let i = 1; i < atrasos.length; i++) expect(atrasos[i]).toBeGreaterThanOrEqual(atrasos[i - 1]);
+  expect(atrasos[1]).toBeGreaterThan(0);
+  // Do 8º item em diante entram juntos: o atraso para em 7 × 35 ms.
+  expect(Math.max(...atrasos)).toBeLessThanOrEqual(7 * 35);
+  // A troca de aba esmaece a tela antiga, sem deslize.
+  expect(await transicoes(p)).toEqual(["aba-dir"]);
+  await parado(p);
+
+  // Filtro dentro da tela: trocar o mês da Agenda faz a lista nova entrar em cascata.
+  await p.getByRole("button", { name: "Próximo mês" }).click();
+  await expect.poll(async () => (await cascataVista(p)).length).toBeGreaterThan(0);
+
+  await p.evaluate(() => (document.documentElement.dataset.motion = "off"));
+  await cascataVista(p);
+  await aba(p, "Folgas").click();
+  await expect(p).toHaveURL(/\/folgas$/);
+  await p.waitForTimeout(300);
+  expect(await cascataVista(p)).toEqual([]);
+  const animadas = await p.evaluate(() =>
+    [...document.querySelectorAll("main *")].filter((el) => el.getAnimations().some((a) => !(a instanceof CSSAnimation) && !(a instanceof CSSTransition))).length,
+  );
+  expect(animadas).toBe(0);
+  await p.context().close();
+});
+
+// Gravação para conferência humana: VIDEO_057=<pasta> pnpm e2e (pula quando a variável não existe).
+test("vídeo 057: três trocas de aba e uma troca de filtro", async ({ browser }) => {
+  test.skip(!process.env.VIDEO_057, "defina VIDEO_057 para gravar");
+  const p = await entrarComEspiao(browser, "no-preference", process.env.VIDEO_057);
+  await p.waitForTimeout(900);
+  for (const [nome, caminho] of [["Folgas", /\/folgas$/], ["Perfil", /\/perfil$/], ["Agenda", /\/agenda$/]] as const) {
+    await aba(p, nome).click();
+    await expect(p).toHaveURL(caminho);
+    await p.waitForTimeout(1100);
+  }
+  await p.getByRole("button", { name: "Próximo mês" }).click();
+  await p.waitForTimeout(1100);
+  await p.context().close();
+});

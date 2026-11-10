@@ -9,11 +9,13 @@
   const d = (ms) => (reduz() ? 0 : ms);
   const anima = (el, frames, ms, easing = EASE, extra = {}) => el.animate(frames, { duration: d(ms), easing, fill: 'both', ...extra });
 
-  // ---------- Entrada em cascata: [data-enter] na ordem do DOM ----------
-  function enter(root = document, { sel = '[data-enter]', stagger = 40, y = 14, ms = 520 } = {}) {
-    const els = [...root.querySelectorAll(sel)];
+  // ---------- Entrada em cascata: [data-enter] na ordem do DOM, ou a lista de elementos dada ----------
+  // max = quantos itens ganham atraso crescente; do max-ésimo em diante entram juntos. Movimento reduzido: nada anima.
+  function enter(root = document, { sel = '[data-enter]', stagger = 40, y = 14, ms = 520, max = Infinity } = {}) {
+    if (reduz()) return Promise.resolve([]);
+    const els = Array.isArray(root) ? root : [...root.querySelectorAll(sel)];
     return Promise.all(
-      els.map((el, i) => anima(el, [{ opacity: 0, transform: `translateY(${y}px)` }, { opacity: 1, transform: 'none' }], ms, EASE, { delay: d(i * stagger), fill: 'backwards' }).finished),
+      els.map((el, i) => anima(el, [{ opacity: 0, transform: `translateY(${y}px)` }, { opacity: 1, transform: 'none' }], ms, EASE, { delay: Math.min(i, max - 1) * stagger, fill: 'backwards' }).finished),
     );
   }
 

@@ -1,4 +1,39 @@
+import { useEffect, useRef } from "react";
 import { ABAS } from "../abas";
+
+/** Entrada em cascata: opacidade e subida de 8 px, 35 ms entre itens; do 8º em diante entram juntos. */
+export function cascata(itens: Element[]) {
+  if (itens.length > 0) window.motion?.enter(itens, { stagger: 35, y: 8, ms: 360, max: 8 });
+}
+
+/** Blocos de uma tela na ordem do DOM, a partir de `desde`; uma lista (`.list`) entra linha a linha. */
+export function itensDaTela(tela: Element, desde = 0): Element[] {
+  const itens: Element[] = [];
+  for (const bloco of [...tela.children].slice(desde)) {
+    if (bloco.classList.contains("list")) itens.push(...bloco.children);
+    else if (bloco.querySelector(":scope > .list")) {
+      for (const filho of bloco.children) filho.classList.contains("list") ? itens.push(...filho.children) : itens.push(filho);
+    } else itens.push(bloco);
+  }
+  return itens;
+}
+
+/** A `.tela` dentro do `main` (ou o primeiro filho dele, nas telas sem `.tela`). */
+export const telaDo = (main: Element) => main.querySelector(":scope > .tela") ?? main.firstElementChild ?? main;
+
+/** Filtro dentro da tela: quando `chave` muda, as linhas do contêiner do `ref` entram em cascata (a montagem não conta). */
+export function useCascata<T extends Element>(chave: unknown) {
+  const ref = useRef<T>(null);
+  const montou = useRef(false);
+  useEffect(() => {
+    if (!montou.current) {
+      montou.current = true;
+      return;
+    }
+    if (ref.current) cascata([...ref.current.children]);
+  }, [chave]);
+  return ref;
+}
 
 /** Direção da troca de tela; o CSS lê em `html[data-nav]` (kit.css). */
 export type TipoNav = "aba-dir" | "aba-esq" | "frente" | "tras" | "troca";
