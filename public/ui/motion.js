@@ -117,22 +117,24 @@
     drawer: [[{ opacity: 0, transform: 'translateX(32px)' }, { opacity: 1, transform: 'none' }], 450],
     pop: [[{ opacity: 0, transform: 'scale(.96) translateY(-4px)' }, { opacity: 1, transform: 'none' }], 220],
     palette: [[{ opacity: 0, transform: 'scale(.97) translateY(8px)' }, { opacity: 1, transform: 'none' }], 300],
+    // só o menu(): cresce do canto do âncora (transform-origin definido em menu()) e encolhe de volta; [frames, entrada ms, easing entrada, saída ms]
+    anchor: [[{ opacity: 0, transform: 'scale(.85)' }, { opacity: 1, transform: 'none' }], 240, POP, 160],
   };
   const pilha = [];
   function layer(el, { tipo = 'drawer', scrim = true, onClose } = {}) {
     const volta = document.activeElement;
     const veu = scrim ? document.body.appendChild(Object.assign(document.createElement('div'), { className: 'scrim' })) : null;
     el.hidden = false;
-    const [frames, ms] = ENTRADAS[tipo];
+    const [frames, ms, easeIn = EASE, msSaida = Math.min(ms, 240)] = ENTRADAS[tipo];
     if (veu) anima(veu, [{ opacity: 0 }, { opacity: 1 }], 300);
-    anima(el, frames, ms, EASE);
+    anima(el, frames, ms, easeIn);
     let fechado = false;
     const fechar = async () => {
       if (fechado) return;
       fechado = true;
       pilha.splice(pilha.indexOf(fechar), 1);
       document.removeEventListener('pointerdown', fora, true);
-      const saidas = [anima(el, [...frames].reverse(), Math.min(ms, 240), EASE_IN).finished];
+      const saidas = [anima(el, [...frames].reverse(), msSaida, EASE_IN).finished];
       if (veu) saidas.push(anima(veu, [{ opacity: 1 }, { opacity: 0 }], 240, EASE_IN).finished);
       await Promise.all(saidas);
       el.hidden = true;
@@ -176,8 +178,11 @@
     const r = ancora.getBoundingClientRect?.() ?? { left: ancora.x, bottom: ancora.y, right: ancora.x };
     const x = Math.min(r.left, innerWidth - m.offsetWidth - 8);
     const y = r.bottom + 6 + m.offsetHeight > innerHeight ? r.top - m.offsetHeight - 6 : r.bottom + 6;
-    Object.assign(m.style, { left: `${Math.max(8, x)}px`, top: `${y}px` });
-    fechar = layer(m, { tipo: 'pop', scrim: false, onClose: () => m.remove() });
+    const esq = Math.max(8, x);
+    // canto do menu mais perto do âncora: é dele que o menu cresce e para ele que encolhe
+    const origem = `${y >= r.bottom ? 'top' : 'bottom'} ${esq === r.left ? 'left' : 'right'}`;
+    Object.assign(m.style, { left: `${esq}px`, top: `${y}px`, transformOrigin: origem });
+    fechar = layer(m, { tipo: 'anchor', scrim: false, onClose: () => m.remove() });
     return fechar;
   }
 

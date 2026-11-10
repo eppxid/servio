@@ -249,7 +249,7 @@ kbd { font: 600 10px/1 var(--font); padding: 3px 6px; border-radius: 6px; backgr
 .menu {
   position: fixed; z-index: 95; min-width: 180px; padding: 6px;
   background: var(--raised); border: 1px solid var(--line); border-radius: var(--r-tile); box-shadow: var(--shadow-pop);
-  transform-origin: top left;
+  transform-origin: top left; /* padrão; menu() define o canto real */
 }
 .menu button { display: flex; width: 100%; align-items: center; gap: 10px; border: 0; background: none; padding: 8px 10px; border-radius: 9px; text-align: left; font-size: var(--fs-sm); }
 .menu button:hover, .menu button:focus-visible { background: var(--well); outline: 0; }
