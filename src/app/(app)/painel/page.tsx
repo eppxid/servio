@@ -131,7 +131,6 @@ export default async function Painel({
         {painel.porVoluntario.length === 0 ? (
           <p className="text-sm text-muted">Nenhuma escala publicada no período.</p>
         ) : (
-          <div className="overflow-x-auto">
           <table className="table">
             <thead>
               <tr>
@@ -145,16 +144,15 @@ export default async function Painel({
             <tbody>
               {painel.porVoluntario.map((l) => (
                 <tr key={l.usuarioId}>
-                  <td>{l.nome}</td>
-                  <td>{l.total}</td>
-                  <td>{l.confirmadas}</td>
-                  <td>{l.presencas}</td>
-                  <td>{l.recusas}</td>
+                  <td data-label="Voluntário">{l.nome}</td>
+                  <td data-label="Total">{l.total}</td>
+                  <td data-label="Confirmadas">{l.confirmadas}</td>
+                  <td data-label="Presentes">{l.presencas}</td>
+                  <td data-label="Recusas">{l.recusas}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          </div>
         )}
       </section>
 
