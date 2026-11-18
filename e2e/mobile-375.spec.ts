@@ -98,3 +98,65 @@ test("375px /painel: tabela em cartões e valor grande numa linha", async ({ pag
     expect(h).toBeLessThanOrEqual(linha * 1.5);
   }
 });
+
+test("375px /agenda e /folgas: abas no fundo da tela e fim do conteúdo acima do botão e das abas", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await entrarComoAdmin(page);
+  for (const rota of ["/agenda", "/folgas"]) {
+    await page.goto(rota);
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(300);
+    const m = await page.evaluate(() => {
+      const caixa = (sel: string) => document.querySelector(sel)?.getBoundingClientRect() ?? null;
+      const tela = document.querySelector("main .tela");
+      const fimConteudo = Math.max(
+        ...[...(tela?.children ?? [])]
+          .filter((e) => !e.matches(".cta-espaco, .cta, dialog, script") && e.getBoundingClientRect().height > 0)
+          .map((e) => e.getBoundingClientRect().bottom),
+      );
+      return { janela: window.innerHeight, abas: caixa(".tabbar"), cta: caixa("main .cta"), fimConteudo };
+    });
+    expect(m.abas, `${rota} sem abas`).not.toBeNull();
+    expect(m.fimConteudo, `${rota} sem conteúdo medido`).toBeGreaterThan(0);
+    expect.soft(Math.round(m.abas!.bottom), `${rota} abas fora do fundo`).toBe(m.janela);
+    const limite = m.cta ? m.cta.top : m.abas!.top;
+    expect.soft(m.fimConteudo, `${rota} conteúdo por baixo do botão/abas`).toBeLessThanOrEqual(limite);
+    if (m.cta) expect.soft(m.cta.bottom, `${rota} botão por cima das abas`).toBeLessThanOrEqual(m.abas!.top);
+  }
+});
+
+test("375px /agenda: viewport visual deslocada (iPhone) — abas e botão descem até o fundo visível", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  // Simula o estado do WebKit no iPhone: a área visível 187 px abaixo da viewport de layout.
+  await page.addInitScript(() => {
+    const ouvintes: Record<string, (() => void)[]> = {};
+    const falsa = {
+      offsetTop: 187,
+      offsetLeft: 0,
+      scale: 1,
+      get height() {
+        return window.innerHeight;
+      },
+      get width() {
+        return window.innerWidth;
+      },
+      addEventListener: (t: string, f: () => void) => (ouvintes[t] ??= []).push(f),
+      removeEventListener: () => {},
+    };
+    Object.defineProperty(window, "visualViewport", { get: () => falsa, configurable: true });
+  });
+  await entrarComoAdmin(page);
+  await page.goto("/agenda");
+  await page.waitForLoadState("networkidle");
+  await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue("--fundo-ajuste"))).toBe("187px");
+  const m = await page.evaluate(() => ({
+    janela: window.innerHeight,
+    abas: document.querySelector(".tabbar")!.getBoundingClientRect().bottom,
+    cta: document.querySelector("main .cta")?.getBoundingClientRect().bottom ?? null,
+  }));
+  expect(Math.round(m.abas)).toBe(m.janela + 187);
+  if (m.cta !== null) expect(Math.round(m.cta)).toBeLessThanOrEqual(m.janela + 187);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await page.screenshot({ path: "docs/prints/073-agenda-fim.png" });
+});

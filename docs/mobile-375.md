@@ -50,6 +50,16 @@ O teste usa viewport 375×812 com `hasTouch` e `isMobile`. Ele confere nas rotas
 
 A regra 5 não tem teste automático. Confira a barra fixa num aparelho com entalhe.
 
+### Barras fixas no fundo (tarefa 073)
+No iPhone (print do usuário, aberto a partir do WhatsApp), a barra de abas ficou no meio da tela. O conteúdo aparecia embaixo dela, e o botão "Marcar folga" cobria o texto da Agenda. Nenhum ancestral da `.tabbar` tem `transform` ou `filter`. A reserva de espaço no fim do `.main` já cobre abas + botão.
+
+Causa provável (hipótese, sem aparelho para confirmar): o WebKit deixa a viewport visual deslocada da viewport de layout. O `position: fixed; bottom: 0` segue a viewport de layout.
+
+Correção: `Casca.tsx` mede `visualViewport` e grava `--fundo-ajuste` no `<html>` (`fundo-visual.ts`). O `app.css` desce `.tabbar`, `.cta` e `.barra-cta` com `translate` só quando a variável existe. Com campo em foco (teclado) ou zoom de pinça, o ajuste fica 0.
+
+Testes: `fundo-visual.test.ts` (fórmula) e dois casos em `e2e/mobile-375.spec.ts`. O primeiro confere abas e botão no fundo da janela e o fim do conteúdo acima deles em `/agenda` e `/folgas`. O segundo simula a viewport deslocada 187 px e grava `docs/prints/073-agenda-fim.png`.
+
 ## Pendências
+- Confirmar a correção da tarefa 073 num iPhone: rolar a Agenda até o fim, aberta pelo link do WhatsApp.
 - Nenhuma falha aberta. Dois ajustes de 1 linha entraram com o teste: `.tbtn` e `.btn--sm` passaram a 44px em `pointer: coarse`.
 - O teste de tabela em cartões só roda se o banco tiver escalas publicadas (rode a suíte completa).

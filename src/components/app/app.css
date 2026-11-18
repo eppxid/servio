@@ -37,6 +37,12 @@
     border-top: 1px solid var(--line);
     view-transition-name: rail;
   }
+  /* iPhone: desce as barras fixas até o fundo visível quando o WebKit desloca a viewport (Casca.tsx, fundo-visual.ts). */
+  @media (max-width: 899.98px) {
+    /* Só com ajuste gravado: sem ele as barras não ganham camada nem bloco de contenção. */
+    html[style*="--fundo-ajuste"] :is(.tabbar, .cta, .barra-cta) { translate: 0 var(--fundo-ajuste); }
+    html[style*="--fundo-ajuste"] .barra-cta .cta { translate: none; }
+  }
   /* Vidro líquido (abas.tsx grava data-vidro só em Chromium capaz): refração por filtro SVG.
      Fundo mantém >= 72% de opacidade para o rótulo de 11 px passar no contraste AA. */
   @media (max-width: 899.98px) {
