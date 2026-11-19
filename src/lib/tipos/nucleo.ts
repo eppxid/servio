@@ -98,7 +98,12 @@ export async function editarHorarioTipo(
 
   await db.transaction(async (tx) => {
     await exigirTipoDaIgreja(tx, ator, recorrenciaId);
-    await tx.update(t.recorrencias).set({ diaSemana, horaInicio, horaFim }).where(eq(t.recorrencias.id, recorrenciaId));
+    const [rec] = await tx
+      .update(t.recorrencias)
+      .set({ diaSemana, horaInicio, horaFim })
+      .where(eq(t.recorrencias.id, recorrenciaId))
+      .returning({ ate: t.recorrencias.ate });
+    const agora = new Date();
 
     const futuros = await tx
       .select({ id: t.eventos.id, inicio: t.eventos.inicio })
@@ -107,23 +112,28 @@ export async function editarHorarioTipo(
         and(
           eq(t.eventos.igrejaId, ator.igrejaId),
           eq(t.eventos.recorrenciaId, recorrenciaId),
-          gte(t.eventos.inicio, new Date()),
+          gte(t.eventos.inicio, agora),
         ),
       );
     const travados = await comEscalaPublicada(tx, futuros.map((e) => e.id));
+    const descartar: number[] = [];
     for (const e of futuros) {
       if (travados.has(e.id)) continue;
       const dia = dataLocal(e.inicio);
       const atual = new Date(`${dia}T00:00:00Z`).getUTCDay();
       const alvo = somarDias(dia, diaSemana - atual);
+      const inicio = fromZonedTime(`${alvo}T${horaInicio}:00`, FUSO);
+      // No novo dia o culto desta semana já passou ou cai depois da data limite: não acontece mais.
+      if (inicio < agora || (rec?.ate && alvo > rec.ate)) {
+        descartar.push(e.id);
+        continue;
+      }
       await tx
         .update(t.eventos)
-        .set({
-          inicio: fromZonedTime(`${alvo}T${horaInicio}:00`, FUSO),
-          fim: horaFim ? fromZonedTime(`${alvo}T${horaFim}:00`, FUSO) : null,
-        })
+        .set({ inicio, fim: horaFim ? fromZonedTime(`${alvo}T${horaFim}:00`, FUSO) : null })
         .where(eq(t.eventos.id, e.id));
     }
+    await apagarEventos(tx, descartar);
   });
 }
 
@@ -144,6 +154,7 @@ export async function contarCultosAposLimite(
   ate: string,
 ): Promise<{ removidos: number; publicados: number }> {
   if (!(await temPapel(db, ator, "admin"))) throw new ErroAcesso();
+  validarDataLimite(ate);
   await exigirTipoDaIgreja(db, ator, recorrenciaId);
   const ids = (await eventosDoTipo(db, ator, recorrenciaId)).filter((e) => dataLocal(e.inicio) > ate).map((e) => e.id);
   return { removidos: ids.length, publicados: (await comEscalaPublicada(db, ids)).size };

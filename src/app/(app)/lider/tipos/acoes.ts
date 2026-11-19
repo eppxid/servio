@@ -103,6 +103,7 @@ export async function contarCultosAposLimiteAcao(
     return await contarCultosAposLimite(db() as unknown as AnyDb, ator, rec, String(ate));
   } catch (erro) {
     if (erro instanceof ErroAcesso) return { erro: SO_ADMIN };
+    if (erro instanceof RangeError) return { erro: erro.message };
     throw erro;
   }
 }

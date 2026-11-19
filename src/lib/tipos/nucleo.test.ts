@@ -132,6 +132,26 @@ describe("editarHorarioTipo", () => {
     await editarHorarioTipo(db, admin, id, novo);
     expect([(await eventoDe(publicado)).inicio.getTime(), (await eventoDe(passado)).inicio.getTime()]).toEqual(antes);
   });
+  it("apaga o culto em rascunho cujo novo horário já passou", async () => {
+    const hoje = diaEm(0);
+    const id = await novoTipo({ diaSemana: semanaDe(hoje) });
+    const [e] = await db
+      .insert(schema.eventos)
+      .values({ igrejaId, titulo: "Culto", inicio: fromZonedTime(`${hoje}T23:59:00`, FUSO), recorrenciaId: id })
+      .returning();
+    await editarHorarioTipo(db, admin, id, { diaSemana: semanaDe(hoje), horaInicio: "00:00", horaFim: null });
+    expect(await eventoDe(e.id)).toBeUndefined();
+  });
+  it("apaga o culto em rascunho que o novo dia leva para depois da data limite", async () => {
+    const d = diaEm(14);
+    const domingo = new Date(`${d}T00:00:00Z`);
+    domingo.setUTCDate(domingo.getUTCDate() - semanaDe(d));
+    const ate = domingo.toISOString().slice(0, 10);
+    const id = await novoTipo({ diaSemana: 0, ate });
+    const culto = await novoCulto(id, ate, false);
+    await editarHorarioTipo(db, admin, id, { diaSemana: 6, horaInicio: "19:00", horaFim: null });
+    expect(await eventoDe(culto)).toBeUndefined();
+  });
   it("recusa horário inválido, fim antes do início e dia fora de 0-6", async () => {
     const id = await novoTipo();
     await expect(editarHorarioTipo(db, admin, id, { ...novo, horaInicio: "25:00" })).rejects.toBeInstanceOf(RangeError);

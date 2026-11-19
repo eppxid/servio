@@ -33,10 +33,12 @@ export default async function ModeloDoTipo({ params }: { params: Promise<{ recor
     if (erro instanceof ErroAcesso) notFound();
     throw erro;
   }
-  const [{ ate }] = await db()
+  const [rec] = await db()
     .select({ ate: recorrencias.ate })
     .from(recorrencias)
     .where(and(eq(recorrencias.id, d.tipo.id), eq(recorrencias.igrejaId, ator.igrejaId)));
+  if (!rec) notFound();
+  const { ate } = rec;
   const admin = ator.papelGlobal === "admin";
   return (
     <div className="tela">

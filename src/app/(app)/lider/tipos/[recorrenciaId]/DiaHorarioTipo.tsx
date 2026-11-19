@@ -59,7 +59,7 @@ export function DiaHorarioTipo({
       setMsg(null);
       setConfirmar(
         `${c.removidos} ${c.removidos === 1 ? "culto depois de" : "cultos depois de"} ${br(limite).slice(0, 5)} ` +
-          `${c.removidos === 1 ? "será removido" : "serão removidos"} da agenda (${c.publicados} já publicados).`,
+          `${c.removidos === 1 ? "será removido" : "serão removidos"} da agenda${c.publicados ? ` (${c.publicados} já ${c.publicados === 1 ? "publicado" : "publicados"})` : ""}.`,
       );
     });
 
