@@ -28,3 +28,5 @@
   font-size: var(--fs-xl);
   font-weight: 700;
 }
+
+.perigo { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }

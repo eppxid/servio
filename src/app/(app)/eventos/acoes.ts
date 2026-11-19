@@ -1,12 +1,12 @@
 "use server";
 
-import { and, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { fromZonedTime } from "date-fns-tz";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db, type Db } from "@/db";
-import { escalaItens, escalas, eventos, mensagens, recorrencias } from "@/db/schema";
+import { eventos, recorrencias } from "@/db/schema";
 import { exigirPapel } from "@/lib/auth";
 import type { AnyDb } from "@/lib/auth-core";
 import {
@@ -16,6 +16,8 @@ import {
   gerarOcorrencias,
   type RegraRecorrencia,
 } from "@/lib/recorrencia";
+import { ErroAcesso } from "@/lib/ministerios/nucleo";
+import { excluirTipo } from "@/lib/tipos/nucleo";
 import { validar } from "@/lib/validar";
 import { criarVagasDosEventos } from "@/lib/vagas/nucleo";
 
@@ -160,55 +162,11 @@ export async function excluirRegra(formData: FormData) {
   const admin = await exigirPapel("admin");
   const v = validar(esquemaRegra, formData);
   if (!v.ok) redirect("/eventos");
-  const { recorrenciaId } = v.dados;
-  const igrejaId = admin.igrejaId;
-
-  await db().transaction(async (tx) => {
-    const [regra] = await tx
-      .select({ id: recorrencias.id })
-      .from(recorrencias)
-      .where(and(eq(recorrencias.id, recorrenciaId), eq(recorrencias.igrejaId, igrejaId)));
-    if (!regra) return;
-
-    const futuras = await tx
-      .select({ id: eventos.id })
-      .from(eventos)
-      .where(
-        and(
-          eq(eventos.igrejaId, igrejaId),
-          eq(eventos.recorrenciaId, recorrenciaId),
-          gte(eventos.inicio, new Date()),
-        ),
-      );
-    const ids = futuras.map((e) => e.id);
-    if (ids.length > 0) {
-      const publicadas = await tx
-        .select({ eventoId: escalas.eventoId })
-        .from(escalas)
-        .where(and(inArray(escalas.eventoId, ids), eq(escalas.status, "publicada")));
-      const bloqueados = new Set(publicadas.map((e) => e.eventoId));
-      const apagar = ids.filter((id) => !bloqueados.has(id));
-      if (apagar.length > 0) {
-        const rascunhos = await tx
-          .select({ id: escalas.id })
-          .from(escalas)
-          .where(inArray(escalas.eventoId, apagar));
-        if (rascunhos.length > 0) {
-          await tx
-            .delete(escalaItens)
-            .where(inArray(escalaItens.escalaId, rascunhos.map((e) => e.id)));
-          await tx.delete(escalas).where(inArray(escalas.eventoId, apagar));
-        }
-        await tx.delete(mensagens).where(inArray(mensagens.eventoId, apagar));
-        await tx.delete(eventos).where(inArray(eventos.id, apagar));
-      }
-    }
-    await tx
-      .update(eventos)
-      .set({ recorrenciaId: null })
-      .where(and(eq(eventos.igrejaId, igrejaId), eq(eventos.recorrenciaId, recorrenciaId)));
-    await tx.delete(recorrencias).where(eq(recorrencias.id, recorrenciaId));
-  });
+  try {
+    await excluirTipo(db() as unknown as AnyDb, admin, v.dados.recorrenciaId);
+  } catch (erro) {
+    if (!(erro instanceof ErroAcesso)) throw erro;
+  }
   revalidatePath("/eventos");
   redirect("/eventos");
 }
